@@ -1,4 +1,4 @@
-Dear student group of AMI 2023,
+**Dear student group of AMI 2023,**
 
 this is your GitLab repository. Please follow the guidelines we gave you in the session at 25th of may:
 
@@ -13,6 +13,14 @@ this is your GitLab repository. Please follow the guidelines we gave you in the 
 
 We initialized your repository with two folders. The `app` folder is where you will implement your containerized web application once you made plans how and what you want to achieve. The `deploy` folder is where configuration will be done to deploy your application on kubernetes. We will discuss these topics in a dedicated session.
 
-**What about your group share?**
+For code that is about data exploration etc. just create folders beside the existing ones.
 
-[link](/../../wikis/home/Group-Share-Access)
+**What about the group share?**
+
+We placed the access information in your [project's wiki](/../../wikis/home/Group-Share-Access).
+
+&nbsp;
+
+Best regards and have fun!
+
+*AMI-Team*
