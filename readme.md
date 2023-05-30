@@ -17,7 +17,7 @@ For code that is about data exploration etc. just create folders beside the exis
 
 **What about the group share?**
 
-We placed the access information in your [project's wiki](/../../wikis/home/Group-Share-Access).
+We placed the access information in your [project's wiki](/../../wikis/Home).
 
 &nbsp;
 
