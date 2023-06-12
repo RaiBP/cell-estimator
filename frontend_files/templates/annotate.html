@@ -9,15 +9,41 @@
     <h1>Annotate The Blood Cell Image</h1>
     <h6><a href="/">Return to index page</a></h6>
     <div id="chart" class="chart"></div>
-    <div>des</div>
 
     <script>
         var graphJSON = {{ graphJSON | safe }};
-        graphJSON.fig.config = graphJSON.config
+        graphJSON.fig.config = graphJSON.config;
 
         // Render the plot using Plotly.js
         Plotly.newPlot('chart', graphJSON.fig);
+
+        // Function to send annotation data to server
+        function sendAnnotationData(data) {
+            fetch('/annotations-data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);  // Print the response data in the browser console
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        // Add event listener for annotation events
+        var chart = document.getElementById('chart');
+        chart.on('plotly_relayout', function(eventData) {
+            var shapes = eventData.shapes || [];
+            sendAnnotationData({ shapes: shapes });
+        });
     </script>
 </body>
 </html>
+
+
 

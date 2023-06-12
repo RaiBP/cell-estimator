@@ -42,12 +42,13 @@ def plot_hdf5_image():
         # Open the HDF5 file and plot a phase image
         with h5py.File(filepath, "r") as file:
             dataset = file['phase/images']
-            # Get the image
+
+            # Get the image with index 10
             img = dataset[10]
 
             fig = px.imshow(img)
             fig.update_layout(dragmode="drawclosedpath")
-            
+
             # Edit here the configuration of the image
             config = {
                 "modeBarButtonsToAdd": [
