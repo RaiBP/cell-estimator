@@ -69,23 +69,31 @@ const AnnotationArea = () => {
     const stage = e.target.getStage();
     const point = stage.getPointerPosition();
 
-    if (!isDrawing.current) {
+    if (!isDrawing.current || lines.length == 0) {
       return;
     }
 
-    console.log(isDrawing.current);
+    const lastLineEnd = lines[lines.length - 1].points.slice(2);
 
-    if (lines.length > 0) {
-      const lastLineEnd = lines[lines.length - 1].points.slice(2);
+    // Computing current distance to first point
+    const firstPoint = lines[0].points;
+    const dx = firstPoint[0] - point.x;
+    const dy = firstPoint[1] - point.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    if (distance < 15) {
+      const firstPoint = lines[0].points;
+      const lastLine = lines[lines.length - 1];
+      setPreviewLine({ points: [...lastLineEnd, ...firstPoint] });
+    } else {
       setPreviewLine({ points: [...lastLineEnd, point.x, point.y] });
     }
+
   };
 
   const handleMouseUp = () => {
     // isDrawing.current = false;
   };
 
-  // Helpers
   function stopDrawing() {
     isDrawing.current = false;
     setPreviewLine(null);
