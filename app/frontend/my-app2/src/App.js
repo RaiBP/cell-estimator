@@ -1,14 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Stage, Layer, Line, Circle, Image } from 'react-konva';
 
-function ImageCanvas(props) {
-  return (
-    <div className="imagecanvas">
-      <h1>{props.image}</h1>
-    </div>
-  );
-}
-
 const AnnotationArea = () => {
 
   const [image, setImage] = useState(null);
@@ -82,7 +74,6 @@ const AnnotationArea = () => {
     const distance = Math.sqrt(dx * dx + dy * dy);
     if (distance < 15) {
       const firstPoint = lines[0].points;
-      const lastLine = lines[lines.length - 1];
       setPreviewLine({ points: [...lastLineEnd, ...firstPoint] });
     } else {
       setPreviewLine({ points: [...lastLineEnd, point.x, point.y] });
