@@ -130,7 +130,9 @@ def calculate_phase_std_within_kernel(masked_phase_original_values, phase_mean_k
     phase_kernel_squared = phase_mean_kernel ** 2 
     phase_squared_kernel = apply_kernel(masked_phase_original_values ** 2, kernel_size)
     kernel_pixels = kernel_size ** 2 
-    return np.sqrt((kernel_pixels / (kernel_pixels - 1)) * (phase_squared_kernel - phase_kernel_squared))
+    dif = phase_squared_kernel - phase_kernel_squared
+    dif[dif<0] = 0
+    return np.sqrt((kernel_pixels / (kernel_pixels - 1)) * dif)
 
 
 def calculate_dry_mass_density_contrast_1(phase_std_kernel, num_pixels):
