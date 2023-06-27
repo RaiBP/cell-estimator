@@ -21,6 +21,19 @@ class FeatureExtractor:
         columns = ['Volume', 'Roundness', 'Opacity', 'Amplitude Variance', 'Amplitude Skewness', 'Dry Mass Density', 'Max Phase', 'Phase Variance', 'Phase Skewness', 'DC1', 'DC2', 'DC3']
         extracted_features = pd.DataFrame(columns=columns)
 
+        for index, (phase, amplitude, mask) in enumerate(self.batch):
+            features_single_cell = self.extract_features_single_image(index, phase, amplitude, mask)
+            features_df = pd.DataFrame([features_single_cell], columns=columns)
+            extracted_features = pd.concat([extracted_features, features_df], ignore_index=True)
+        # Return the extracted features for all elements of the batch
+        self.features = extracted_features
+        return extracted_features
+
+    def extract_features_multiple_masks(self):
+        # Loop over each element of the batch and extract features
+        columns = ['Volume', 'Roundness', 'Opacity', 'Amplitude Variance', 'Amplitude Skewness', 'Dry Mass Density', 'Max Phase', 'Phase Variance', 'Phase Skewness', 'DC1', 'DC2', 'DC3']
+        extracted_features = pd.DataFrame(columns=columns)
+
         for index, (phase, amplitude, masks) in enumerate(self.batch):
             for mask in masks:
                 features_single_cell = self.extract_features_single_image(index, phase, amplitude, mask)
