@@ -132,8 +132,9 @@ def calculate_phase_std_within_kernel(masked_phase_original_values, phase_mean_k
     kernel_pixels = kernel_size ** 2 
     dif = phase_squared_kernel - phase_kernel_squared
     dif[dif<0] = 0
-    return np.sqrt((kernel_pixels / (kernel_pixels - 1)) * dif)
-
+    phase_std_kernel = np.sqrt((kernel_pixels / (kernel_pixels - 1)) * dif)
+    phase_std_kernel = replace_nan_with_min_value(phase_std_kernel)
+    return phase_std_kernel
 
 def calculate_dry_mass_density_contrast_1(phase_std_kernel, num_pixels):
     return calculate_mean(phase_std_kernel, num_pixels)
@@ -146,3 +147,7 @@ def calculate_dry_mass_density_contrast_2(phase_std_kernel, dc1, num_pixels):
 def calculate_dry_mass_density_contrast_3(phase_std_kernel, dc1, num_pixels):
     return calculate_skewness(phase_std_kernel, dc1, num_pixels)
 
+def replace_nan_with_min_value(image):
+    min = np.nanmin(image)
+    image[np.isnan(image)] = min
+    return image
