@@ -131,3 +131,10 @@ def replace_nan_with_min_value(image):
     min = np.nanmin(image)
     image[np.isnan(image)] = min
     return image
+
+
+def kernel_size_micrometer_to_pixels(kernel_size_in_micrometers, length_to_pixel_ratio):
+    kernel_size_in_pixels = int(np.round(kernel_size_in_micrometers / length_to_pixel_ratio))
+
+    # we want an odd integer for kernel size
+    return kernel_size_in_pixels if kernel_size_in_pixels % 2 == 0 else kernel_size_in_pixels + 1
