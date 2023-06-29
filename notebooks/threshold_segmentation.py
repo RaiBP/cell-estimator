@@ -27,6 +27,17 @@ class ThresholdSegmentation(Segmentation):
         final_mask = self._per_region_segmentation(image_for_regional_thresholding, initial_mask)
 
         return final_mask
+    
+
+    def _list_of_outlines(self, mask):
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        outlines = list(contours)
+
+        for i in range(len(outlines)):
+            outlines[i] = outlines[i].reshape(-1, 2)
+
+        return outlines
+        
 
     def _apply_threshold(self, image, threshold, kernel_size, use_otsu=False):
         image_uint8 = self._image_to_uint8(image)
