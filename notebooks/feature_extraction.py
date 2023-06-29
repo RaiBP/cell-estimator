@@ -12,16 +12,19 @@ def calculate_num_pixels(mask):
 def calculate_binary_mask(mask):
     return np.where(mask != 0, True, False)
 
-def calculate_perimeter(mask, pixel_to_length_ratio):
+def calculate_perimeter(mask, length_to_pixel_ratio):
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    return cv2.arcLength(contours[0], True) * pixel_to_length_ratio
+    perimeter = 0
+    for contour in contours:
+        perimeter += cv2.arcLength(contour, True) 
+    return perimeter * length_to_pixel_ratio
 
 
-def calculate_area(num_pixels, pixel_to_area_ratio):
-    return pixel_to_area_ratio * num_pixels
+def calculate_area(num_pixels, area_to_pixel_ratio):
+    return area_to_pixel_ratio * num_pixels
 
 
-def calculate_volume(mask, pixel_to_length_ratio):
+def calculate_volume(mask, length_to_pixel_ratio):
     indices = np.where(mask != 0)
 
     # Get the minimum and maximum coordinates
@@ -29,8 +32,8 @@ def calculate_volume(mask, pixel_to_length_ratio):
     min_y, max_y = np.min(indices[0]), np.max(indices[0])
 
     # Calculate the width and height of the mask
-    width = (max_x - min_x + 1) * pixel_to_length_ratio
-    height = (max_y - min_y + 1) * pixel_to_length_ratio
+    width = (max_x - min_x + 1) * length_to_pixel_ratio
+    height = (max_y - min_y + 1) * length_to_pixel_ratio
 
     return width ** 2 * height * np.pi / 6
 
@@ -38,11 +41,6 @@ def calculate_volume(mask, pixel_to_length_ratio):
 def calculate_roundness(area, perimeter):
     return 4 * np.pi * area / perimeter ** 2
    
-
-def calculate_masked_normalized_amplitude(amplitude, binary_mask):
-    normalized_amplitude = amplitude / 255
-    return normalized_amplitude[binary_mask]
-
 
 def calculate_opacity(masked_normalized_amplitude, area):
     return np.sum(1 - masked_normalized_amplitude) / area
@@ -60,41 +58,28 @@ def calculate_skewness(masked_image, mean, pixels_in_mask):
     return (np.sum((masked_image - mean) ** 3) / pixels_in_mask) / (np.sum((masked_image - mean) ** 2) / pixels_in_mask) ** 1.5
 
 
-def calculate_amplitude_mean(masked_normalized_amplitude, num_pixels):
-    return calculate_mean(masked_normalized_amplitude, num_pixels)
+def calculate_kurtosis(masked_image, mean, pixels_in_mask):
+    return (np.sum((masked_image - mean) ** 4) / pixels_in_mask) / (np.sum((masked_image - mean) ** 2) / pixels_in_mask) ** 2
 
 
-def calculate_amplitude_variance(masked_normalized_amplitude, amplitude_mean, num_pixels):
-    return calculate_variance(masked_normalized_amplitude, amplitude_mean, num_pixels)
+def calculate_masked_image(image, binary_mask):
+    # returns a list of values
+    return image[binary_mask]
 
+def calculate_centroid_coordinates(masked_image, num_pixels):
+    grid_x, grid_y = np.meshgrid(np.arange(masked_image.shape[1]), np.arange(masked_image.shape[0]))
+    centroid_x = np.sum(grid_x * masked_image) / num_pixels
+    centroid_y = np.sum(grid_y * masked_image) / num_pixels
+    return centroid_x, centroid_y
 
-def calculate_amplitude_skewness(masked_normalized_amplitude, amplitude_mean, num_pixels):
-    return calculate_skewness(masked_normalized_amplitude, amplitude_mean, num_pixels)
+def calculate_centroid_displacement(centroid_x_1, centroid_y_1, centroid_x_2, centroid_y_2, length_to_pixel_ratio):
+    diff_x = centroid_x_1 - centroid_x_2
+    diff_y = centroid_y_1 - centroid_y_2
+    return np.sqrt(diff_x ** 2 + diff_y ** 2) * length_to_pixel_ratio
 
-
-def calculate_masked_phase(phase, binary_mask):
-    return phase[binary_mask]
-
-
-def calculate_max_phase(masked_phase):
-    return np.max(np.abs(masked_phase))
-
-
-def calculate_phase_mean(masked_phase, num_pixels):
-    return calculate_mean(masked_phase, num_pixels)
-
-
-def calculate_phase_variance(masked_phase, phase_mean, num_pixels):
-    return calculate_variance(masked_phase, phase_mean, num_pixels)
-    
-
-def calculate_phase_skewness(masked_phase, phase_mean, num_pixels):
-    return calculate_skewness(masked_phase, phase_mean, num_pixels)
-
-
-def calculate_dry_mass(phase_mean, wavelength, refractive_increment, pixel_to_area_ratio, num_pixels):
+def calculate_dry_mass(phase_mean, wavelength, refractive_increment, area_to_pixel_ratio, num_pixels):
     # in picograms
-    return pixel_to_area_ratio * wavelength  * phase_mean * num_pixels / (1e3 * 2 * np.pi * refractive_increment)
+    return area_to_pixel_ratio * wavelength  * phase_mean * num_pixels / (1e3 * 2 * np.pi * refractive_increment)
 
 
 def calculate_dry_mass_density(dry_mass, volume):
@@ -117,35 +102,30 @@ def apply_kernel(image, kernel_size):
     
     return result
 
-def calculate_masked_phase_with_original_values(phase, mask): 
+def calculate_masked_image_keeping_dimensions(image, mask): 
+    # returns an actual image
     binary_mask = np.where(mask != 0, 1, 0).astype(np.uint8)  # Convert mask to 0-1 binary mask
-    return phase * binary_mask
+    return image * binary_mask
 
 
-def calculate_phase_mean_within_kernel(masked_phase_original_values, kernel_size):
-    return apply_kernel(masked_phase_original_values, kernel_size)
+def calculate_std_kernel(masked_image, kernel_size):
+    mean_kernel = apply_kernel(masked_image, kernel_size)
 
-
-def calculate_phase_std_within_kernel(masked_phase_original_values, phase_mean_kernel, kernel_size):
-    phase_kernel_squared = phase_mean_kernel ** 2 
-    phase_squared_kernel = apply_kernel(masked_phase_original_values ** 2, kernel_size)
+    kernel_squared = mean_kernel ** 2 
+    squared_kernel = apply_kernel(masked_image ** 2, kernel_size)
     kernel_pixels = kernel_size ** 2 
-    dif = phase_squared_kernel - phase_kernel_squared
-    dif[dif<0] = 0
-    phase_std_kernel = np.sqrt((kernel_pixels / (kernel_pixels - 1)) * dif)
-    phase_std_kernel = replace_nan_with_min_value(phase_std_kernel)
-    return phase_std_kernel
+    diff = squared_kernel - kernel_squared
+    diff[diff<0] = 0
+    std_kernel = np.sqrt((kernel_pixels / (kernel_pixels - 1)) * diff)
+    std_kernel = replace_nan_with_min_value(std_kernel)
 
-def calculate_dry_mass_density_contrast_1(phase_std_kernel, num_pixels):
-    return calculate_mean(phase_std_kernel, num_pixels)
-
-
-def calculate_dry_mass_density_contrast_2(phase_std_kernel, dc1, num_pixels):
-    return calculate_variance(phase_std_kernel, dc1, num_pixels)
+    #std_kernel = np.pad(std_kernel, ((0, 1), (0, 1)), mode='constant')
+    return std_kernel 
 
 
-def calculate_dry_mass_density_contrast_3(phase_std_kernel, dc1, num_pixels):
-    return calculate_skewness(phase_std_kernel, dc1, num_pixels)
+def img_to_uint8(img):
+    return ((img - np.min(img)) / (np.max(img) - np.min(img)) * 255).astype(np.uint8)
+
 
 def replace_nan_with_min_value(image):
     min = np.nanmin(image)
