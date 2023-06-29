@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.compose import ColumnTransformer
 import numpy as np
 
 
@@ -48,22 +50,28 @@ class FeatureExtraction:
 
 
 class Classification:
-    def __init__(self):
+    def __init__(self, X_test, model, prob = True):
         # Classification initialization code here
-        pass
+        self.model = model
+        self.X_test = X_test
+        self.prob = prob
 
-    def classify(self, data):
+    def classify(self):
         # Classification logic here
-        pass
+        if self.prob == True:
+            y_pred = self.model.predict_proba(self.X_test)
+        else:
+            y_pred = self.model.predict(self.X_test)
+        return y_pred
 
 
 
 
 class Pipeline:
     def __init__(self, segmentation, fetaure_extraction, classification):
-        self.segmentation = Segmentation()
-        self.feature_extraction = FeatureExtraction()
-        self.classification = Classification()
+        self.segmentation = segmentation
+        self.feature_extraction = fetaure_extraction
+        self.classification = classification
 
     def process_data(self, data):
         masks = self.segmentation.segment()
