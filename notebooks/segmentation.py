@@ -16,7 +16,14 @@ class Segmentation(ABC):
             mask_single_image = self._segment_single_image(phase, amplitude)
             self.masks.append(mask_single_image)
         return self.masks
+    
+    def outlines(self, mask):
+        return self._list_of_outlines(mask)
 
     @abstractmethod
     def _segment_single_image(self, index, phase, amplitude):
+        pass
+
+    @abstractmethod
+    def _list_of_outlines(self, mask):
         pass
