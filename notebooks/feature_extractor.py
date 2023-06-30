@@ -46,6 +46,7 @@ class FeatureExtractor:
 
     def extract_features_multiple_masks(self, image_ids=None):
         # Loop over each element of the batch and extract features
+        self.columns.append("Mask ID")
         if image_ids is not None:
             self.columns.append("Image ID")
 
@@ -55,8 +56,9 @@ class FeatureExtractor:
         progress_bar = tqdm(total=total_iterations, desc="Extracting features", unit="image")
 
         for index, (phase, amplitude, masks) in enumerate(self.batch):
-            for mask in masks:
+            for mask_idx, mask in enumerate(masks):
                 features_single_cell = self.extract_features_single_image(index, phase, amplitude, mask)
+                features_single_cell.append(mask_idx)
                 if image_ids is not None:
                     features_single_cell.append(image_ids[index])
                 features_df = pd.DataFrame([features_single_cell], columns=self.columns)
