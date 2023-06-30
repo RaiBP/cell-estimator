@@ -147,9 +147,9 @@ const AnnotationArea = () => {
           />
         )}
         {Object.entries(polygons).map(([polygonId, polygon]) => {
-          return <Polygon id={polygonId} lines={polygon} />
+          return <Polygon key={polygonId} lines={polygon} />
         })}
-        <Polygon lines={currentPolygon} />
+        <Polygon key="current" lines={currentPolygon} />
         {previewLine && (
           <Line
             points={previewLine.points}
@@ -165,14 +165,14 @@ const AnnotationArea = () => {
   );
 };
 
-function Polygon({ id, lines }) {
+function Polygon({ key, lines }) {
 
   return (
     <Group>
       {lines.map((line, i) => (
         <>
           <Line
-            key={i}
+            key={'polygon-' + key + '-line-' + i}
             points={line.points}
             stroke="#df4b26"
             strokeWidth={2}
