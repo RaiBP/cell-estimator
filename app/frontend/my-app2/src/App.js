@@ -147,9 +147,9 @@ const AnnotationArea = () => {
           />
         )}
         {Object.entries(polygons).map(([polygonId, polygon]) => {
-          return <Polygon key={polygonId} lines={polygon} />
+          return <Polygon key={polygonId} id={polygonId} lines={polygon} />
         })}
-        <Polygon key="current" lines={currentPolygon} />
+        <Polygon key="current" id="current" lines={currentPolygon} />
         {previewLine && (
           <Line
             points={previewLine.points}
@@ -165,14 +165,13 @@ const AnnotationArea = () => {
   );
 };
 
-function Polygon({ key, lines }) {
+function Polygon({ id, lines }) {
 
   return (
     <Group>
       {lines.map((line, i) => (
-        <>
+        <React.Fragment key={'polygon-' + id + '-line-' + i}>
           <Line
-            key={'polygon-' + key + '-line-' + i}
             points={line.points}
             stroke="#df4b26"
             strokeWidth={2}
@@ -186,7 +185,7 @@ function Polygon({ key, lines }) {
               fill="black"
             />
           }
-        </>
+        </React.Fragment>
       ))}
     </Group >
   );
