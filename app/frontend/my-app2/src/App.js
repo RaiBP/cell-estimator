@@ -30,6 +30,9 @@ const AnnotationArea = () => {
 
     // Handling keydown events -- registering callback
     const handleKeyDown = (event) => {
+      if (event.key === 'r' && event.ctrlKey) {
+        reset();
+      }
       if (event.key === 'r') {
         resetCurrentPolygon();
       }
