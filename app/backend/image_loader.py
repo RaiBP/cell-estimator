@@ -38,18 +38,6 @@ CellfaceStdCMap = clrs.LinearSegmentedColormap.from_list(
 )
 
 
-def colormap_phase_img(img: np.array) -> np.array:
-    """
-    Applies the CellFace Standard colormap to a phase image.
-
-    Args:
-        img: The phase image to be colored.
-    Returns:
-        The colored phase image. Format: (height, width, 3) -> Normalized RGB
-    """
-    return CellfaceStdCMap(ColorNormalizer(img))[..., :3]  # Remove alpha channel
-
-
 def denormalize(img: np.array) -> np.array:
     """
     Denormalizes an image.
@@ -102,7 +90,8 @@ def prepare_phase_img(img: np.array) -> str:
     Returns:
         The prepared phase image.
     """
-    img = colormap_phase_img(img)
+    img = (img - img.min()) / (img.max() - img.min())
+    img = CellfaceStdCMap(img)[..., :3]
     img = denormalize(img)
     img = encode_b64(img)
     return img
@@ -132,3 +121,17 @@ class ImageLoader:
     @classmethod
     def from_file(cls, path):
         return cls(path)
+
+# path = "/home/fidelinus/tum/applied_machine_intelligence/final_project/data/real_world_sample01.pre"
+# loader = ImageLoader.from_file(path)
+# _, phase = loader.get_images(0)
+# cmapped = colormap_phase_img(phase)
+# cmapped_denorm = denormalize(cmapped)
+
+# plt.subplots(1, 3, figsize=(10, 5))
+# plt.subplot(1, 3, 1)
+# plt.imshow(phase, cmap=CellfaceStdCMap)
+# plt.subplot(1, 3, 2)
+# plt.imshow(cmapped)
+# plt.subplot(1, 3, 3)
+# plt.imshow(cmapped_denorm)

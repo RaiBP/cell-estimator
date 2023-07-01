@@ -12,11 +12,15 @@ async function getImageWithPredictions(imageId, callback) {
   })
   const response_json = await response.json()
   console.log(response_json)
-  callback(`data:image/jpeg;base64,${response_json.amplitude_img_data}`)
+  callback(response_json)
+  // callback(`data:image/jpeg;base64,${response_json.amplitude_img_data}`)
   return response_json
 }
 
 const AnnotationArea = () => {
+  const [amplitudeImage, setAmplitudeImage] = useState(null)
+  const [phaseImage, setPhaseImage] = useState(null)
+  const [showAmplitudeImage, setShowAmplitudeImage] = useState(true) // 0 for amplitude, 1 for phase
   const [image, setImage] = useState(null)
   const [imageId, setImageId] = useState(0)
 
@@ -31,12 +35,27 @@ const AnnotationArea = () => {
 
   const img = new window.Image()
 
-  function setImageCallback(data) {
-    img.src = data
+  function setImageCallback(response_json) {
+    // This is a callback function that is called when the image is fetched
+    // Its only purpose is to set the image state variables
+    
+    setAmplitudeImage(`data:image/jpeg;base64,${response_json.amplitude_img_data}`)
+    setPhaseImage(`data:image/jpeg;base64,${response_json.phase_img_data}`)
+
+  }
+
+  // Hook for showing amplitude or phase image
+  useEffect(() => {
+    if (showAmplitudeImage) {
+      img.src = amplitudeImage
+    } else {
+      img.src = phaseImage
+    }
     img.onload = () => {
       setImage(img)
     }
-  }
+  }, [showAmplitudeImage, amplitudeImage, phaseImage])
+    
 
   useEffect(() => {
     getImageWithPredictions(imageId, setImageCallback)
@@ -66,6 +85,8 @@ const AnnotationArea = () => {
         setImageId((prevId) => prevId + 1)
       } else if (event.key === 'ArrowLeft') {
         setImageId((prevId) => prevId - 1)
+      } else if (event.key === 't') {
+        setShowAmplitudeImage((prev) => !prev)
       }
     }
 
