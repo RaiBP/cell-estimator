@@ -1,6 +1,121 @@
 import React, { useEffect, useState } from 'react'
 import { Stage, Layer, Group, Line, Circle, Image } from 'react-konva'
 
+const MenuContainer = ({ children }) => {
+  const style = {
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'flex-start', // align items to start
+    alignItems: 'center',
+    background: '#3C3E45',
+    width: '200px',
+    padding: '20px',
+    boxSizing: 'border-box',
+    borderRight: '1px solid #eee',
+  }
+
+  return <div style={style}>{children}</div>
+}
+
+const Button = ({ children, onClick }) => {
+  const style = {
+    display: 'block',
+    padding: '10px 20px',
+    marginBottom: '10px',
+    backgroundColor: '#5A5F6C',
+    color: '#FFF',
+    borderRadius: '4px',
+    textAlign: 'center',
+    cursor: 'pointer',
+  }
+
+  return (
+    <button onClick={onClick} style={style}>
+      {children}
+    </button>
+  )
+}
+
+const StageContainer = ({ children }) => {
+  const style = {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flex: 1,
+    overflow: 'auto',
+    background: '#f0f0f0',
+  }
+
+  return <div style={style}>{children}</div>
+}
+
+function Menu({ onReset, onUndo, onSave, onNext, onPrev, onToggleImage }) {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        left: 0,
+        top: 0,
+        bottom: 0,
+        width: '200px',
+        background: '#f0f0f0',
+        padding: '10px',
+      }}
+    >
+      <Button onClick={onReset}>Reset</Button>
+      <Button onClick={onUndo}>Undo</Button>
+      <Button onClick={onSave}>Save</Button>
+      <Button onClick={onNext}>Next Image</Button>
+      <Button onClick={onPrev}>Previous Image</Button>
+      <Button onClick={onToggleImage}>Toggle Image</Button>
+    </div>
+  )
+}
+
+function ImageAnnotation({
+  image,
+  polygons,
+  currentPolygon,
+  previewLine,
+  onMouseDown,
+  onMouseMove,
+}) {
+  return (
+    <Stage
+      width={window.innerWidth}
+      height={window.innerHeight}
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+    >
+      <Layer>
+        {image && (
+          <Image
+            image={image}
+            x={0}
+            y={0}
+            width={window.innerWidth}
+            height={window.innerHeight}
+          />
+        )}
+        {Object.entries(polygons).map(([polygonId, polygon]) => {
+          return <Polygon key={polygonId} id={polygonId} lines={polygon} />
+        })}
+        <Polygon key='current' id='current' lines={currentPolygon} />
+        {previewLine && (
+          <Line
+            points={previewLine.points}
+            stroke='#df4b26'
+            strokeWidth={5}
+            tension={0.5}
+            lineCap='round'
+            lineJoin='round'
+          />
+        )}
+      </Layer>
+    </Stage>
+  )
+}
+
 async function getImageWithPredictions(imageId, callback) {
   const response = await fetch('http://localhost:8000/images', {
     method: 'POST',
@@ -13,16 +128,24 @@ async function getImageWithPredictions(imageId, callback) {
   const response_json = await response.json()
   console.log(response_json)
   callback(response_json)
-  // callback(`data:image/jpeg;base64,${response_json.amplitude_img_data}`)
   return response_json
 }
 
 const AnnotationArea = () => {
+  const style = {
+    display: 'flex',
+    alignItems: 'flex-start', // align items vertically
+    justifyContent: 'flex-start', // align items horizontally
+    height: '100vh', // 100% of the viewport height
+  }
+
+  // Image management
   const [amplitudeImage, setAmplitudeImage] = useState(null)
   const [phaseImage, setPhaseImage] = useState(null)
   const [showAmplitudeImage, setShowAmplitudeImage] = useState(true) // 0 for amplitude, 1 for phase
   const [image, setImage] = useState(null)
   const [imageId, setImageId] = useState(0)
+  const img = new window.Image()
 
   // Polygon management
   const [polygons, setPolygons] = useState({})
@@ -30,18 +153,18 @@ const AnnotationArea = () => {
   const [currentPolygon, setCurrentPolygon] = useState([])
   const currentPolygonRef = React.useRef(currentPolygon)
 
+  // Preview line management
   const [previewLine, setPreviewLine] = useState(null)
   const isDrawing = React.useRef(false)
-
-  const img = new window.Image()
 
   function setImageCallback(response_json) {
     // This is a callback function that is called when the image is fetched
     // Its only purpose is to set the image state variables
-    
-    setAmplitudeImage(`data:image/jpeg;base64,${response_json.amplitude_img_data}`)
-    setPhaseImage(`data:image/jpeg;base64,${response_json.phase_img_data}`)
 
+    setAmplitudeImage(
+      `data:image/jpeg;base64,${response_json.amplitude_img_data}`
+    )
+    setPhaseImage(`data:image/jpeg;base64,${response_json.phase_img_data}`)
   }
 
   // Hook for showing amplitude or phase image
@@ -55,7 +178,6 @@ const AnnotationArea = () => {
       setImage(img)
     }
   }, [showAmplitudeImage, amplitudeImage, phaseImage])
-    
 
   useEffect(() => {
     getImageWithPredictions(imageId, setImageCallback)
@@ -82,11 +204,11 @@ const AnnotationArea = () => {
       } else if (event.key === 's') {
         saveMask()
       } else if (event.key === 'ArrowRight') {
-        setImageId((prevId) => prevId + 1)
+        nextImage()
       } else if (event.key === 'ArrowLeft') {
-        setImageId((prevId) => prevId - 1)
+        prevImage()
       } else if (event.key === 't') {
-        setShowAmplitudeImage((prev) => !prev)
+        toggleImage()
       }
     }
 
@@ -94,6 +216,7 @@ const AnnotationArea = () => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
+
   }, [])
 
   const handleMouseDown = (e) => {
@@ -134,8 +257,16 @@ const AnnotationArea = () => {
     }
   }
 
-  const handleMouseUp = () => {
-    // isDrawing.current = false;
+  const nextImage = () => {
+    setImageId((prevId) => prevId + 1)
+  }
+
+  const prevImage = () => {
+    setImageId((prevId) => prevId - 1)
+  }
+
+  const toggleImage = () => {
+    setShowAmplitudeImage((prev) => !prev)
   }
 
   function stopDrawing() {
@@ -180,47 +311,36 @@ const AnnotationArea = () => {
   }
 
   return (
-    <Stage
-      width={window.innerWidth}
-      height={window.innerHeight}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-    >
-      <Layer>
-        {image && (
-          <Image
-            image={image}
-            x={0}
-            y={0}
-            width={window.innerWidth}
-            height={window.innerHeight}
-          />
-        )}
-        {Object.entries(polygons).map(([polygonId, polygon]) => {
-          return <Polygon key={polygonId} id={polygonId} lines={polygon} />
-        })}
-        <Polygon key='current' id='current' lines={currentPolygon} />
-        {previewLine && (
-          <Line
-            points={previewLine.points}
-            stroke='#df4b26'
-            strokeWidth={5}
-            tension={0.5}
-            lineCap='round'
-            lineJoin='round'
-          />
-        )}
-      </Layer>
-    </Stage>
+    <div style={style}>
+      <MenuContainer>
+        <Menu
+          onReset={reset}
+          onUndo={undo}
+          onSave={saveMask}
+          onNext={nextImage}
+          onPrev={prevImage}
+          onToggleImage={toggleImage}
+        />
+      </MenuContainer>
+      <StageContainer>
+        <ImageAnnotation
+          image={image}
+          polygons={polygons}
+          currentPolygon={currentPolygon}
+          previewLine={previewLine}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+        />
+      </StageContainer>
+    </div>
   )
 }
 
-function Polygon({ id, lines }) {
+const Polygon = (props) => {
   return (
     <Group>
-      {lines.map((line, i) => (
-        <React.Fragment key={'polygon-' + id + '-line-' + i}>
+      {props.lines.map((line, i) => (
+        <React.Fragment key={'polygon-' + props.id + '-line-' + i}>
           <Line
             points={line.points}
             stroke='#df4b26'
@@ -232,7 +352,7 @@ function Polygon({ id, lines }) {
               x={line.points[2]}
               y={line.points[3]}
               radius={5}
-              fill='black'
+              fill='green'
             />
           }
         </React.Fragment>
