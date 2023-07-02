@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { Stage, Layer, Group, Line, Circle, Image } from 'react-konva'
 
+const originalImageHeight = 384
+const originalImageWidth = 512
+
 const MenuContainer = ({ children }) => {
   const style = {
     display: 'flex',
@@ -166,6 +169,25 @@ const AnnotationArea = () => {
     )
     setPhaseImage(`data:image/jpeg;base64,${response_json.phase_img_data}`)
 
+    const polygonsWithPredictions = response_json.predictions
+    const transformedPolygons = {}
+    polygonsWithPredictions.forEach((polygonWithPrediction, index) => {
+      const polygon = polygonWithPrediction.polygon.points
+      const transformedPolygon = []
+      for (let i = 0; i < polygon.length; i += 2) {
+        transformedPolygon.push({
+          points: [
+            polygon[i] / originalImageWidth,
+            polygon[i + 1] / originalImageHeight,
+            polygon[i + 2] / originalImageWidth,
+            polygon[i + 3] / originalImageHeight,
+          ],
+        })
+      }
+      transformedPolygons[index] = transformedPolygon
+    })
+    setPolygons(transformedPolygons)
+
     console.log(response_json.predictions)
   }
 
@@ -218,7 +240,6 @@ const AnnotationArea = () => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-
   }, [])
 
   const handleMouseDown = (e) => {
@@ -344,7 +365,12 @@ const Polygon = (props) => {
       {props.lines.map((line, i) => (
         <React.Fragment key={'polygon-' + props.id + '-line-' + i}>
           <Line
-            points={line.points}
+            points={line.points.map((p, index) => {
+              // Rescale the points to the current canvas size
+              return index % 2 === 0
+                ? p * window.innerWidth
+                : p * window.innerHeight
+            })}
             stroke='#df4b26'
             strokeWidth={2}
             tension={0.2}
