@@ -16,9 +16,15 @@ class ImageSegmentator(ABC):
         pass
 
     @abstractmethod
-    def segment(self, query=None) -> np.ndarray:
+    def segment(self, image: np.ndarray, image_id: Union[str, int]) -> np.ndarray:
         """
-        Receives an image and returns an array of masks in normalized XY format
+        Receives an image and its id and returns an array of binary masks, which has shame (N, H, W)
+        """
+        pass
+
+    def prompt(self, query: dict = None) -> np.ndarray:
+        """
+        Used to query the segmentation algorithm
         """
         pass
 

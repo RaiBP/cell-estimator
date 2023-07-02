@@ -1,10 +1,13 @@
 import numpy as np
+import logging
 from cellpose import models
 from typing import Union
 
-import config
-from base import ImageSegmentator
+from . import utils
+from . import config
+from .base import ImageSegmentator
 
+logging.basicConfig(level=logging.INFO)
 
 class CellPoseImageSegmentator(ImageSegmentator):
     def __init__(self):
@@ -12,8 +15,13 @@ class CellPoseImageSegmentator(ImageSegmentator):
         self.model = models.Cellpose(**config.CELLPOSE["MODEL_KWARGS"])
 
     def set_image(self, image: np.ndarray, image_id: Union[str, int]) -> np.ndarray:
-        self.image = image
+        logging.warning("CellPose does not have a special functionality for setting images. Use segment directly. - Skipping")
+        pass
 
-    def segment(self, query=None) -> np.ndarray:
-        masks, _, _, _ = self.model.eval(self.image, **config.CELLPOSE["PREDICTION_KWARGS"])
-        print(masks)
+    def segment(self, image: np.ndarray, image_id: Union[str, int]) -> np.ndarray:
+        masks, _, _, _ = self.model.eval(image, **config.CELLPOSE["PREDICTION_KWARGS"])
+        masks = utils.image_to_masks(masks)
+        return np.array(masks)
+
+    def prompt(self, query: dict = None) -> np.ndarray:
+        raise NotImplementedError("CellPose does not support prompting")

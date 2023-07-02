@@ -1,5 +1,4 @@
 import torch
-import cellpose
 
 IMAGE_TYPE = "phase"
 
@@ -16,10 +15,16 @@ FASTSAM = {
     "DEVICE": TORCH_DEVICE,
 }
 
+SAM = {
+    "CHECKPOINT_PATH": "/home/fidelinus/Downloads/sam_vit_b_01ec64.pth",
+    "MODEL_TYPE": "vit_b",
+    "DEVICE": TORCH_DEVICE,
+}
+
 CELLPOSE = {
     "MODEL_KWARGS": {
         "model_type": "cyto",
-        "gpu": False,
+        "gpu": True,
     },
     "PREDICTION_KWARGS": {
         "diameter": None,
@@ -31,5 +36,5 @@ CELLPOSE = {
         "augment": True,
         "net_avg": True,
         "resample": True,
-    }
+    },
 }
