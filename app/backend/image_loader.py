@@ -77,8 +77,9 @@ def prepare_amplitude_img(img: np.array) -> str:
     img = img.clip(0, 255)
     img = ColorNormalizer(img)
     img = denormalize(img)
+    img = img[..., np.newaxis]
+    img = np.repeat(img, 3, axis=2)
     return img
-
 
 def prepare_phase_img(img: np.array) -> str:
     """

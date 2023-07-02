@@ -1,0 +1,3 @@
+[submodule "app/backend/FastSAM"]
+	path = app/backend/FastSAM
+	url = https://github.com/leofernandeso/FastSAM

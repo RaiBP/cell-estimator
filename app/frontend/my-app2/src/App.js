@@ -165,6 +165,8 @@ const AnnotationArea = () => {
       `data:image/jpeg;base64,${response_json.amplitude_img_data}`
     )
     setPhaseImage(`data:image/jpeg;base64,${response_json.phase_img_data}`)
+
+    console.log(response_json.predictions)
   }
 
   // Hook for showing amplitude or phase image
