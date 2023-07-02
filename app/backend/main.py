@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from typing import List
 from pathlib import Path
 
-from image_loader import ImageLoader, prepare_phase_img, prepare_amplitude_img
+from image_loader import ImageLoader, prepare_phase_img, prepare_amplitude_img, encode_b64
 
 # Setting up logger
 logging.basicConfig(level=logging.INFO)
@@ -75,8 +75,8 @@ async def get_images(image_id: ImageId):
 
     amplitude_image, phase_image = image_loader.get_images(image_id)
 
-    amplitude_image_b64 = prepare_amplitude_img(amplitude_image)
-    phase_img_b64 = prepare_phase_img(phase_image)
+    amplitude_image_b64 = encode_b64(prepare_amplitude_img(amplitude_image))
+    phase_img_b64 = encode_b64(prepare_phase_img(phase_image))
 
     logging.info(f"Sending images with id {image_id} to client.")
 

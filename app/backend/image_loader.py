@@ -77,7 +77,6 @@ def prepare_amplitude_img(img: np.array) -> str:
     img = img.clip(0, 255)
     img = ColorNormalizer(img)
     img = denormalize(img)
-    img = encode_b64(img)
     return img
 
 
@@ -93,7 +92,6 @@ def prepare_phase_img(img: np.array) -> str:
     img = (img - img.min()) / (img.max() - img.min())
     img = CellfaceStdCMap(img)[..., :3]
     img = denormalize(img)
-    img = encode_b64(img)
     return img
 
 
