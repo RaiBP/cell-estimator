@@ -131,15 +131,16 @@ class ThresholdSegmentation(Segmentation):
         labeled_mask = label(mask)
         regions = regionprops(labeled_mask)
         region_masks = []
+        object_counter = 1  # Counter for assigning unique values to objects
+
         for region in regions:
             volume = self._calculate_region_volume(region)
-            # we ignore regions that are too small to be a cell
+            # Ignore regions that are too small to be a cell
             if volume < self.volume_threshold:
                 continue
 
             initial_region_mask = self._get_region_mask(labeled_mask, region)
             masked_region = image * initial_region_mask
-            #square_region_image = self._extract_square_region(image, initial_region_mask, region)
 
             if self.regional_threshold is None:
                 region_mask = self._apply_threshold(masked_region, -1, self.regional_kernel_size, use_otsu=True)
@@ -148,10 +149,16 @@ class ThresholdSegmentation(Segmentation):
 
             # Fill holes inside the region mask
             region_mask_filled = cv2.morphologyEx(region_mask, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5)))
-        
+
             region_masks.append(region_mask_filled)
+
+            # Update the labeled mask with unique values for each object
+            labeled_mask[labeled_mask == region.label] = object_counter
+            object_counter += 1
+
         global_mask = self._regional_to_global_mask(region_masks)
-        return global_mask
+        return labeled_mask
+
 
     @staticmethod
     def _image_to_uint8(image):

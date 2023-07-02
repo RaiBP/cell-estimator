@@ -18,7 +18,6 @@ class CellposeSegmentation(Segmentation):
 
     def _segment_single_image(self, phase, amplitude):
         # Implement Cellpose-based segmentation here
-        # Use self.img and self.model to perform the segmentation
         # Return the segmented image
 
         imgs = phase if self.use_phase else amplitude
