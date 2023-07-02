@@ -96,9 +96,14 @@ async def get_images(image_id: ImageId):
     amplitude_image, phase_image = image_loader.get_images(image_id)
     amplitude_image, phase_image = prepare_amplitude_img(amplitude_image), prepare_phase_img(phase_image)
 
-    masks = image_segmentator.segment(amplitude_image, image_id)
-    contours = [segmentation_utils.get_mask_contour(m) for m in masks]
-    contours = segmentation_utils.flatten_contours(contours)
+    try:
+        masks = image_segmentator.segment(amplitude_image, image_id)
+        contours = [segmentation_utils.get_mask_contour(m) for m in masks]
+        contours = segmentation_utils.flatten_contours(contours)
+    except Exception as e:
+        logging.error(f"Error while segmenting image with id {image_id}: {e}")
+        contours = []
+
 
     predictions = [
         PolygonWithPredictions(
@@ -109,10 +114,10 @@ async def get_images(image_id: ImageId):
         for polygon in contours
     ]
 
+    logging.info(f"Sending image with id {image_id} and {len(predictions)} predictions to client.")
+
     amplitude_image_b64 = encode_b64(amplitude_image)
     phase_img_b64 = encode_b64(phase_image)
-
-    logging.info(f"Sending images with id {image_id} to client.")
 
     return ImagesWithPredictions(
         amplitude_img_data=amplitude_image_b64,
