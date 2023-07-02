@@ -6,13 +6,15 @@ from pydantic import BaseModel
 from typing import List
 from pathlib import Path
 
+from segmentation import utils as segmentation_utils
+
 from image_loader import (
     ImageLoader,
     prepare_phase_img,
     prepare_amplitude_img,
     encode_b64,
 )
-from image_segmentator import FastSAMImageSegmentator
+from segmentation.fastsam_segmentator  import FastSAMImageSegmentator
 
 # Setting up logger
 logging.basicConfig(level=logging.INFO)
@@ -33,7 +35,7 @@ logging.info("Image segmentator initialized.")
 
 
 class Polygon(BaseModel):
-    points: List[float] | None
+    points: List[int] | None
 
 
 class PolygonWithPredictions(BaseModel):
@@ -92,19 +94,19 @@ async def get_images(image_id: ImageId):
         return {"message": "Image not found"}
 
     amplitude_image, phase_image = image_loader.get_images(image_id)
-    amplitude_image, phase_image = prepare_amplitude_img(
-        amplitude_image
-    ), prepare_phase_img(phase_image)
+    amplitude_image, phase_image = prepare_amplitude_img(amplitude_image), prepare_phase_img(phase_image)
 
-    image_segmentator.set_image(amplitude_image, image_id)
-    polygons = image_segmentator.segment()
+    masks = image_segmentator.segment(amplitude_image, image_id)
+    contours = [segmentation_utils.get_mask_contour(m) for m in masks]
+    contours = segmentation_utils.flatten_contours(contours)
+
     predictions = [
         PolygonWithPredictions(
             polygon=Polygon(points=polygon),
             class_id=0,
             confidence=1.0,
         )
-        for polygon in polygons
+        for polygon in contours
     ]
 
     amplitude_image_b64 = encode_b64(amplitude_image)

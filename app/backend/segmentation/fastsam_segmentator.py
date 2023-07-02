@@ -4,8 +4,7 @@ from typing import Union
 
 import sys
 
-sys.path.append("../FastSAM")
-from fastsam import FastSAM, FastSAMPrompt
+from .FastSAM.fastsam import FastSAM, FastSAMPrompt
 
 from . import config
 from .base import ImageSegmentator
