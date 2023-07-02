@@ -28,6 +28,6 @@ class CellposeSegmentation(Segmentation):
         return masks_imgs
     
 
-    def _list_of_outlines(self, masks):
-        return utils.outlines_list(masks)
+    def _list_of_outlines(self, object_mask):
+        return utils.outlines_list(object_mask)
     

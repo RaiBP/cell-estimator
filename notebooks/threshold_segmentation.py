@@ -30,8 +30,8 @@ class ThresholdSegmentation(Segmentation):
         return final_mask
     
 
-    def _list_of_outlines(self, mask):
-        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    def _list_of_outlines(self, object_mask):
+        contours, _ = cv2.findContours(object_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         outlines = list(contours)
 
         for i in range(len(outlines)):
