@@ -8,6 +8,7 @@ from .base import ImageSegmentator
 
 logging.basicConfig(level=logging.INFO)
 
+
 class SAMImageSegmentator(ImageSegmentator):
     def __init__(self):
         super().__init__()
@@ -28,7 +29,8 @@ class SAMImageSegmentator(ImageSegmentator):
     def segment(self, image: np.ndarray, image_id: Union[str, int]) -> np.ndarray:
         logging.info("Generating masks with SAM - Mask generator")
         results = self.mask_generator.generate(image)
-        return np.array([r['segmentation'] for r in results])
+        masks = (np.array([r["segmentation"] for r in results]) * 255.0).astype(np.uint8)
+        return masks
 
     def prompt(self, query: Optional[dict] = None) -> np.ndarray:
         return self.predictor.predict(**query)

@@ -37,6 +37,7 @@ class FastSAMImageSegmentator(ImageSegmentator):
     def segment(self, image: np.ndarray, image_id: Union[str, int]) -> np.ndarray:
         self.set_image(image, image_id)
         masks = np.array([mask.data.cpu().numpy() for mask in self.results.masks]).squeeze()
+        masks = (masks * 255.).astype(np.uint8)
         return masks
 
     def prompt(self, query: dict = None) -> np.ndarray:
