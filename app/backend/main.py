@@ -7,6 +7,7 @@ from typing import List
 from pathlib import Path
 
 from segmentation import utils as segmentation_utils
+from pipeline import config as pipeline_config 
 
 from image_loader import (
     ImageLoader,
@@ -14,7 +15,6 @@ from image_loader import (
     prepare_amplitude_img,
     encode_b64,
 )
-from segmentation.fastsam_segmentator  import FastSAMImageSegmentator
 
 # Setting up logger
 logging.basicConfig(level=logging.INFO)
@@ -30,7 +30,8 @@ logging.info(f"Image loader initialized with {len(image_loader)} images.")
 
 # Initializing image segmentator
 logging.info("Initializing image segmentator.")
-image_segmentator = FastSAMImageSegmentator()
+image_segmentator_cls = pipeline_config["image_segmentator"]["class"]
+image_segmentator = image_segmentator_cls()
 logging.info("Image segmentator initialized.")
 
 
