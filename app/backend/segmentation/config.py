@@ -10,6 +10,12 @@ TORCH_DEVICE = torch.device(
     else "cpu"
 )
 
+MOBILE_SAM = {
+    "CHECKPOINT_PATH": "/home/fidelinus/Downloads/mobile_sam.pt",
+    "MODEL_TYPE": "vit_t",
+    "DEVICE": TORCH_DEVICE,
+}
+
 FASTSAM = {
     "FASTSAM_MODEL_PATH": "/home/fidelinus/Downloads/FastSAM-x.pt",
     "DEVICE": TORCH_DEVICE,
