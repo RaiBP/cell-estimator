@@ -98,7 +98,7 @@ async def get_images(image_id: ImageId):
     amplitude_image, phase_image = prepare_amplitude_img(amplitude_image), prepare_phase_img(phase_image)
 
     try:
-        masks = image_segmentator.segment(amplitude_image, image_id)
+        masks = image_segmentator.segment_image(amplitude_image)
         contours = [segmentation_utils.get_mask_contour(m) for m in masks]
         contours = segmentation_utils.flatten_contours(contours)
     except Exception as e:

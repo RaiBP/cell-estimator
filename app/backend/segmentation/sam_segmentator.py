@@ -1,6 +1,6 @@
 import numpy as np
 import logging
-from typing import Union, Optional
+from typing import Optional
 from segment_anything import sam_model_registry, SamPredictor, SamAutomaticMaskGenerator
 
 from . import config
@@ -21,13 +21,13 @@ class SAMImageSegmentator(ImageSegmentator):
         self.mask_generator = SamAutomaticMaskGenerator(self._sam)
         self.mask_generation_mode = True
 
-    def set_image(self, image: np.ndarray, image_id: Union[str, int]) -> np.ndarray:
+    def set_image(self, image: np.ndarray) -> np.ndarray:
         self.image = image
-        logging.info("Setting image for SAM - Generating embeddings")
-        self.predictor.set_image(image)
+        logging.info("[SAM] Generating embeddings")
+        return self.predictor.set_image(image)
 
-    def segment(self, image: np.ndarray, image_id: Union[str, int]) -> np.ndarray:
-        logging.info("Generating masks with SAM - Mask generator")
+    def segment(self, image: np.ndarray) -> np.ndarray:
+        logging.info("[SAM] Segmenting image")
         results = self.mask_generator.generate(image)
         masks = (np.array([r["segmentation"] for r in results]) * 255.0).astype(np.uint8)
         return masks

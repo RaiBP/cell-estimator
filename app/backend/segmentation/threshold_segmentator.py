@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-from typing import Union
+from typing import Optional
 from skimage.measure import label, regionprops
 
 from .base import ImageSegmentator
@@ -15,10 +15,11 @@ class ThresholdImageSegmentator(ImageSegmentator):
         self.regional_kernel_size = regional_kernel_size
         self.volume_threshold = volume_threshold
 
-    def set_image(self, image: np.ndarray, image_id: Union[str, int]) -> np.ndarray:
+    def set_image(self, image: np.ndarray) -> Optional[np.ndarray]:
+        "Does nothing for this segmentator"
         pass
 
-    def segment(self, image: np.ndarray, image_id: Union[str, int]) -> np.ndarray:
+    def segment(self, image: np.ndarray) -> np.ndarray:
 
         # Convert to grayscale if needed
         if image.ndim > 2:
