@@ -14,11 +14,11 @@ class CellPoseImageSegmentator(ImageSegmentator):
         super().__init__()
         self.model = models.Cellpose(**config.CELLPOSE["MODEL_KWARGS"])
 
-    def set_image(self, image: np.ndarray, image_id: Union[str, int]) -> np.ndarray:
+    def set_image(self, image: np.ndarray) -> np.ndarray:
         logging.warning("CellPose does not have a special functionality for setting images. Use segment directly. - Skipping")
         pass
 
-    def segment(self, image: np.ndarray, image_id: Union[str, int]) -> np.ndarray:
+    def segment(self, image: np.ndarray) -> np.ndarray:
         masks, _, _, _ = self.model.eval(image, **config.CELLPOSE["PREDICTION_KWARGS"])
         masks = utils.image_to_masks(masks)
         return np.array(masks)
