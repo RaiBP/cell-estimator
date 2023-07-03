@@ -14,6 +14,7 @@ class ThresholdSegmentation(Segmentation):
         self.volume_threshold = volume_threshold
         self.use_phase_global_thresholding = use_phase_global_thresholding
         self.use_phase_regional_thresholding = use_phase_regional_thresholding
+        self.object_counter = 1  # Counter for assigning unique values to objects
     
     def _segment_single_image(self, phase, amplitude):
         image_for_global_thresholding = phase if self.use_phase_global_thresholding else amplitude
@@ -29,8 +30,8 @@ class ThresholdSegmentation(Segmentation):
         return final_mask
     
 
-    def _list_of_outlines(self, mask):
-        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    def _list_of_outlines(self, object_mask):
+        contours, _ = cv2.findContours(object_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         outlines = list(contours)
 
         for i in range(len(outlines)):
@@ -131,15 +132,15 @@ class ThresholdSegmentation(Segmentation):
         labeled_mask = label(mask)
         regions = regionprops(labeled_mask)
         region_masks = []
+
         for region in regions:
             volume = self._calculate_region_volume(region)
-            # we ignore regions that are too small to be a cell
+            # Ignore regions that are too small to be a cell
             if volume < self.volume_threshold:
                 continue
 
             initial_region_mask = self._get_region_mask(labeled_mask, region)
             masked_region = image * initial_region_mask
-            #square_region_image = self._extract_square_region(image, initial_region_mask, region)
 
             if self.regional_threshold is None:
                 region_mask = self._apply_threshold(masked_region, -1, self.regional_kernel_size, use_otsu=True)
@@ -148,10 +149,16 @@ class ThresholdSegmentation(Segmentation):
 
             # Fill holes inside the region mask
             region_mask_filled = cv2.morphologyEx(region_mask, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5)))
-        
+
+            region_mask_filled = np.where(region_mask_filled == 255, self.object_counter, region_mask_filled)
+            self.object_counter += 1
+
             region_masks.append(region_mask_filled)
+
         global_mask = self._regional_to_global_mask(region_masks)
+        self.object_counter = 1
         return global_mask
+
 
     @staticmethod
     def _image_to_uint8(image):

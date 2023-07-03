@@ -7,7 +7,9 @@ import numpy as np
 from tqdm import tqdm
 from cellpose_segmentation import CellposeSegmentation
 from threshold_segmentation import ThresholdSegmentation
+from sam_segmentation import SAMSegmentation
 from cellpose import models
+from segment_anything import sam_model_registry, SamAutomaticMaskGenerator
 import os
 import joblib
 
@@ -42,24 +44,28 @@ class Segmentation(ABC):
 
         self.batch = list(zip(phase_img, amplitude_img))
         self.masks = None
+        self.ms = None
 
 
     def segment(self):
         self.masks = []
+        self.ms = []
         for phase, amplitude in self.batch:
             mask_single_image = self._segment_single_image(phase, amplitude)
             self.masks.append(mask_single_image)
+            self.ms.append(mask_single_image)
+
         return self.masks
     
-    def outlines(self, mask):
-        return self._list_of_outlines(mask)
+    def outlines(self, object_mask):
+        return self._list_of_outlines(object_mask)
 
     @abstractmethod
     def _segment_single_image(self, index, phase, amplitude):
         pass
 
     @abstractmethod
-    def _list_of_outlines(self, mask):
+    def _list_of_outlines(self, object_mask):
         pass
 
 
@@ -220,24 +226,36 @@ class Pipeline:
         self.amplitude_img = amplitude_img
         self.segmentation_algorithm = segmentation_algorithm
         self.classification_model = classification_model
+        self.seg = None
+        self.masks_array = None
 
     def process_data(self):
         # Segmentation
         if self.segmentation_algorithm == 'cellpose':
             # model_type='cyto' or model_type='nuclei'
             seg_model = models.Cellpose(gpu=False, model_type='cyto')
-            seg = CellposeSegmentation(self.phase_img, self.amplitude_img, seg_model)
+            self.seg = CellposeSegmentation(self.phase_img, self.amplitude_img, seg_model)
         elif self.segmentation_algorithm == 'thresholding':
-            seg = ThresholdSegmentation(self.phase_img, self.amplitude_img)
-        masks = seg.segment()
-
-        masks_array = []
+            self.seg = ThresholdSegmentation(self.phase_img, self.amplitude_img)
+        elif self.segmentation_algorithm == 'sam':
+            sam_checkpoint = "sam_vit_b_01ec64.pth"
+            model_type = "vit_b"
+            device = "cuda"
+            sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
+            sam.to(device=device)
+            seg_model = SamAutomaticMaskGenerator(sam)
+            self.seg = SAMSegmentation(self.phase_img, self.amplitude_img, seg_model)
+ 
+        masks = self.seg.segment()
+        
+        # probably here need an if statement
+        self.masks_array = []
         for idx, _ in enumerate(self.phase_img):
             masks1 = image_to_masks(masks[idx])
-            masks_array.append(masks1)
+            self.masks_array.append(masks1)
 
         # Feature extraction
-        fe = FeatureExtractor(self.phase_img, self.amplitude_img, masks_array)
+        fe = FeatureExtractor(self.phase_img, self.amplitude_img, self.masks_array)
         extracted_features = fe.extract_features_multiple_masks()
 
         # Classification
@@ -255,3 +273,11 @@ class Pipeline:
         y_pred, prob = classifier.classify()
 
         return y_pred, prob
+    
+    def get_outlines(self):
+        outlines = []
+        for ind, mask in enumerate(self.masks_array):
+            outlines.append([])
+            for object_mask in mask:
+                outlines[ind].append(self.seg.outlines(object_mask))  
+        return outlines
