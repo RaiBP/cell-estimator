@@ -1,9 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Stage, Layer, Group, Line, Circle, Image } from 'react-konva'
 
-const originalImageHeight = 384
-const originalImageWidth = 512
-
 const MenuContainer = ({ children }) => {
   const style = {
     display: 'flex',
@@ -177,10 +174,10 @@ const AnnotationArea = () => {
       for (let i = 0; i < polygon.length; i += 2) {
         transformedPolygon.push({
           points: [
-            polygon[i] / originalImageWidth,
-            polygon[i + 1] / originalImageHeight,
-            polygon[i + 2] / originalImageWidth,
-            polygon[i + 3] / originalImageHeight,
+            polygon[i],
+            polygon[i + 1],
+            polygon[i + 2],
+            polygon[i + 3],
           ],
         })
       }

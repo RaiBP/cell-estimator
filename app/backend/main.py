@@ -36,7 +36,7 @@ logging.info("Image segmentator initialized.")
 
 
 class Polygon(BaseModel):
-    points: List[int] | None
+    points: List[float] | None
 
 
 class PolygonWithPredictions(BaseModel):
@@ -100,6 +100,7 @@ async def get_images(image_id: ImageId):
     try:
         masks = image_segmentator.segment_image(amplitude_image)
         contours = [segmentation_utils.get_mask_contour(m) for m in masks]
+        contours = [segmentation_utils.normalize_contour(c) for c in contours]
         contours = segmentation_utils.flatten_contours(contours)
     except Exception as e:
         logging.error(f"Error while segmenting image with id {image_id}: {e}")
