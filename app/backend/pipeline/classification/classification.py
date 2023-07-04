@@ -3,8 +3,7 @@ import os
 import joblib
 
 from abc import ABC, abstractmethod
-from three_step_classification import ThreeStepClassifier
-from one_step_classification import OneStepClassifier
+
 
 class Classification(ABC):
     def __init__(self): 
@@ -67,19 +66,10 @@ class Classification(ABC):
 
     
     @staticmethod
-    def create_model(selector):
-        if selector == 'TSC':
-            return ThreeStepClassifier()
-        else:
-            return OneStepClassifier(selector)
-
-
-    @staticmethod
     def _load_model(folder_path, file_name):
         file_path = os.path.join(folder_path, file_name)
         if os.path.exists(file_path):
             return joblib.load(file_path)
         else:
-            print(f"Model file '{file_path}' does not exist.")
-            return None
+            raise FileNotFoundError(f"Model file '{file_path}' does not exist.")
 

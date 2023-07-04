@@ -1,12 +1,10 @@
 import numpy as np 
 from abc import ABC, abstractmethod
 
-from cellpose_segmentation import CellposeSegmentation
-from sam_segmentation import SAMSegmentation
-from threshold_segmentation import ThresholdSegmentation
 
 class Segmentation(ABC):
     def __init__(self):
+        pass
 
     def segment(self, phase, amplitude):
         mask_image = self._segment_single_image(phase, amplitude)
@@ -15,18 +13,6 @@ class Segmentation(ABC):
 
     def outlines(self, mask):
         return self._list_of_outlines(mask)
-
-
-    @staticmethod
-    def create_model(selector):
-        if selector == "cellpose":
-            return CellposeSegmentation()
-        elif selector == "threshold":
-            return ThresholdSegmentation()
-        elif selector == "sam":
-            return SAMSegmentation()
-        else:
-            raise ValueError("Invalid segmentation model")
 
 
     @staticmethod
