@@ -1,0 +1,172 @@
+# You can use this docker-compose file to define how to run your web app locally.
+# Later, we will show how to build a equivalent deployment definition for
+# the kubernetes cluster.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: group06
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gitlab-deploy-token
+  namespace: group06
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: <base64-encoded-json>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: group06-app-deployment
+  namespace: group06
+  labels:
+    app: group06-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: group06-app
+  template:
+    metadata:
+      labels:
+        app: group06-app
+    spec:
+      containers:
+        - name: app-container
+          image: gitlab.lrz.de:5005/ldv/teaching/ami/ami2023/projects/group00/app:latest
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - mountPath: "/data/ami/"
+              name: share-ami
+            - mountPath: "/data/group/"
+              name: share-group
+      imagePullSecrets:
+        - name: gitlab-deploy-token
+      volumes:
+        - name: share-ami
+          persistentVolumeClaim:
+            claimName: pvc-share-ami
+        - name: share-group
+          persistentVolumeClaim:
+            claimName: pvc-share-group
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: group06-app-service
+  namespace: group06
+spec:
+  selector:
+    app: group06-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: group06-app-ingress
+  namespace: group06
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`group06.ami.dedyn.io`)
+      services:
+        - kind: Service
+          name: group06-app-service
+          port: 8000
+  tls:
+    certResolver: myresolver
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: group06-pv-share-ami
+spec:
+  claimRef:
+    name: pvc-share-ami
+    namespace: group06
+  capacity:
+    storage: 100Gi
+  accessModes:
+    - ReadOnlyMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: smb
+  mountOptions:
+    - dir_mode=0444
+    - file_mode=0444
+  csi:
+    driver: smb.csi.k8s.io
+    readOnly: true
+    volumeAttributes:
+      source: "\\192.168.1.1\share-ami"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-share-ami
+  namespace: group06
+spec:
+  accessModes:
+    - ReadOnlyMany
+  storageClassName: smb
+  resources:
+    requests:
+      storage: 100Gi
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: group06-pv-share-group
+spec:
+  claimRef:
+    name: pvc-share-group
+    namespace: group06
+  capacity:
+    storage: 100Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: smb
+  mountOptions:
+    - dir_mode=0777
+    - file_mode=0777
+  csi:
+    driver: smb.csi.k8s.io
+    readOnly: false
+    volumeAttributes:
+      source: "\\192.168.1.1\share-group"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-share-group
+  namespace: group06
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: smb
+  resources:
+    requests:
+      storage: 100Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-scratch-space
+  namespace: group06
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: smb
+  resources:
+    requests:
+      storage: 50Gi
