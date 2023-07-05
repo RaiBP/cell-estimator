@@ -1,6 +1,6 @@
 import pandas as pd
 
-from classification import Classification
+from classification.classification import Classification
 
 
 class ThreeStepClassifier(Classification):

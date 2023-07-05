@@ -1,6 +1,8 @@
 from feature_extraction.feature_extractor import FeatureExtractor
-from segmentation.segmentation import Segmentation
-from classification.classification import Classification
+#from segmentation.segmentation import Segmentation
+from segmentation.segmentation_factory import SegmentationFactory
+#from classification.classification import Classification
+from classification.classification_factory import ClassificationFactory
 
 
 class Inference:
@@ -8,9 +10,9 @@ class Inference:
         self.segmentation_method = segmentation_method
         self.classification_method = classification_method
 
-        self.segmentation_model = Segmentation.create_model(self.segmentation_method)
+        self.segmentation_model = SegmentationFactory.create_model(self.segmentation_method)
         self.feature_extractor = FeatureExtractor()
-        self.classification_model = Classification.create_model(self.classification_method)
+        self.classification_model = ClassificationFactory.create_model(self.classification_method)
 
 
     def _segment(self, phase, amplitude):

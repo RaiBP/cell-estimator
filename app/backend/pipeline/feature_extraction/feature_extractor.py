@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from feature_extraction import * 
+from feature_extraction.feature_extraction import * 
 
 def kernel_size_micrometer_to_pixels(kernel_size_in_micrometers, length_to_pixel_ratio):
     kernel_size_in_pixels = int(np.round(kernel_size_in_micrometers / length_to_pixel_ratio))

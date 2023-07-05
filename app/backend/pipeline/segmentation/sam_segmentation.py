@@ -1,4 +1,4 @@
-from segmentation import Segmentation
+from segmentation.segmentation import Segmentation
 
 class SAMSegmentation(Segmentation):
     def __init__(self, batch, parameters):

@@ -1,4 +1,4 @@
-from segmentation import Segmentation
+from segmentation.segmentation import Segmentation
 import numpy as np
 import cv2
 from skimage.measure import label, regionprops
@@ -14,6 +14,7 @@ class ThresholdSegmentation(Segmentation):
         self.volume_threshold = volume_threshold
         self.use_phase_global_thresholding = use_phase_global_thresholding
         self.use_phase_regional_thresholding = use_phase_regional_thresholding
+        self.object_counter = 1  # Counter for assigning unique values to objects
    
 
     def _segment_single_image(self, phase, amplitude):
@@ -151,6 +152,9 @@ class ThresholdSegmentation(Segmentation):
 
             # Fill holes inside the region mask
             region_mask_filled = cv2.morphologyEx(region_mask, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5)))
+
+            region_mask_filled = np.where(region_mask_filled == 255, self.object_counter, region_mask_filled)
+            self.object_counter += 1
         
             region_masks.append(region_mask_filled)
         global_mask = self._regional_to_global_mask(region_masks)
