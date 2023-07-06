@@ -1,8 +1,9 @@
-from classification import Classification
+from classification.classification import Classification
 
 
 class OneStepClassifier(Classification):
     def __init__(self, model_type="RFC", model_filename=None):
+        super().__init__()  
         self.model_type = model_type
 
 
@@ -10,7 +11,7 @@ class OneStepClassifier(Classification):
             self.model_filename = self._get_model_filename()
         else:
             self.model_filename = model_filename
-
+        
         self.model = self._get_model()
 
 

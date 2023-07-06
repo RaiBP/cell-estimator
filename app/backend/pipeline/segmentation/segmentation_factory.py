@@ -1,6 +1,6 @@
-from threshold_segmentation import ThresholdSegmentation
-from sam_segmentation import SAMSegmentation
-from cellpose_segmentation import CellposeSegmentation
+from segmentation.threshold_segmentation import ThresholdSegmentation
+from segmentation.sam_segmentation import SAMSegmentation
+from segmentation.cellpose_segmentation import CellposeSegmentation
 
 
 class SegmentationFactory:

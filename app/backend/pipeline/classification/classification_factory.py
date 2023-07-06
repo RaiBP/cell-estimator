@@ -1,5 +1,5 @@
-from one_step_classification import OneStepClassifier
-from three_step_classification import ThreeStepClassifier
+from classification.one_step_classification import OneStepClassifier
+from classification.three_step_classification import ThreeStepClassifier
 
 
 class ClassificationFactory:

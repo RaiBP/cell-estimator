@@ -29,7 +29,7 @@ class FeatureExtractor:
 
         self.features = None
 
-        self.columns = ['Volume', 'Roundness', 'Opacity', 'AmplitudeVariance', 'AmplitudeSkewness', 'MaxAmplitude', 'MinAmplitude', 'DryMassDensity', 'MaxPhase', 'MinPhase', 'PhaseVariance', 'PhaseSkewness', 'PhaseSTDLocalMean', 'PhaseSTDLocalVariance', 'PhaseSTDLocalSkewness', 'PhaseSTDLocalKurtosis', 'PhaseSTDLocalMin', 'PhaseSTDLocalMax', 'PhaseSTDLocalCentroidDisplacement','AmplitudeSTDLocalMean', 'AmplitudeSTDLocalVariance', 'AmplitudeSTDLocalSkewness', 'AmplitudeSTDLocalKurtosis', 'AmplitudeSTDLocalMin', 'AmplitudeSTDLocalMax', 'AmplitudeSTDLocalCentroidDisplacement']
+        self.columns = ['Volume', 'Roundness', 'Opacity', 'AmplitudeVariance', 'AmplitudeSkewness', 'MaxAmplitude', 'MinAmplitude', 'DryMassDensity', 'MaxPhase', 'MinPhase', 'PhaseVariance', 'PhaseSkewness', 'PhaseSTDLocalMean', 'PhaseSTDLocalVariance', 'PhaseSTDLocalSkewness', 'PhaseSTDLocalKurtosis', 'PhaseSTDLocalMin', 'PhaseSTDLocalMax','AmplitudeSTDLocalMean', 'AmplitudeSTDLocalVariance', 'AmplitudeSTDLocalSkewness', 'AmplitudeSTDLocalKurtosis', 'AmplitudeSTDLocalMin', 'AmplitudeSTDLocalMax']
         
 
     def extract_features(self):
@@ -111,7 +111,7 @@ class FeatureExtractor:
 
         amplitude_std_local_mean, amplitude_std_local_std, amplitude_std_local_skewness, amplitude_std_local_kurtosis, amplitude_std_local_min, amplitude_std_local_max, amplitude_std_local_centroid_displacement = self._calculate_local_features(amplitude_std_kernel, mask, binary_mask, num_pixels, mask_centroid_x, mask_centroid_y)
 
-        feature_list = [volume, roundness, opacity, amplitude_variance, amplitude_skewness, max_amplitude, min_amplitude, dry_mass_density, max_phase, min_phase, phase_variance, phase_skewness, phase_std_local_mean, phase_std_local_std, phase_std_local_skewness, phase_std_local_kurtosis, phase_std_local_min, phase_std_local_max, phase_std_local_centroid_displacement,  amplitude_std_local_mean, amplitude_std_local_std, amplitude_std_local_skewness, amplitude_std_local_kurtosis, amplitude_std_local_min, amplitude_std_local_max, amplitude_std_local_centroid_displacement]
+        feature_list = [volume, roundness, opacity, amplitude_variance, amplitude_skewness, max_amplitude, min_amplitude, dry_mass_density, max_phase, min_phase, phase_variance, phase_skewness, phase_std_local_mean, phase_std_local_std, phase_std_local_skewness, phase_std_local_kurtosis, phase_std_local_min, phase_std_local_max, amplitude_std_local_mean, amplitude_std_local_std, amplitude_std_local_skewness, amplitude_std_local_kurtosis, amplitude_std_local_min, amplitude_std_local_max]
 
         return feature_list
 

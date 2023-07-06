@@ -18,7 +18,7 @@ class Classification(ABC):
         self.labels_column_name = "Labels"
         self.mask_id_column_name = "MaskID"
 
-        self.models_folder = "models"
+        self.models_folder = "classification\models"
 
 
     def classify(self, features):
@@ -53,6 +53,13 @@ class Classification(ABC):
             features_copy = features_copy.drop(columns_to_drop, axis=1)
 
         return features_copy
+    
+    def _load_model(self, folder_path, file_name):
+        file_path = os.path.join(folder_path, file_name)
+        if os.path.exists(file_path):
+            return joblib.load(file_path)
+        else:
+            raise FileNotFoundError(f"Model file '{file_path}' does not exist.")
 
 
     @abstractmethod 
@@ -64,12 +71,5 @@ class Classification(ABC):
     def _get_probabilities(self, features):
         pass
 
-    
-    @staticmethod
-    def _load_model(folder_path, file_name):
-        file_path = os.path.join(folder_path, file_name)
-        if os.path.exists(file_path):
-            return joblib.load(file_path)
-        else:
-            raise FileNotFoundError(f"Model file '{file_path}' does not exist.")
+
 

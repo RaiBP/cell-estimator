@@ -1,4 +1,4 @@
-from segmentation import Segmentation
+from segmentation.segmentation import Segmentation
 from cellpose import utils, models
 
 class CellposeSegmentation(Segmentation):
