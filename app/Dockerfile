@@ -38,13 +38,7 @@ COPY ./frontend/my-app2/package.json /app/frontend/my-app2/package.json
 WORKDIR /app/frontend/my-app2
 RUN npm install
 
-# Copy app
-COPY . /app
-
 RUN apt-get install -y supervisor
 
 # Copying supervisor file
 COPY ./supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
-# Running backend and frontend
-CMD ["/usr/bin/supervisord"]
