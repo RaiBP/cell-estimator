@@ -1,5 +1,4 @@
-# Start from Ubuntu 22.04
-FROM ubuntu:22.04
+FROM debian:latest
 
 # Working directory for the application
 WORKDIR /app
@@ -31,7 +30,7 @@ RUN python --version && pip --version
 
 # Install Python dependencies
 COPY ./requirements.txt /app/requirements.txt
-RUN pip install -r requirements.txt
+RUN pip install --break-system-packages -r requirements.txt
 
 # Installing node dependencies
 COPY ./frontend/my-app2/package.json /app/frontend/my-app2/package.json
@@ -45,3 +44,5 @@ RUN apt-get install -y supervisor
 
 # Copying supervisor file
 COPY ./supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+WORKDIR /app
