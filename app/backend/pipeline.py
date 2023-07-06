@@ -1,5 +1,6 @@
 from segmentation.threshold_segmentator import ThresholdImageSegmentator
 from segmentation.fastsam_segmentator import FastSAMImageSegmentator
+#from segmentation.mobile_sam_segmentator import MobileSAMImageSegmentator
 from segmentation.sam_segmentator import SAMImageSegmentator
 from segmentation.cellpose_segmentator import CellPoseImageSegmentator
 
