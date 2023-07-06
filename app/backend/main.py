@@ -1,3 +1,4 @@
+import os
 import base64
 import logging
 from fastapi import FastAPI
@@ -22,9 +23,8 @@ logging.basicConfig(level=logging.INFO)
 
 # Initializing image loader for dataset
 logging.info("Initializing image loader.")
-dataset_path = Path(
-    "/home/fidelinus/tum/applied_machine_intelligence/final_project/data/real_world_sample01.pre"
-)
+data_folder = Path(os.environ["DATA_FOLDER"])
+dataset_path = data_folder / "real_world_sample01.pre"
 image_loader = ImageLoader.from_file(dataset_path)
 logging.info(f"Image loader initialized with {len(image_loader)} images.")
 
