@@ -38,6 +38,9 @@ COPY ./frontend/my-app2/package.json /app/frontend/my-app2/package.json
 WORKDIR /app/frontend/my-app2
 RUN npm install
 
+# Copy app
+COPY . /app
+
 RUN apt-get install -y supervisor
 
 # Copying supervisor file

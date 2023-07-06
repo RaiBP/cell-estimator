@@ -5,8 +5,7 @@ services:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - <your_data_folder>:/data
-      - ./:/app
+      - /home/fidelinus/tum/applied_machine_intelligence/final_project/data:/data
     ports:
       - "8000:8000"
       - "3000:3000"
