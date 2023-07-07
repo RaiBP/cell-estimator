@@ -27,8 +27,9 @@ logging.basicConfig(level=logging.INFO)
 # Initializing image loader for dataset
 logging.info("Initializing image loader.")
 #data_folder = Path(os.environ["DATA_FOLDER"])
-data_folder = Path("/home/rai/Documents/MSCE/Sem2/ami/project_datashare/")
-dataset_path = data_folder / "real_world_sample01.pre"
+#data_folder = Path("/home/rai/Documents/MSCE/Sem2/ami/project_datashare/")
+data_folder = Path("/mnt/w")
+dataset_path = data_folder / "sample01.pre"
 image_loader = ImageLoader.from_file(dataset_path)
 logging.info(f"Image loader initialized with {len(image_loader)} images.")
 
@@ -104,6 +105,7 @@ async def get_dataset_info():
 @app.post("/images")
 async def get_images(image_id: ImageId):
     image_id = image_id.image_id % len(image_loader)
+    image_id = 2
     if image_id not in image_loader:
         logging.warning(f"Image with id {image_id} not found.")
         return {"message": "Image not found"}
@@ -123,6 +125,7 @@ async def get_images(image_id: ImageId):
         contours = [segmentation_utils.get_mask_contour(m) for m in masks]
         contours = [segmentation_utils.normalize_contour(c) for c in contours]
         contours = segmentation_utils.flatten_contours(contours)
+        logging.info(f"Masks of image {image_id} calculated succesfully.")
     except Exception as e:
         logging.error(f"Error while segmenting image with id {image_id}: {e}")
         contours = []
