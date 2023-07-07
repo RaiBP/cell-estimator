@@ -2,7 +2,7 @@ from classification.classification import Classification
 
 
 class OneStepClassifier(Classification):
-    def __init__(self, model_type="RFC", model_filename=None):
+    def __init__(self, model_type="SVC", model_filename=None):
         super().__init__()  
         self.model_type = model_type
 
