@@ -1,12 +1,11 @@
-from segmentation.threshold_segmentator import ThresholdImageSegmentator
-from segmentation.fastsam_segmentator import FastSAMImageSegmentator
-#from segmentation.mobile_sam_segmentator import MobileSAMImageSegmentator
-from segmentation.sam_segmentator import SAMImageSegmentator
-from segmentation.cellpose_segmentator import CellPoseImageSegmentator
-
 config = {
     'image_segmentator': {
-        'class': ThresholdImageSegmentator,
+        'method': "threshold",
+        # whether to segment the phase or the amplitude image
+        'image_to_segment': 'phase'
         # Put other parameters here in the future
     },
+    'classifier': {
+        'method': 'SVC'
+    }
 }

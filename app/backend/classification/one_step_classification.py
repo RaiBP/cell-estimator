@@ -17,12 +17,16 @@ class OneStepClassifier(Classification):
 
     def _get_probabilities(self, features):
         assert(self.model is not None)
-        return self.model.predict_proba(features)
+        probas = self.model.predict_proba(features)
+        list_of_dicts = [{'proba': prob_list.tolist()} for prob_list in probas]
+        return list_of_dicts
 
 
     def _get_predictions(self, features):
         assert(self.model is not None)
-        return self.model.predict(features)
+        binary_list = self.model.predict(features)
+
+        return [item.decode('utf-8') for item in binary_list]
 
     
     def _get_model_filename(self):

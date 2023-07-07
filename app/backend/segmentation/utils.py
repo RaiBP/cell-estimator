@@ -2,9 +2,28 @@ import cv2
 import numpy as np
 from cellpose import utils
 from typing import List
+from segmentation.threshold_segmentator import ThresholdImageSegmentator
+from segmentation.fastsam_segmentator import FastSAMImageSegmentator
+from segmentation.sam_segmentator import SAMImageSegmentator
+from segmentation.cellpose_segmentator import CellPoseImageSegmentator
 
 IMAGE_HEIGHT = 384
 IMAGE_WIDTH = 512
+
+
+def create_segmentation_model(selector):
+    if selector == "cellpose":
+        return CellPoseImageSegmentator()   
+    elif selector == "threshold":
+        return ThresholdImageSegmentator()
+    elif selector == "sam":
+        return SAMImageSegmentator()
+    elif selector =="fastsam":
+        return FastSAMImageSegmentator()
+    else:
+        raise ValueError("Invalid segmentation model")
+
+
 
 
 def normalize_contour(contour: np.ndarray) -> np.ndarray:
