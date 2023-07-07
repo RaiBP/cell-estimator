@@ -18,7 +18,7 @@ class Classification(ABC):
         self.labels_column_name = "Labels"
         self.mask_id_column_name = "MaskID"
 
-        self.models_folder = "classification\models"
+        self.models_folder = os.path.join("classification", "models")
 
 
     def classify(self, features):
@@ -70,6 +70,4 @@ class Classification(ABC):
     @abstractmethod
     def _get_probabilities(self, features):
         pass
-
-
 

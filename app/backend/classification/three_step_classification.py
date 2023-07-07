@@ -32,7 +32,11 @@ class ThreeStepClassifier(Classification):
     
     def _get_probabilities(self, features):
         oof_proba, agg_proba, cell_proba = self._predict_proba(features)
-        return {'oof_proba': oof_proba, 'agg_proba': agg_proba, 'cell_proba': cell_proba} 
+        probabilities = []
+        for idx in range(len(oof_proba)):
+            probabilities.append({'oof_proba': oof_proba[idx].tolist(), 'agg_proba': agg_proba[idx].tolist(), 'cell_proba': cell_proba[idx].tolist()})
+
+        return probabilities
 
 
     def _predict_proba(self, df):
