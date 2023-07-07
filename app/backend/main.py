@@ -26,8 +26,8 @@ logging.basicConfig(level=logging.INFO)
 
 # Initializing image loader for dataset
 logging.info("Initializing image loader.")
-#data_folder = Path(os.environ["DATA_FOLDER"])
-data_folder = Path("/home/rai/Documents/MSCE/Sem2/ami/project_datashare/")
+data_folder = Path(os.environ["DATA_FOLDER"])
+#data_folder = Path("/home/rai/Documents/MSCE/Sem2/ami/project_datashare/")
 dataset_path = data_folder / "real_world_sample01.pre"
 image_loader = ImageLoader.from_file(dataset_path)
 logging.info(f"Image loader initialized with {len(image_loader)} images.")

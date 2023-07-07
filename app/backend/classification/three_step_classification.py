@@ -34,7 +34,7 @@ class ThreeStepClassifier(Classification):
         oof_proba, agg_proba, cell_proba = self._predict_proba(features)
         probabilities = []
         for idx in range(len(oof_proba)):
-            probabilities.append({'oof_proba': oof_proba[idx].tolist(), 'agg_proba': agg_proba[idx].tolist(), 'cell_proba': cell_proba[idx].tolist()})
+            probabilities.append({'oof_proba': oof_proba[idx].tolist(), 'agg_proba': agg_proba[idx].tolist(), 'cell_proba': cell_proba[idx].tolist(), 'proba': -1})
 
         return probabilities
 
