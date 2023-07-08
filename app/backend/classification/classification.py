@@ -63,11 +63,13 @@ class Classification(ABC):
             raise FileNotFoundError(f"Model file '{file_path}' does not exist.")
         
     def _save_model(self, model, folder_path, file_name):
+        folder_path = os.path.join("classification", "models_test")
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
         file_path = os.path.join(folder_path, file_name)
         joblib.dump(model, file_path)
-        logging.info(f"Model saved at {file_path}") 
+        logging.info(f"Model saved succesfully at {file_path}") 
+        #return {"message": "Model retrained and saved succesfully"}
         
     def _active_learning(self, X_updated, y_updated):
         return self._prepare_data(X_updated, y_updated)
@@ -83,6 +85,6 @@ class Classification(ABC):
         pass
 
     @abstractmethod
-    def _prepare_data(X_updated, y_updated):
+    def _prepare_data(self, X_updated, y_updated):
         pass
 

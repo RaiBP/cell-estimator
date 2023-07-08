@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
 from pathlib import Path
+import numpy as np
 
 from segmentation import utils as segmentation_utils
 from pipeline import config as pipeline_config 
@@ -82,8 +83,15 @@ class DatasetInfo(BaseModel):
     ]
     num_images: int
 
+class PredictionsList(BaseModel):
+    predictions: List[str]
+
+
 
 app = FastAPI()
+
+# Variable to store the features calculated from feature extraction
+shared_features = None
 
 origins = ["http://localhost:3000", "https://localhost:3000"]
 
@@ -104,6 +112,7 @@ async def get_dataset_info():
 
 @app.post("/images")
 async def get_images(image_id: ImageId):
+    global shared_features
     image_id = image_id.image_id % len(image_loader)
     image_id = 2
     if image_id not in image_loader:
@@ -133,6 +142,7 @@ async def get_images(image_id: ImageId):
     logging.info(f"Found {len(masks)} masks in image with id {image_id}")
     try:
         features = feature_extractor.extract_features(phase_image, amplitude_image, masks)
+        shared_features = features
     except Exception as e:
         logging.error(f"Error while extracting features from image with id {image_id}: {e}")
         features = None
@@ -165,3 +175,15 @@ async def get_images(image_id: ImageId):
         phase_img_data=phase_img_b64,
         predictions=predictions,
     )
+
+
+@app.post("/process_predictions")
+async def process_strings_endpoint(predictions: PredictionsList):
+    global shared_features
+    predictions = predictions.predictions
+    predictions_enc = np.array([string.encode('UTF-8') for string in predictions])
+    classifier._active_learning(shared_features, predictions_enc)
+    shared_features = None
+
+    logging.info("Predictions processed succesfully")
+    return {"message": "Predictions processed succesfully"}

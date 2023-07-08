@@ -7,6 +7,7 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC
+import logging
 import numpy as np
 
 
@@ -55,6 +56,7 @@ class OneStepClassifier(Classification):
         permutation = np.random.permutation(num_rows)
         X_updated = X_updated.iloc[permutation].reset_index(drop=True)
         y_updated = y_updated[permutation]
+        logging.info("Data preprocessed succesfully for retraining")
 
         return self._retrain_model(ct, X_updated, y_updated)
     
@@ -69,6 +71,7 @@ class OneStepClassifier(Classification):
                                gamma = self.model.named_steps['classifier'].gamma))
             ])
             pipe_svc.fit(X_updated, y_updated)
+            logging.info("Model SVC retrained succesfully")
             model_to_be_saved = pipe_svc
 
         elif self.model_type.lower() == 'rfc':
@@ -80,6 +83,7 @@ class OneStepClassifier(Classification):
                                max_depth = self.model.named_steps['classifier'].max_depth))
             ])
             pipe_rfc.fit(X_updated, y_updated)
+            logging.info("Model RFC retrained succesfully")
             model_to_be_saved = pipe_rfc
 
         elif self.model_type.lower() == 'knn':
@@ -90,6 +94,7 @@ class OneStepClassifier(Classification):
                                                 algorithm = self.model.named_steps['classifier'].algorithm))
             ])         
             pipe_knn.fit(X_updated, y_updated)
+            logging.info("Model KNN retrained succesfully")
             model_to_be_saved = pipe_knn
 
         elif self.model_type.lower() == 'nb':
@@ -98,6 +103,7 @@ class OneStepClassifier(Classification):
                 ('classifier', GaussianNB())
             ])
             pipe_nb.fit(X_updated, y_updated)
+            logging.info("Model NB retrained succesfully")
             model_to_be_saved = pipe_nb
         
         return self._save_model(model_to_be_saved, self.models_folder, self.model_filename)
