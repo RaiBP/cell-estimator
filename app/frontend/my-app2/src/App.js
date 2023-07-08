@@ -203,6 +203,7 @@ const AnnotationArea = () => {
         })
       }
       transformedPolygons[index] = transformedPolygon
+      setPolygonCounter(index+1)
     })
     setPolygons(transformedPolygons)
 
@@ -269,7 +270,7 @@ const AnnotationArea = () => {
       const pos = e.target.getStage().getPointerPosition()
       setCurrentPolygon([
         ...currentPolygon,
-        { points: [pos.x, pos.y, pos.x, pos.y] },
+        { points: [pos.x, pos.y, pos.x, pos.y], color:'#bfff00' },
       ])
     }
   }
@@ -391,7 +392,7 @@ const Polygon = (props) => {
             })}
             stroke={line.color}
             strokeWidth={3}
-            tension={0.4}
+            tension={0.2}
           />
           {
             <Circle
