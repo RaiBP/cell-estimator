@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from typing import List
 from pathlib import Path
 import numpy as np
+import pandas as pd
 
 from segmentation import utils as segmentation_utils
 from pipeline import config as pipeline_config 
@@ -180,10 +181,33 @@ async def get_images(image_id: ImageId):
 @app.post("/process_predictions")
 async def process_strings_endpoint(predictions: PredictionsList):
     global shared_features
+
     predictions = predictions.predictions
     predictions_enc = np.array([string.encode('UTF-8') for string in predictions])
-    classifier._active_learning(shared_features, predictions_enc)
+
+    # Load saved training data and concatenate with the new data
+    file_path = os.path.join('classification/training_data', 'training_data.csv')
+    new_df = pd.read_csv(file_path)
+
+    y_saved = new_df['Labels'].str[2:-1].values
+    y_saved = np.array([item.encode() for item in y_saved])
+    X_saved = new_df.drop(['Labels'], axis=1)
+
+    shared_features = shared_features.drop(["MaskID"], axis = 1)
+
+    X_updated= pd.concat([X_saved, shared_features], axis=0)
+    y_updated = np.concatenate((y_saved, predictions_enc))
+
+    # Active learning
+    classifier._active_learning(X_updated, y_updated)
     shared_features = None
+
+    # Save the DataFrame to a CSV file inside the folder
+    y_updated = y_updated.tolist()
+    y_updated = [f"b'{item.decode()}'" for item in y_updated]
+    X_updated['Labels'] = y_updated
+    X_updated.to_csv(file_path, index=False)
+    logging.info("Training data updated succesfully")
 
     logging.info("Predictions processed succesfully")
     return {"message": "Predictions processed succesfully"}

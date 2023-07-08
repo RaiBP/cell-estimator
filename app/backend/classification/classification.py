@@ -68,7 +68,7 @@ class Classification(ABC):
             os.makedirs(folder_path)
         file_path = os.path.join(folder_path, file_name)
         joblib.dump(model, file_path)
-        logging.info(f"Model saved succesfully at {file_path}") 
+        logging.info(f"Model saved succesfully at {file_path}")
         #return {"message": "Model retrained and saved succesfully"}
         
     def _active_learning(self, X_updated, y_updated):
