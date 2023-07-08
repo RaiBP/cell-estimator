@@ -8,7 +8,7 @@ const MenuContainer = ({ children }) => {
     justifyContent: 'flex-start', // align items to start
     alignItems: 'center',
     background: '#3C3E45',
-    width: '200px',
+    width: '10%',
     padding: '20px',
     boxSizing: 'border-box',
     borderRight: '1px solid #eee',
@@ -20,13 +20,16 @@ const MenuContainer = ({ children }) => {
 const Button = ({ children, onClick }) => {
   const style = {
     display: 'block',
-    padding: '10px 20px',
+    padding: '20px 20px',
     marginBottom: '10px',
     backgroundColor: '#5A5F6C',
     color: '#FFF',
     borderRadius: '4px',
     textAlign: 'center',
     cursor: 'pointer',
+    width: '80%',
+    height: '7%',
+    fontSize: '150%'
   }
 
   return (
@@ -57,9 +60,10 @@ function Menu({ onReset, onUndo, onSave, onNext, onPrev, onToggleImage }) {
         left: 0,
         top: 0,
         bottom: 0,
-        width: '200px',
+        width: '10%',
         background: '#f0f0f0',
-        padding: '10px',
+        padding: '0px',
+        
       }}
     >
       <Button onClick={onReset}>Reset</Button>
@@ -82,8 +86,8 @@ function ImageAnnotation({
 }) {
   return (
     <Stage
-      width={window.innerWidth}
-      height={window.innerHeight}
+      width={window.innerWidth*0.9}
+      height={window.innerHeight*0.9}
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
     >
@@ -93,8 +97,8 @@ function ImageAnnotation({
             image={image}
             x={0}
             y={0}
-            width={window.innerWidth}
-            height={window.innerHeight}
+            width={window.innerWidth*0.9}
+            height={window.innerHeight*0.9}
           />
         )}
         {Object.entries(polygons).map(([polygonId, polygon]) => {
@@ -157,6 +161,21 @@ const AnnotationArea = () => {
   const [previewLine, setPreviewLine] = useState(null)
   const isDrawing = React.useRef(false)
 
+  function getColorByClassId(classId) {
+    switch(classId) {
+      case 'rbc':
+        return '#ff0000';
+      case 'wbc':
+        return '#ffffff';
+      case 'plt':
+        return '#0000ff';
+      case 'agg':
+        return '#00ff00';
+      case 'oof':
+        return '#ffff00';
+    }
+  }
+
   function setImageCallback(response_json) {
     // This is a callback function that is called when the image is fetched
     // Its only purpose is to set the image state variables
@@ -170,6 +189,7 @@ const AnnotationArea = () => {
     const transformedPolygons = {}
     polygonsWithPredictions.forEach((polygonWithPrediction, index) => {
       const polygon = polygonWithPrediction.polygon.points
+      const color = getColorByClassId(polygonWithPrediction.class_id)
       const transformedPolygon = []
       for (let i = 0; i < polygon.length; i += 2) {
         transformedPolygon.push({
@@ -179,6 +199,7 @@ const AnnotationArea = () => {
             polygon[i + 2],
             polygon[i + 3],
           ],
+          color
         })
       }
       transformedPolygons[index] = transformedPolygon
@@ -365,12 +386,12 @@ const Polygon = (props) => {
             points={line.points.map((p, index) => {
               // Rescale the points to the current canvas size
               return index % 2 === 0
-                ? p * window.innerWidth
-                : p * window.innerHeight
+                ? p * window.innerWidth*0.9
+                : p * window.innerHeight*0.9
             })}
-            stroke='#df4b26'
-            strokeWidth={2}
-            tension={0.2}
+            stroke={line.color}
+            strokeWidth={3}
+            tension={0.4}
           />
           {
             <Circle
