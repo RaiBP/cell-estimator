@@ -29,7 +29,7 @@ const Button = ({ children, onClick }) => {
     cursor: 'pointer',
     width: '80%',
     height: '7%',
-    fontSize: '150%'
+    fontSize: '100%'
   }
 
   return (
@@ -52,7 +52,7 @@ const StageContainer = ({ children }) => {
   return <div style={style}>{children}</div>
 }
 
-function Menu({ onReset, onUndo, onSave, onNext, onPrev, onImageId, onToggleImage , number , onNumberChange}) {
+function Menu({ onReset, onUndo, onSave, onNext, onPrev, onImageId, onToggleImage }) {
   return (
     <div
       style={{
@@ -71,12 +71,14 @@ function Menu({ onReset, onUndo, onSave, onNext, onPrev, onImageId, onToggleImag
       <Button onClick={onSave}>Save</Button>
       <Button onClick={onNext}>Next Image</Button>
       <Button onClick={onPrev}>Previous Image</Button>
-      <label>
-        Enter a number between 1 and 1000:
-        <input type="number" value={number} onChange={onNumberChange} />
-      </label>
-      <button onClick={onImageId}>Submit</button>
       <Button onClick={onToggleImage}>Toggle Image</Button>
+      <form onSubmit={onImageId}>
+        <label>
+          Enter a number between 1 and 1000:
+          <input name="image_id" type="number" />
+        </label>
+        <input type="submit" value="Submit" />
+      </form>
     </div>
   )
 }
@@ -135,7 +137,6 @@ async function getImageWithPredictions(imageId, callback) {
     body: JSON.stringify({ image_id: imageId }),
   })
   const response_json = await response.json()
-  console.log(response_json)
   callback(response_json)
   return response_json
 }
@@ -212,7 +213,6 @@ const AnnotationArea = () => {
     })
     setPolygons(transformedPolygons)
 
-    console.log(response_json.predictions)
   }
 
   // Hook for showing amplitude or phase image
@@ -316,21 +316,21 @@ const AnnotationArea = () => {
     setImageId((prevId) => prevId+100)
   }
   
-  const handleNumberChange = (e) => {
-    setImageId(e.target.value);
-    console.log('Number', imageId)
-  };
-  
-  const handleButtonClick = () => {
+  const handleButtonClick = (e) => {
+
+    e.preventDefault();
+
+
+    const newImageId = e.target.image_id.value
     // Validate the number
-    if (imageId >= 1 && imageId <= 1000) {
-      setImageId((imageId) => imageId)
+    if (newImageId >= 1 && newImageId <= 1000) {
+      setImageId(newImageId)
       // Perform your desired action with the valid number
-      console.log('Valid number:', imageId);
+      console.log('Valid number:', newImageId);
     } else {
-      console.log('Invalid number:', imageId);
+      console.log('Invalid number:', newImageId);
     }
-  };
+  }
 
   const toggleImage = () => {
     setShowAmplitudeImage((prev) => !prev)
@@ -387,7 +387,6 @@ const AnnotationArea = () => {
           onNext={nextImage}
           onPrev={prevImage}
           onImageId={handleButtonClick}
-          onChange={handleNumberChange}
           onToggleImage={toggleImage}
         />
       </MenuContainer>
