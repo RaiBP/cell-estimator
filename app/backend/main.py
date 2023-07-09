@@ -9,6 +9,7 @@ from typing import List
 from pathlib import Path
 import numpy as np
 import pandas as pd
+import cv2
 
 from segmentation import utils as segmentation_utils
 from pipeline import config as pipeline_config 
@@ -87,6 +88,9 @@ class DatasetInfo(BaseModel):
 class PredictionsList(BaseModel):
     predictions: List[str]
 
+
+class ListOfLists(BaseModel):
+    coordinates: List[List[int]]
 
 
 app = FastAPI()
@@ -176,6 +180,23 @@ async def get_images(image_id: ImageId):
         phase_img_data=phase_img_b64,
         predictions=predictions,
     )
+
+
+@app.post("/process_lists")
+def get_lists(lists: List[ListOfLists]):
+    masks_pre = []
+    # Process the received arrays
+    for list in lists:
+        # Access the NumPy array using array.data
+        shape_coordinates = np.array(list.coordinates)
+        image_shape = (384, 512)
+        msk = np.zeros(image_shape, dtype=np.uint8)
+        cv2.drawContours(msk, [shape_coordinates], 0, 255, -1)
+        masks_pre.append(msk)
+
+    logging.info("Masks created successfully")
+    return {"message": "Masks created successfully"}
+
 
 
 @app.post("/process_predictions")
