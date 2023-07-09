@@ -93,8 +93,8 @@ function ImageAnnotation({
 }) {
   return (
     <Stage
-      width={window.innerWidth*0.9}
-      height={window.innerHeight*0.9}
+      width={window.innerWidth}
+      height={window.innerHeight}
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
     >
@@ -104,8 +104,8 @@ function ImageAnnotation({
             image={image}
             x={0}
             y={0}
-            width={window.innerWidth*0.9}
-            height={window.innerHeight*0.9}
+            width={window.innerWidth}
+            height={window.innerHeight}
           />
         )}
         {Object.entries(polygons).map(([polygonId, polygon]) => {
@@ -127,14 +127,16 @@ function ImageAnnotation({
   )
 }
 
-async function getImageWithPredictions(imageId, callback) {
+async function getImageWithPredictions(imageId, imageType, callback) {
+
+  // If we show the amplitude image, we want to use it for the masks
   const response = await fetch('http://localhost:8000/images', {
     method: 'POST',
     headers: {
       accept: 'application/json',
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ image_id: imageId }),
+    body: JSON.stringify({ image_id: imageId, image_type: imageType }),
   })
   const response_json = await response.json()
   callback(response_json)
@@ -228,8 +230,9 @@ const AnnotationArea = () => {
   }, [showAmplitudeImage, amplitudeImage, phaseImage])
 
   useEffect(() => {
-    getImageWithPredictions(imageId, setImageCallback)
-  }, [imageId])
+    const image_type = showAmplitudeImage ? 0 : 1
+    getImageWithPredictions(imageId, image_type, setImageCallback)
+  }, [imageId, showAmplitudeImage])
 
   // Hook for keeping track of lines
   useEffect(() => {
@@ -413,8 +416,8 @@ const Polygon = (props) => {
             points={line.points.map((p, index) => {
               // Rescale the points to the current canvas size
               return index % 2 === 0
-                ? p * window.innerWidth*0.9
-                : p * window.innerHeight*0.9
+                ? p * window.innerWidth
+                : p * window.innerHeight
             })}
             stroke={line.color}
             strokeWidth={3}

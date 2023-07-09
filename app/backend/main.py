@@ -35,7 +35,7 @@ logging.info(f"Image loader initialized with {len(image_loader)} images.")
 # Initializing image segmentator
 logging.info("Initializing image segmentator.")
 segmentation_method = pipeline_config["image_segmentator"]["method"]
-image_to_segment = pipeline_config["image_segmentator"]["image_to_segment"]
+# image_to_segment = pipeline_config["image_segmentator"]["image_to_segment"]
 image_segmentator = create_segmentation_model(segmentation_method)
 logging.info("Image segmentator initialized.")
 
@@ -60,8 +60,9 @@ class PolygonWithPredictions(BaseModel):
     features: dict
 
 
-class ImageId(BaseModel):
+class ImageQuery(BaseModel):
     image_id: int
+    image_type: int
 
 
 class ImagesWithPredictions(BaseModel):
@@ -103,8 +104,12 @@ async def get_dataset_info():
 
 
 @app.post("/images")
-async def get_images(image_id: ImageId):
-    image_id = image_id.image_id % len(image_loader)
+async def get_images(image_query: ImageQuery):
+
+    image_id = image_query.image_id
+    image_type = image_query.image_type
+
+    image_id = image_id % len(image_loader)
     if image_id not in image_loader:
         logging.warning(f"Image with id {image_id} not found.")
         return {"message": "Image not found"}
@@ -115,9 +120,9 @@ async def get_images(image_id: ImageId):
     phase_image_str = prepare_phase_img(phase_image)
 
     if segmentation_method in ["fastsam", "sam"]:
-        image_to_be_segmented = amplitude_image_str if image_to_segment == "amplitude" else phase_image_str
+        image_to_be_segmented = amplitude_image_str if image_type == 0 else phase_image_str
     else:
-        image_to_be_segmented = amplitude_image if image_to_segment == "amplitude" else phase_image
+        image_to_be_segmented = amplitude_image if image_type == 0 else phase_image
 
     try:
         masks = image_segmentator.segment_image(image_to_be_segmented)
