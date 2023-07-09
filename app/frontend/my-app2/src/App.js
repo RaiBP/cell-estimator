@@ -52,7 +52,7 @@ const StageContainer = ({ children }) => {
   return <div style={style}>{children}</div>
 }
 
-function Menu({ onReset, onUndo, onSave, onNext, onPrev, onToggleImage }) {
+function Menu({ onReset, onUndo, onSave, onNext, onPrev, onImageId, onToggleImage , number , onNumberChange}) {
   return (
     <div
       style={{
@@ -71,6 +71,11 @@ function Menu({ onReset, onUndo, onSave, onNext, onPrev, onToggleImage }) {
       <Button onClick={onSave}>Save</Button>
       <Button onClick={onNext}>Next Image</Button>
       <Button onClick={onPrev}>Previous Image</Button>
+      <label>
+        Enter a number between 1 and 1000:
+        <input type="number" value={number} onChange={onNumberChange} />
+      </label>
+      <button onClick={onImageId}>Submit</button>
       <Button onClick={onToggleImage}>Toggle Image</Button>
     </div>
   )
@@ -307,6 +312,26 @@ const AnnotationArea = () => {
     setImageId((prevId) => prevId - 1)
   }
 
+  const skip100Images = () => {
+    setImageId((prevId) => prevId+100)
+  }
+  
+  const handleNumberChange = (e) => {
+    setImageId(e.target.value);
+    console.log('Number', imageId)
+  };
+  
+  const handleButtonClick = () => {
+    // Validate the number
+    if (imageId >= 1 && imageId <= 1000) {
+      setImageId((imageId) => imageId)
+      // Perform your desired action with the valid number
+      console.log('Valid number:', imageId);
+    } else {
+      console.log('Invalid number:', imageId);
+    }
+  };
+
   const toggleImage = () => {
     setShowAmplitudeImage((prev) => !prev)
   }
@@ -361,6 +386,8 @@ const AnnotationArea = () => {
           onSave={saveMask}
           onNext={nextImage}
           onPrev={prevImage}
+          onImageId={handleButtonClick}
+          onChange={handleNumberChange}
           onToggleImage={toggleImage}
         />
       </MenuContainer>
