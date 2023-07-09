@@ -28,7 +28,7 @@ class OneStepClassifier(Classification):
     def _get_probabilities(self, features):
         assert(self.model is not None)
         probas = self.model.predict_proba(features)
-        list_of_dicts = [{'proba': prob_list.tolist()} for prob_list in probas]
+        list_of_dicts = [{'oof_proba': -1, 'agg_proba': -1, 'cell_proba': -1, 'proba': prob_list.tolist()} for prob_list in probas]
         return list_of_dicts
 
 

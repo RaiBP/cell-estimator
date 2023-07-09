@@ -6,6 +6,6 @@ config = {
         # Put other parameters here in the future
     },
     'classifier': {
-        'method': 'RFC'
+        'method': 'tsc'
     }
 }
