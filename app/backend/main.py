@@ -1,5 +1,3 @@
-import os
-import base64
 import logging
 from feature_extraction.feature_extractor import FeatureExtractor
 from fastapi import FastAPI
@@ -12,6 +10,8 @@ from segmentation import utils as segmentation_utils
 from pipeline import config as pipeline_config 
 from classification.utils import create_classification_model
 from segmentation.utils import create_segmentation_model
+
+from pprint import pprint
 
 from image_loader import (
     ImageLoader,
@@ -57,6 +57,7 @@ class PolygonWithPredictions(BaseModel):
     polygon: Polygon
     class_id: str
     confidence: dict
+    features: dict
 
 
 class ImageId(BaseModel):
@@ -130,6 +131,7 @@ async def get_images(image_id: ImageId):
     logging.info(f"Found {len(masks)} masks in image with id {image_id}")
     try:
         features = feature_extractor.extract_features(phase_image, amplitude_image, masks)
+        features_records = features.to_dict('records')
     except Exception as e:
         logging.error(f"Error while extracting features from image with id {image_id}: {e}")
         features = None
@@ -146,10 +148,11 @@ async def get_images(image_id: ImageId):
     predictions = [
         PolygonWithPredictions(
             polygon=Polygon(points=polygon),
-            class_id=labels[idx],
-            confidence=probabilities[idx],
+            class_id=label,
+            confidence=prob,
+            features=mask_features
         )
-        for idx, polygon in enumerate(contours)
+        for polygon, label, prob, mask_features in zip(contours, labels, probabilities, features_records)
     ]
 
     logging.info(f"Sending image with id {image_id} and {len(predictions)} predictions to client.")
