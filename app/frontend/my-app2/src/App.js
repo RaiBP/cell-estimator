@@ -1,3 +1,4 @@
+import { wait } from '@testing-library/user-event/dist/utils'
 import React, { useEffect, useState } from 'react'
 import { Stage, Layer, Group, Line, Circle, Image } from 'react-konva'
 
@@ -29,7 +30,7 @@ const Button = ({ children, onClick }) => {
     cursor: 'pointer',
     width: '80%',
     height: '7%',
-    fontSize: '100%'
+    fontSize: '100%',
   }
 
   return (
@@ -52,7 +53,15 @@ const StageContainer = ({ children }) => {
   return <div style={style}>{children}</div>
 }
 
-function Menu({ onReset, onUndo, onSave, onNext, onPrev, onImageId, onToggleImage }) {
+function Menu({
+  onReset,
+  onUndo,
+  onSave,
+  onNext,
+  onPrev,
+  onImageId,
+  onToggleImage,
+}) {
   return (
     <div
       style={{
@@ -63,7 +72,6 @@ function Menu({ onReset, onUndo, onSave, onNext, onPrev, onImageId, onToggleImag
         width: '10%',
         background: '#f0f0f0',
         padding: '0px',
-        
       }}
     >
       <Button onClick={onReset}>Reset</Button>
@@ -75,9 +83,9 @@ function Menu({ onReset, onUndo, onSave, onNext, onPrev, onImageId, onToggleImag
       <form onSubmit={onImageId}>
         <label>
           Enter a number between 1 and 1000:
-          <input name="image_id" type="number" />
+          <input name='image_id' type='number' />
         </label>
-        <input type="submit" value="Submit" />
+        <input type='submit' value='Submit' />
       </form>
     </div>
   )
@@ -128,7 +136,6 @@ function ImageAnnotation({
 }
 
 async function getImageWithPredictions(imageId, imageType, callback) {
-
   // If we show the amplitude image, we want to use it for the masks
   const response = await fetch('http://localhost:8000/images', {
     method: 'POST',
@@ -170,17 +177,17 @@ const AnnotationArea = () => {
   const isDrawing = React.useRef(false)
 
   function getColorByClassId(classId) {
-    switch(classId) {
+    switch (classId) {
       case 'rbc':
-        return '#ff0000';
+        return '#ff0000'
       case 'wbc':
-        return '#ffffff';
+        return '#ffffff'
       case 'plt':
-        return '#0000ff';
+        return '#0000ff'
       case 'agg':
-        return '#00ff00';
+        return '#00ff00'
       case 'oof':
-        return '#ffff00';
+        return '#ffff00'
     }
   }
 
@@ -196,25 +203,17 @@ const AnnotationArea = () => {
     const polygonsWithPredictions = response_json.predictions
     const transformedPolygons = {}
     polygonsWithPredictions.forEach((polygonWithPrediction, index) => {
-      const polygon = polygonWithPrediction.polygon.points
+      const polygonPoints = polygonWithPrediction.polygon.points
       const color = getColorByClassId(polygonWithPrediction.class_id)
-      const transformedPolygon = []
-      for (let i = 0; i < polygon.length; i += 2) {
-        transformedPolygon.push({
-          points: [
-            polygon[i],
-            polygon[i + 1],
-            polygon[i + 2],
-            polygon[i + 3],
-          ],
-          color
-        })
-      }
-      transformedPolygons[index] = transformedPolygon
-      setPolygonCounter(index+1)
+      transformedPolygons[index] = [
+        {
+          points: polygonPoints,
+          color,
+        },
+      ]
+      setPolygonCounter(index + 1)
     })
     setPolygons(transformedPolygons)
-
   }
 
   // Hook for showing amplitude or phase image
@@ -271,40 +270,37 @@ const AnnotationArea = () => {
 
   const handleMouseDown = (e) => {
     isDrawing.current = true
-    if (previewLine) {
-      setCurrentPolygon([...currentPolygon, previewLine])
-      setPreviewLine(null)
-    } else {
-      const pos = e.target.getStage().getPointerPosition()
-      setCurrentPolygon([
-        ...currentPolygon,
-        { points: [pos.x, pos.y, pos.x, pos.y], color:'#bfff00' },
+    const pos = e.target.getStage().getPointerPosition()
+    if (currentPolygon.length === 0) {
+      // If there's no polygon started, start a new one
+      setCurrentPolygon((prev) => [
+        ...prev,
+        {
+          points: [
+            pos.x / window.innerWidth,
+            pos.y / window.innerHeight,
+            pos.x / window.innerWidth,
+            pos.y / window.innerHeight,
+          ],
+          color: '#ff0000',
+        },
       ])
+    } else {
+      // If a polygon has been started, add a new point to the last polygon
+      setCurrentPolygon((prev) => {
+        const newPrev = [...prev]
+        const lastPolygon = newPrev[newPrev.length - 1]
+        lastPolygon.points.push(
+          pos.x / window.innerWidth,
+          pos.y / window.innerHeight
+        )
+        return newPrev
+      })
     }
   }
 
   const handleMouseMove = (e) => {
-    const stage = e.target.getStage()
-    const point = stage.getPointerPosition()
-
-    if (!isDrawing.current || currentPolygon.length === 0) {
-      return
-    }
-
-    const lastLineEnd =
-      currentPolygon[currentPolygon.length - 1].points.slice(2)
-
-    // Computing current distance to first point
-    const firstPoint = currentPolygon[0].points
-    const dx = firstPoint[0] - point.x
-    const dy = firstPoint[1] - point.y
-    const distance = Math.sqrt(dx * dx + dy * dy)
-    if (distance < 15) {
-      const firstPoint = currentPolygon[0].points
-      setPreviewLine({ points: [...lastLineEnd, ...firstPoint] })
-    } else {
-      setPreviewLine({ points: [...lastLineEnd, point.x, point.y] })
-    }
+    // To be fixed
   }
 
   const nextImage = () => {
@@ -316,22 +312,20 @@ const AnnotationArea = () => {
   }
 
   const skip100Images = () => {
-    setImageId((prevId) => prevId+100)
+    setImageId((prevId) => prevId + 100)
   }
-  
+
   const handleButtonClick = (e) => {
-
-    e.preventDefault();
-
+    e.preventDefault()
 
     const newImageId = e.target.image_id.value
     // Validate the number
     if (newImageId >= 1 && newImageId <= 1000) {
       setImageId(newImageId)
       // Perform your desired action with the valid number
-      console.log('Valid number:', newImageId);
+      console.log('Valid number:', newImageId)
     } else {
-      console.log('Invalid number:', newImageId);
+      console.log('Invalid number:', newImageId)
     }
   }
 
@@ -425,9 +419,9 @@ const Polygon = (props) => {
           />
           {
             <Circle
-              x={line.points[2]}
-              y={line.points[3]}
-              radius={5}
+              x={line.points[2] * window.innerWidth}
+              y={line.points[3] * window.innerHeight}
+              radius={1.0}
               fill='green'
             />
           }
