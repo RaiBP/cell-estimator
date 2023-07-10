@@ -30,8 +30,8 @@ logging.basicConfig(level=logging.INFO)
 # Initializing image loader for dataset
 logging.info("Initializing image loader.")
 # data_folder = Path(os.environ["DATA_FOLDER"])
-data_folder = Path("/home/fidelinus/tum/applied_machine_intelligence/final_project/data")
-dataset_path = data_folder / "real_world_sample01.pre"
+data_folder = Path("/mnt/w")
+dataset_path = data_folder / "sample01.pre"
 image_loader = ImageLoader.from_file(dataset_path)
 logging.info(f"Image loader initialized with {len(image_loader)} images.")
 
@@ -100,18 +100,29 @@ class DatasetInfo(BaseModel):
     ]
     num_images: int
 
+class DataForPlotting(BaseModel):
+    features_names: List[str]
+    feature_1_values: List[float]
+    feature_2_values: List[float]
+    feature_1_training_values: List[float]
+    feature_2_training_values: List[float]
+
 class PredictionsList(BaseModel):
     predictions: List[str]
 
+class FeaturesList(BaseModel):
+    features: List[str]
 
-class ListOfLists(BaseModel):
+
+class ListsOfCoordinates(BaseModel):
     coordinates: List[List[int]]
 
 
 app = FastAPI()
 
-# Variable to store the features calculated from feature extraction
+# Global help variables
 shared_features = None
+features_to_plot = None
 
 origins = ["http://localhost:3000", "https://localhost:3000"]
 
@@ -180,6 +191,7 @@ async def get_images(image_query: ImageQuery):
     image_type = image_query.image_type
 
     image_id = image_id % len(image_loader)
+    image_id = 2
 
     if image_id not in image_loader:
         logging.warning(f"Image with id {image_id} not found.")
@@ -246,8 +258,11 @@ async def get_images(image_query: ImageQuery):
     )
 
 
-@app.post("/process_lists")
-def get_lists(lists: List[ListOfLists]):
+@app.post("/process_lists_of_coordinates")
+def get_lists_of_coordinates(lists: List[ListsOfCoordinates]):
+    """
+    Method for converting the Polygon's coordinates to masks
+    """
     masks_pre = []
     # Process the received arrays
     for list in lists:
@@ -262,9 +277,11 @@ def get_lists(lists: List[ListOfLists]):
     return {"message": "Masks created successfully"}
 
 
-
-@app.post("/process_predictions")
-async def process_strings_endpoint(predictions: PredictionsList):
+@app.post("/process_corrected_predictions")
+async def get_corrected_predictions(predictions: PredictionsList):
+    """
+    Method for performing active learning based on the user-corrected predictions
+    """
     global shared_features
 
     predictions = predictions.predictions
@@ -283,7 +300,7 @@ async def process_strings_endpoint(predictions: PredictionsList):
     X_updated= pd.concat([X_saved, shared_features], axis=0)
     y_updated = np.concatenate((y_saved, predictions_enc))
 
-    # Active learning
+    # Active learning is performed here
     classifier._active_learning(X_updated, y_updated)
     shared_features = None
 
@@ -296,3 +313,30 @@ async def process_strings_endpoint(predictions: PredictionsList):
 
     logging.info("Predictions processed succesfully")
     return {"message": "Predictions processed succesfully"}
+
+
+@app.post("/features_and_data_to_plot")
+async def get_features_and_data_to_plot(features: FeaturesList):
+    """
+    Method for saving the features that will be used for plotting
+    and sending the data that will be plotted
+    """
+    global features_to_plot
+
+    if features is not None:
+        features_to_plot = features.features
+
+    file_path = os.path.join('classification/training_data', 'training_data.csv')
+    training_features = pd.read_csv(file_path)
+
+    feature_1_values = shared_features[features_to_plot[0]].tolist()
+    feature_2_values = shared_features[features_to_plot[1]].tolist()
+
+    feature_1_training_values = training_features[features_to_plot[0]].tolist()
+    feature_2_training_values = training_features[features_to_plot[1]].tolist()
+
+    return DataForPlotting(features_names=features_to_plot, 
+                           feature_1_values=feature_1_values,
+                           feature_2_values=feature_2_values,
+                           feature_1_training_values=feature_1_training_values,
+                           feature_2_training_values=feature_2_training_values)
