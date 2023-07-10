@@ -34,3 +34,6 @@ class SAMImageSegmentator(ImageSegmentator):
 
     def prompt(self, query: Optional[dict] = None) -> np.ndarray:
         return self.predictor.predict(**query)
+
+    def name(self) -> str:
+        return "sam"

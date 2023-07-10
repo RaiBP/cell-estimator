@@ -37,6 +37,9 @@ class ThresholdImageSegmentator(ImageSegmentator):
 
         return masks
 
+    def name(self) -> str:
+        return "threshold"
+
     def _apply_threshold(self, image, threshold, kernel_size, use_otsu=False):
 
         image_uint8 = self._image_to_uint8(image)
@@ -110,4 +113,3 @@ class ThresholdImageSegmentator(ImageSegmentator):
         global_mask = self._regional_to_global_mask(region_masks)
         self.object_counter = 1
         return global_mask
-

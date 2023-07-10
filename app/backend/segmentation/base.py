@@ -75,3 +75,10 @@ class ImageSegmentator:
         Used to query the segmentation algorithm
         """
         pass
+
+    @abstractmethod
+    def name(self) -> str:
+        """
+        Returns the name of the algorithm
+        """
+        pass
