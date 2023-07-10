@@ -128,6 +128,7 @@ function ImageAnnotation({
             tension={0.5}
             lineCap='round'
             lineJoin='round'
+            closed={true}
           />
         )}
       </Layer>
@@ -300,7 +301,17 @@ const AnnotationArea = () => {
   }
 
   const handleMouseMove = (e) => {
-    // To be fixed
+    if (!isDrawing.current) {
+      return
+    }
+
+    const pos = e.target.getStage().getPointerPosition()
+    console.log(currentPolygonRef.current)
+    const lastPolygon = currentPolygonRef.current[currentPolygonRef.current.length - 1]
+    console.log(lastPolygon)
+    lastPolygon.points[lastPolygon.points.length - 2] = pos.x / window.innerWidth
+    lastPolygon.points[lastPolygon.points.length - 1] = pos.y / window.innerHeight
+    setCurrentPolygon((prev) => [...prev])
   }
 
   const nextImage = () => {
@@ -340,7 +351,11 @@ const AnnotationArea = () => {
   }
 
   function saveMask() {
-    if (currentPolygonRef.current.length <= 2) {
+
+    console.log("Saving masks...");
+    const currentPolygonPoints = currentPolygonRef.current[0].points
+
+    if (currentPolygonPoints.length <= 4) {
       resetCurrentPolygon()
       return
     }
