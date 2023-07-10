@@ -15,6 +15,7 @@ from segmentation import utils as segmentation_utils
 from pipeline import config as pipeline_config 
 from classification.utils import create_classification_model
 from segmentation.utils import create_segmentation_model
+from backend_functions import *
 
 from image_loader import (
     ImageLoader,
@@ -65,6 +66,11 @@ class ImageId(BaseModel):
     image_id: int
 
 
+class ImagesGivenID(BaseModel):
+    amplitude_img_data: str
+    phase_img_data: str
+
+
 class ImagesWithPredictions(BaseModel):
     amplitude_img_data: str
     phase_img_data: str
@@ -111,6 +117,86 @@ app.add_middleware(
 @app.get("/dataset_info")
 async def get_dataset_info():
     return DatasetInfo(file=dataset_path.name, num_images=len(image_loader))
+
+
+@app.post("/select_dataset")
+async def select_dataset(dataset_filename: str):
+    """
+    Method for changing the dataset file from which to load the images
+    """
+    global image_loader, data_folder, dataset_path
+    logging.info("Initializing image loader with new dataset.")
+    dataset_path = data_folder / dataset_filename
+    image_loader = ImageLoader.from_file(dataset_path)
+    logging.info(f"Image loader initialized with {len(image_loader)} images.")
+    return DatasetInfo(file=dataset_path.name, num_images=len(image_loader))
+
+
+@app.post("/segment")
+async def segment_image(image_id: ImageId): 
+    image_id = image_id.image_id % len(image_loader)
+    if image_id not in image_loader:
+        logging.warning(f"Image with id {image_id} not found.")
+        return {"message": "Image not found"}
+
+    amplitude_image, phase_image = image_loader.get_images(image_id)
+
+    amplitude_image_str = prepare_amplitude_img(amplitude_image)
+    phase_image_str = prepare_phase_img(phase_image)
+
+    if segmentation_method in ["fastsam", "sam"]:
+        image_to_be_segmented = amplitude_image_str if image_to_segment == "amplitude" else phase_image_str
+    else:
+        image_to_be_segmented = amplitude_image if image_to_segment == "amplitude" else phase_image
+
+    try:
+        masks = image_segmentator.segment_image(image_to_be_segmented)
+        contours = [segmentation_utils.get_mask_contour(m) for m in masks]
+        contours = [segmentation_utils.normalize_contour(c) for c in contours]
+        contours = segmentation_utils.flatten_contours(contours)
+        logging.info(f"Masks of image {image_id} calculated succesfully.")
+    except Exception as e:
+        logging.error(f"Error while segmenting image with id {image_id}: {e}")
+        contours = []
+        masks = []
+    logging.info(f"Found {len(masks)} masks in image with id {image_id}")
+
+
+    predictions = [
+        PolygonWithPredictions(
+            polygon=Polygon(points=polygon),
+            class_id=labels[idx],
+            confidence=probabilities[idx],
+        )
+        for idx, polygon in enumerate(contours)
+    ]
+
+    logging.info(f"Sending image with id {image_id} and {len(predictions)} predictions to client.")
+
+    amplitude_image_b64 = encode_b64(amplitude_image_str)
+    phase_img_b64 = encode_b64(phase_image_str)
+
+    return ImagesWithPredictions(
+        amplitude_img_data=amplitude_image_b64,
+        phase_img_data=phase_img_b64,
+        predictions=predictions,
+    )
+
+
+@app.post("/send_images")
+async def send_images(image_id: ImageId):
+    """
+    Method for sending phase and amplitude images indexed by "image_id" in file given by "dataset_path".
+    """
+    global image_loader, logging
+    
+    amplitude_image_b64, phase_image_b64 = load_image(image_id, image_loader, logging)
+    
+    return ImagesGivenID(
+        amplitude_img_data=amplitude_image_b64,
+        phase_img_data=phase_image_b64,
+    )
+
 
 
 @app.post("/images")
