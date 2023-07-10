@@ -33,9 +33,9 @@ class PipelineManager:
         self.shared_features = None
 
     def set_dataset(self, dataset_path: Path):
-        logging.info("Initializing image loader with new dataset.")
+        logging.info(f"Initializing image loader with new dataset with path {dataset_path}.")
         self.image_loader = ImageLoader.from_file(dataset_path)
-        logging.info(f"Image loader initialized with {len(self.image_loader)} images.")
+        logging.info(f"Image loader initialized dataset with {len(self.image_loader)} images.")
 
     def set_segmentation_method(self, segmentation_method: str):
         logging.info(f"Initializing new segmentator of type {segmentation_method}.")
@@ -82,6 +82,9 @@ class ImageSegmentationMethod(str, Enum):
     threshold = "threshold"
     fastsam = "fastsam"
     sam = "sam"
+
+class Dataset(BaseModel):
+    filename: str
 
 class SegmentationMethod(BaseModel):
     method: ImageSegmentationMethod
@@ -146,6 +149,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/datasets")
+async def get_datasets():
+    return {
+        "datasets": [dataset.name for dataset in data_folder.glob("*.pre")],
+    }
 
 @app.get("/dataset_info")
 async def get_dataset_info():
@@ -153,12 +161,12 @@ async def get_dataset_info():
 
 
 @app.post("/select_dataset")
-async def select_dataset(dataset_filename: str):
+async def select_dataset(dataset: Dataset):
     """
     Method for changing the dataset file from which to load the images
     """
     logging.info("Initializing image loader with new dataset.")
-    dataset_path = data_folder / dataset_filename
+    dataset_path = data_folder / dataset.filename
     pipeline_manager.set_dataset(dataset_path)
     return DatasetInfo(file=dataset_path.name, num_images=len(pipeline_manager.image_loader))
 

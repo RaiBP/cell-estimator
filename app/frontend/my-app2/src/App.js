@@ -5,6 +5,31 @@ import axios from 'axios'
 
 axios.defaults.baseURL = 'http://localhost:8000'
 
+function DatasetSelector({ onChange }) {
+  const [datasets, setDatasets] = useState([])
+
+  useEffect(() => {
+    async function fetchData() {
+      const response = await axios.get('/datasets')
+      setDatasets(response.data.datasets)
+    }
+    fetchData()
+  }, [])
+
+  return (
+    <div>
+      <label for='dataset-selector'>Choose a dataset: </label>
+      <select id='dataset-selector' onChange={onChange}>
+        {datasets.map((method, index) => (
+          <option key={index} value={method}>
+            {method}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
 function SegmentationMethodsSelector({ onChange }) {
   const [segmentationMethods, setSegmentationMethods] = useState([])
 
@@ -90,6 +115,7 @@ function Menu({
   onImageId,
   onToggleImage,
   onSegmentationMethodChange,
+  onDatasetChange,
 }) {
   return (
     <div
@@ -117,6 +143,7 @@ function Menu({
         <input type='submit' value='Submit' />
       </form>
       <SegmentationMethodsSelector onChange={onSegmentationMethodChange} />
+      <DatasetSelector onChange={onDatasetChange} />
     </div>
   )
 }
@@ -195,6 +222,7 @@ const AnnotationArea = () => {
   const [showAmplitudeImage, setShowAmplitudeImage] = useState(true) // 0 for amplitude, 1 for phase
   const [image, setImage] = useState(null)
   const [imageId, setImageId] = useState(0)
+  const [currentDataset, setCurrentDataset] = useState(null)
   const img = new window.Image()
 
   // Polygon management
@@ -262,7 +290,7 @@ const AnnotationArea = () => {
   useEffect(() => {
     const image_type = showAmplitudeImage ? 0 : 1
     getImageWithPredictions(imageId, image_type, setImageCallback)
-  }, [imageId, showAmplitudeImage])
+  }, [imageId, showAmplitudeImage, currentDataset])
 
   // Hook for keeping track of lines
   useEffect(() => {
@@ -436,6 +464,27 @@ const AnnotationArea = () => {
       })
   }
 
+  function onDatasetChange(e) {
+    const selectedDataset = e.target.value
+
+    console.log(`Selected dataset: ${selectedDataset}`)
+
+    axios
+      .post('/select_dataset', {
+        filename: selectedDataset,
+      })
+      .then((response) => {
+        console.log(response.data) // Output the server's response to the console.
+      })
+      .catch((error) => {
+        console.error(`Error selecting dataset: ${error}`)
+      })
+
+    setCurrentDataset(selectedDataset)
+
+  }
+
+
   return (
     <div style={style}>
       <MenuContainer>
@@ -448,6 +497,7 @@ const AnnotationArea = () => {
           onImageId={handleButtonClick}
           onToggleImage={toggleImage}
           onSegmentationMethodChange={onSegmentationMethodChange}
+          onDatasetChange={onDatasetChange}
         />
       </MenuContainer>
       <StageContainer>
