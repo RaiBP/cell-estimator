@@ -29,7 +29,7 @@ const Button = ({ children, onClick }) => {
     cursor: 'pointer',
     width: '80%',
     height: '7%',
-    fontSize: '150%'
+    fontSize: '100%'
   }
 
   return (
@@ -52,7 +52,7 @@ const StageContainer = ({ children }) => {
   return <div style={style}>{children}</div>
 }
 
-function Menu({ onReset, onUndo, onSave, onNext, onPrev, onToggleImage }) {
+function Menu({ onReset, onUndo, onSave, onNext, onPrev, onImageId, onToggleImage }) {
   return (
     <div
       style={{
@@ -72,6 +72,13 @@ function Menu({ onReset, onUndo, onSave, onNext, onPrev, onToggleImage }) {
       <Button onClick={onNext}>Next Image</Button>
       <Button onClick={onPrev}>Previous Image</Button>
       <Button onClick={onToggleImage}>Toggle Image</Button>
+      <form onSubmit={onImageId}>
+        <label>
+          Enter a number between 1 and 1000:
+          <input name="image_id" type="number" />
+        </label>
+        <input type="submit" value="Submit" />
+      </form>
     </div>
   )
 }
@@ -86,8 +93,8 @@ function ImageAnnotation({
 }) {
   return (
     <Stage
-      width={window.innerWidth*0.9}
-      height={window.innerHeight*0.9}
+      width={window.innerWidth}
+      height={window.innerHeight}
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
     >
@@ -97,8 +104,8 @@ function ImageAnnotation({
             image={image}
             x={0}
             y={0}
-            width={window.innerWidth*0.9}
-            height={window.innerHeight*0.9}
+            width={window.innerWidth}
+            height={window.innerHeight}
           />
         )}
         {Object.entries(polygons).map(([polygonId, polygon]) => {
@@ -120,17 +127,18 @@ function ImageAnnotation({
   )
 }
 
-async function getImageWithPredictions(imageId, callback) {
+async function getImageWithPredictions(imageId, imageType, callback) {
+
+  // If we show the amplitude image, we want to use it for the masks
   const response = await fetch('http://localhost:8000/images', {
     method: 'POST',
     headers: {
       accept: 'application/json',
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ image_id: imageId }),
+    body: JSON.stringify({ image_id: imageId, image_type: imageType }),
   })
   const response_json = await response.json()
-  console.log(response_json)
   callback(response_json)
   return response_json
 }
@@ -207,7 +215,6 @@ const AnnotationArea = () => {
     })
     setPolygons(transformedPolygons)
 
-    console.log(response_json.predictions)
   }
 
   // Hook for showing amplitude or phase image
@@ -223,8 +230,9 @@ const AnnotationArea = () => {
   }, [showAmplitudeImage, amplitudeImage, phaseImage])
 
   useEffect(() => {
-    getImageWithPredictions(imageId, setImageCallback)
-  }, [imageId])
+    const image_type = showAmplitudeImage ? 0 : 1
+    getImageWithPredictions(imageId, image_type, setImageCallback)
+  }, [imageId, showAmplitudeImage])
 
   // Hook for keeping track of lines
   useEffect(() => {
@@ -307,6 +315,26 @@ const AnnotationArea = () => {
     setImageId((prevId) => prevId - 1)
   }
 
+  const skip100Images = () => {
+    setImageId((prevId) => prevId+100)
+  }
+  
+  const handleButtonClick = (e) => {
+
+    e.preventDefault();
+
+
+    const newImageId = e.target.image_id.value
+    // Validate the number
+    if (newImageId >= 1 && newImageId <= 1000) {
+      setImageId(newImageId)
+      // Perform your desired action with the valid number
+      console.log('Valid number:', newImageId);
+    } else {
+      console.log('Invalid number:', newImageId);
+    }
+  }
+
   const toggleImage = () => {
     setShowAmplitudeImage((prev) => !prev)
   }
@@ -361,6 +389,7 @@ const AnnotationArea = () => {
           onSave={saveMask}
           onNext={nextImage}
           onPrev={prevImage}
+          onImageId={handleButtonClick}
           onToggleImage={toggleImage}
         />
       </MenuContainer>
@@ -387,8 +416,8 @@ const Polygon = (props) => {
             points={line.points.map((p, index) => {
               // Rescale the points to the current canvas size
               return index % 2 === 0
-                ? p * window.innerWidth*0.9
-                : p * window.innerHeight*0.9
+                ? p * window.innerWidth
+                : p * window.innerHeight
             })}
             stroke={line.color}
             strokeWidth={3}
