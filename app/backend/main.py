@@ -27,10 +27,11 @@ from image_loader import (
 # Setting up logger
 logging.basicConfig(level=logging.INFO)
 
-
+# Initialization values. All of these can be latter changed via POST methods
 # Initializing image loader for dataset
 logging.info("Initializing image loader.")
 data_folder = Path(os.environ["DATA_FOLDER"])
+#data_folder = Path("/home/fidelinus/tum/applied_machine_intelligence/final_project/data")
 dataset_path = data_folder / "real_world_sample01.pre"
 image_loader = ImageLoader.from_file(dataset_path)
 logging.info(f"Image loader initialized with {len(image_loader)} images.")
@@ -132,6 +133,32 @@ async def select_dataset(dataset_filename: str):
     image_loader = ImageLoader.from_file(dataset_path)
     logging.info(f"Image loader initialized with {len(image_loader)} images.")
     return DatasetInfo(file=dataset_path.name, num_images=len(image_loader))
+
+
+@app.post("/select_segmentator")
+async def select_segmentator(segmentation_method: str):
+    """
+    Method for initializing a new segmentator of type indicated by 'segmentation_method'
+    """
+    global image_segmentator
+    logging.info(f"Initializing new segmentator of type {segmentation_method}.")
+    image_segmentator = create_segmentation_model(segmentation_method)
+    message = f"New segmentator of type {segmentation_method} initialized."
+    logging.info(message)
+    return {'message': message}
+
+
+@app.post("/select_classifier")
+async def select_classifier(classification_method: str):
+    """
+    Method for initializing a new classifier of type indicated by 'classification_method'
+    """
+    global classifier
+    logging.info(f"Initializing new classifier of type {classification_method}.")
+    classifier = create_classification_model(classification_method)
+    message = f"New classifier of type {classification_method} initialized."
+    logging.info(message)
+    return {'message': message}
 
 
 @app.post("/images")
