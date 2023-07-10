@@ -42,17 +42,26 @@ class PipelineManager:
 
             dataset_group = f[self.dataset_id]
 
-            # Save the masks, labels, and image_ids as separate datasets
-            for mask, label in zip(masks, labels):
-                # Append the mask, label, and image_id to the corresponding datasets
-                mask_dataset = dataset_group['masks']
-                mask_dataset.resize(mask_dataset.shape[0] + 1, axis=0)
-                mask_dataset[-1] = mask
+            # Check if the image_id already exists in the file
+            image_ids_dataset = dataset_group['image_ids']
+            if self.image_id in image_ids_dataset:
+                # Overwrite the existing mask and label data
+                index = np.where(image_ids_dataset[:] == self.image_id)[0][0]
+                masks_dataset = dataset_group['masks']
+                masks_dataset[index] = masks
+                labels_dataset = dataset_group['labels']
+                labels_dataset[index] = labels
+            else:
+                # Append the new mask, label, and image_id data
+                image_ids_dataset.resize(image_ids_dataset.shape[0] + 1, axis=0)
+                image_ids_dataset[-1] = self.image_id
+                masks_dataset = dataset_group['masks']
+                masks_dataset.resize(masks_dataset.shape[0] + 1, axis=0)
+                masks_dataset[-1] = masks
+                labels_dataset = dataset_group['labels']
+                labels_dataset.resize(labels_dataset.shape[0] + 1, axis=0)
+                labels_dataset[-1] = labels
 
-                label_dataset = dataset_group['labels']
-                label_dataset.resize(label_dataset.shape[0] + 1, axis=0)
-                label_dataset[-1] = label
-
-                image_id_dataset = dataset_group['image_ids']
-                image_id_dataset.resize(image_id_dataset.shape[0] + 1, axis=0)
-                image_id_dataset[-1] = self.image_id
+            # Increment the image_counter
+            self.image_counter += 1
+            self.cell_counter += len(masks)

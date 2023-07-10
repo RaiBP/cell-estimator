@@ -291,7 +291,6 @@ async def get_images(image_query: ImageQuery):
 
     manager.save_masks(masks, labels)
     manager.cell_counter += len(masks)
-    manager.image_counter += 1
 
     return ImagesWithPredictions(
         amplitude_img_data=amplitude_image_b64,
