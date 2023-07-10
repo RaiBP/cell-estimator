@@ -6,13 +6,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
 from pathlib import Path
+from enum import Enum
 
 from segmentation import utils as segmentation_utils
 from pipeline import config as pipeline_config 
 from classification.utils import create_classification_model
 from segmentation.utils import create_segmentation_model, list_segmentation_methods
-
-from pprint import pprint
 
 from image_loader import (
     ImageLoader,
@@ -49,6 +48,15 @@ classification_method = pipeline_config["classifier"]["method"]
 classifier = create_classification_model(classification_method)
 logging.info("Classifier initialized.")
 
+
+class ImageSegmentationMethod(str, Enum):
+    cellpose = "cellpose"
+    threshold = "threshold"
+    fastsam = "fastsam"
+    sam = "sam"
+
+class SegmentationMethod(BaseModel):
+    method: ImageSegmentationMethod
 
 class Polygon(BaseModel):
     points: List[float] | None
@@ -118,14 +126,14 @@ async def select_dataset(dataset_filename: str):
 
 
 @app.post("/select_segmentator")
-async def select_segmentator(segmentation_method: str):
+async def select_segmentator(segmentation_method: SegmentationMethod):
     """
     Method for initializing a new segmentator of type indicated by 'segmentation_method'
     """
     global image_segmentator
-    logging.info(f"Initializing new segmentator of type {segmentation_method}.")
-    image_segmentator = create_segmentation_model(segmentation_method)
-    message = f"New segmentator of type {segmentation_method} initialized."
+    logging.info(f"Initializing new segmentator of type {segmentation_method.method}.")
+    image_segmentator = create_segmentation_model(segmentation_method.method)
+    message = f"New segmentator of type {segmentation_method.method} initialized."
     logging.info(message)
     return {'message': message}
 

@@ -1,6 +1,34 @@
 import { wait } from '@testing-library/user-event/dist/utils'
 import React, { useEffect, useState } from 'react'
 import { Stage, Layer, Group, Line, Circle, Image } from 'react-konva'
+import axios from 'axios'
+
+axios.defaults.baseURL = 'http://localhost:8000'
+
+function SegmentationMethodsSelector({ onChange }) {
+  const [segmentationMethods, setSegmentationMethods] = useState([])
+
+  useEffect(() => {
+    async function fetchData() {
+      const response = await axios.get('/get_segmentation_methods')
+      setSegmentationMethods(response.data.segmentation_methods)
+    }
+    fetchData()
+  }, [])
+
+  return (
+    <div>
+      <label for='segmentation'>Choose a segmentation method:</label>
+      <select id='segmentation' onChange={onChange}>
+        {segmentationMethods.map((method, index) => (
+          <option key={index} value={method}>
+            {method}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
 
 const MenuContainer = ({ children }) => {
   const style = {
@@ -61,6 +89,7 @@ function Menu({
   onPrev,
   onImageId,
   onToggleImage,
+  onSegmentationMethodChange,
 }) {
   return (
     <div
@@ -87,6 +116,7 @@ function Menu({
         </label>
         <input type='submit' value='Submit' />
       </form>
+      <SegmentationMethodsSelector onChange={onSegmentationMethodChange} />
     </div>
   )
 }
@@ -307,10 +337,13 @@ const AnnotationArea = () => {
 
     const pos = e.target.getStage().getPointerPosition()
     console.log(currentPolygonRef.current)
-    const lastPolygon = currentPolygonRef.current[currentPolygonRef.current.length - 1]
+    const lastPolygon =
+      currentPolygonRef.current[currentPolygonRef.current.length - 1]
     console.log(lastPolygon)
-    lastPolygon.points[lastPolygon.points.length - 2] = pos.x / window.innerWidth
-    lastPolygon.points[lastPolygon.points.length - 1] = pos.y / window.innerHeight
+    lastPolygon.points[lastPolygon.points.length - 2] =
+      pos.x / window.innerWidth
+    lastPolygon.points[lastPolygon.points.length - 1] =
+      pos.y / window.innerHeight
     setCurrentPolygon((prev) => [...prev])
   }
 
@@ -351,8 +384,7 @@ const AnnotationArea = () => {
   }
 
   function saveMask() {
-
-    console.log("Saving masks...");
+    console.log('Saving masks...')
     const currentPolygonPoints = currentPolygonRef.current[0].points
 
     if (currentPolygonPoints.length <= 4) {
@@ -389,6 +421,21 @@ const AnnotationArea = () => {
     setCurrentPolygon((lines) => lines.slice(0, -1))
   }
 
+  function onSegmentationMethodChange(e) {
+    const selectedMethod = e.target.value
+
+    axios
+      .post('/select_segmentator', {
+        method: selectedMethod,
+      })
+      .then((response) => {
+        console.log(response.data) // Output the server's response to the console.
+      })
+      .catch((error) => {
+        console.error(`Error selecting segmentation method: ${error}`)
+      })
+  }
+
   return (
     <div style={style}>
       <MenuContainer>
@@ -400,6 +447,7 @@ const AnnotationArea = () => {
           onPrev={prevImage}
           onImageId={handleButtonClick}
           onToggleImage={toggleImage}
+          onSegmentationMethodChange={onSegmentationMethodChange}
         />
       </MenuContainer>
       <StageContainer>
