@@ -25,3 +25,6 @@ class CellPoseImageSegmentator(ImageSegmentator):
 
     def prompt(self, query: dict = None) -> np.ndarray:
         raise NotImplementedError("CellPose does not support prompting")
+
+    def name(self) -> str:
+        return "cellpose"
