@@ -1,59 +1,10 @@
-import { wait } from '@testing-library/user-event/dist/utils'
 import React, { useEffect, useState } from 'react'
-import { Stage, Layer, Group, Line, Circle, Image } from 'react-konva'
+import { Stage, Layer, Line, Image } from 'react-konva'
 import axios from 'axios'
+import Polygon from './components/Polygon/Polygon'
+import Menu from './components/Menu/Menu'
 
 axios.defaults.baseURL = 'http://localhost:8000'
-
-function DatasetSelector({ onChange }) {
-  const [datasets, setDatasets] = useState([])
-
-  useEffect(() => {
-    async function fetchData() {
-      const response = await axios.get('/datasets')
-      setDatasets(response.data.datasets)
-    }
-    fetchData()
-  }, [])
-
-  return (
-    <div>
-      <label for='dataset-selector'>Choose a dataset: </label>
-      <select id='dataset-selector' onChange={onChange}>
-        {datasets.map((method, index) => (
-          <option key={index} value={method}>
-            {method}
-          </option>
-        ))}
-      </select>
-    </div>
-  )
-}
-
-function SegmentationMethodsSelector({ onChange }) {
-  const [segmentationMethods, setSegmentationMethods] = useState([])
-
-  useEffect(() => {
-    async function fetchData() {
-      const response = await axios.get('/get_segmentation_methods')
-      setSegmentationMethods(response.data.segmentation_methods)
-    }
-    fetchData()
-  }, [])
-
-  return (
-    <div>
-      <label for='segmentation'>Choose a segmentation method:</label>
-      <select id='segmentation' onChange={onChange}>
-        {segmentationMethods.map((method, index) => (
-          <option key={index} value={method}>
-            {method}
-          </option>
-        ))}
-      </select>
-    </div>
-  )
-}
 
 const MenuContainer = ({ children }) => {
   const style = {
@@ -71,28 +22,6 @@ const MenuContainer = ({ children }) => {
   return <div style={style}>{children}</div>
 }
 
-const Button = ({ children, onClick }) => {
-  const style = {
-    display: 'block',
-    padding: '20px 20px',
-    marginBottom: '10px',
-    backgroundColor: '#5A5F6C',
-    color: '#FFF',
-    borderRadius: '4px',
-    textAlign: 'center',
-    cursor: 'pointer',
-    width: '80%',
-    height: '7%',
-    fontSize: '100%',
-  }
-
-  return (
-    <button onClick={onClick} style={style}>
-      {children}
-    </button>
-  )
-}
-
 const StageContainer = ({ children }) => {
   const style = {
     display: 'flex',
@@ -104,48 +33,6 @@ const StageContainer = ({ children }) => {
   }
 
   return <div style={style}>{children}</div>
-}
-
-function Menu({
-  onReset,
-  onUndo,
-  onSave,
-  onNext,
-  onPrev,
-  onImageId,
-  onToggleImage,
-  onSegmentationMethodChange,
-  onDatasetChange,
-}) {
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        left: 0,
-        top: 0,
-        bottom: 0,
-        width: '10%',
-        background: '#f0f0f0',
-        padding: '0px',
-      }}
-    >
-      <Button onClick={onReset}>Reset</Button>
-      <Button onClick={onUndo}>Undo</Button>
-      <Button onClick={onSave}>Save</Button>
-      <Button onClick={onNext}>Next Image</Button>
-      <Button onClick={onPrev}>Previous Image</Button>
-      <Button onClick={onToggleImage}>Toggle Image</Button>
-      <form onSubmit={onImageId}>
-        <label>
-          Enter a number between 1 and 1000:
-          <input name='image_id' type='number' />
-        </label>
-        <input type='submit' value='Submit' />
-      </form>
-      <SegmentationMethodsSelector onChange={onSegmentationMethodChange} />
-      <DatasetSelector onChange={onDatasetChange} />
-    </div>
-  )
 }
 
 function ImageAnnotation({
@@ -481,9 +368,7 @@ const AnnotationArea = () => {
       })
 
     setCurrentDataset(selectedDataset)
-
   }
-
 
   return (
     <div style={style}>
@@ -511,36 +396,6 @@ const AnnotationArea = () => {
         />
       </StageContainer>
     </div>
-  )
-}
-
-const Polygon = (props) => {
-  return (
-    <Group>
-      {props.lines.map((line, i) => (
-        <React.Fragment key={'polygon-' + props.id + '-line-' + i}>
-          <Line
-            points={line.points.map((p, index) => {
-              // Rescale the points to the current canvas size
-              return index % 2 === 0
-                ? p * window.innerWidth
-                : p * window.innerHeight
-            })}
-            stroke={line.color}
-            strokeWidth={3}
-            tension={0.2}
-          />
-          {
-            <Circle
-              x={line.points[2] * window.innerWidth}
-              y={line.points[3] * window.innerHeight}
-              radius={1.0}
-              fill='green'
-            />
-          }
-        </React.Fragment>
-      ))}
-    </Group>
   )
 }
 
