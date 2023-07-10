@@ -103,6 +103,19 @@ async def get_dataset_info():
     return DatasetInfo(file=dataset_path.name, num_images=len(image_loader))
 
 
+@app.post("/select_dataset")
+async def select_dataset(dataset_filename: str):
+    """
+    Method for changing the dataset file from which to load the images
+    """
+    global image_loader, data_folder, dataset_path
+    logging.info("Initializing image loader with new dataset.")
+    dataset_path = data_folder / dataset_filename
+    image_loader = ImageLoader.from_file(dataset_path)
+    logging.info(f"Image loader initialized with {len(image_loader)} images.")
+    return DatasetInfo(file=dataset_path.name, num_images=len(image_loader))
+
+
 @app.post("/images")
 async def get_images(image_query: ImageQuery):
 
