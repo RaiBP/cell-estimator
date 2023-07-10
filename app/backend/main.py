@@ -112,7 +112,7 @@ async def select_dataset(dataset_filename: str):
     global image_loader, data_folder, dataset_path
     logging.info("Initializing image loader with new dataset.")
     dataset_path = data_folder / dataset_filename
-    image_loader = ImageLoader.from_fil(dataset_path)
+    image_loader = ImageLoader.from_file(dataset_path)
     logging.info(f"Image loader initialized with {len(image_loader)} images.")
     return DatasetInfo(file=dataset_path.name, num_images=len(image_loader))
 
