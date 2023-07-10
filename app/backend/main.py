@@ -56,10 +56,7 @@ class PipelineManager:
         self.shared_features = shared_features
 
     def get_current_segmentation_method(self) -> str:
-        return self.image_segmentator.method
-
-    def get_current_classification_method(self) -> str:
-        return self.classifier.method
+        return self.image_segmentator.name()
 
 # Setting up logger
 logging.basicConfig(level=logging.INFO)
@@ -71,7 +68,7 @@ dataset_path = data_folder / "real_world_sample01.pre"
 
 # Initializing image segmentator
 segmentation_method = pipeline_config["image_segmentator"]["method"]
-# image_to_segment = pipeline_config["image_segmentator"]["image_to_segment"]
+image_to_segment = pipeline_config["image_segmentator"]["image_to_segment"]
 
 feature_extractor = FeatureExtractor()
 
@@ -181,9 +178,7 @@ async def select_classifier(classification_method: str):
     """
     Method for initializing a new classifier of type indicated by 'classification_method'
     """
-    logging.info(f"Initializing new classifier of type {classification_method}.")
     pipeline_manager.set_classification_method(classification_method)
-    message = f"New classifier of type {pipeline_manager.get_current_classification_method()} initialized."
     return {'message': message}
 
 @app.get("/get_segmentation_methods")
@@ -193,7 +188,11 @@ async def get_segmentation_methods():
 
 @app.post("/images")
 async def get_images(image_query: ImageQuery):
-    global shared_features
+
+    image_loader = pipeline_manager.image_loader
+    image_segmentator = pipeline_manager.image_segmentator
+    classifier = pipeline_manager.classifier
+
     image_id = image_query.image_id
     image_type = image_query.image_type
 
@@ -226,7 +225,8 @@ async def get_images(image_query: ImageQuery):
     logging.info(f"Found {len(masks)} masks in image with id {image_id}")
     try:
         features = feature_extractor.extract_features(phase_image, amplitude_image, masks)
-        shared_features = features
+        pipeline_manager.set_shared_features(features)
+        # shared_features = features
         features_records = features.to_dict('records')
     except Exception as e:
         logging.error(f"Error while extracting features from image with id {image_id}: {e}")
@@ -283,7 +283,6 @@ def get_lists(lists: List[ListOfLists]):
 
 @app.post("/process_predictions")
 async def process_strings_endpoint(predictions: PredictionsList):
-    global shared_features
 
     predictions = predictions.predictions
     predictions_enc = np.array([string.encode('UTF-8') for string in predictions])
@@ -296,14 +295,14 @@ async def process_strings_endpoint(predictions: PredictionsList):
     y_saved = np.array([item.encode() for item in y_saved])
     X_saved = new_df.drop(['Labels'], axis=1)
 
-    shared_features = shared_features.drop(["MaskID"], axis = 1)
+    pipeline_manager.set_shared_features(pipeline_manager.shared_features.drop(["MaskID"], axis = 1))
 
-    X_updated= pd.concat([X_saved, shared_features], axis=0)
+    X_updated= pd.concat([X_saved, pipeline_manager.shared_features], axis=0)
     y_updated = np.concatenate((y_saved, predictions_enc))
 
     # Active learning
-    classifier._active_learning(X_updated, y_updated)
-    shared_features = None
+    pipeline_manager.classifier._active_learning(X_updated, y_updated)
+    pipeline_manager.set_shared_features(None)
 
     # Save the DataFrame to a CSV file inside the folder
     y_updated = y_updated.tolist()
