@@ -1,24 +1,15 @@
 version: '3'
-
 services:
-  backend:
-    image: gitlab.lrz.de:5005/group06/backend:latest
+  cellapp:
+    build:
+      context: .
+      dockerfile: Dockerfile
     volumes:
-      - ami_share:/app/data
-    stop_signal: SIGINT
+      - /home/fidelinus/tum/applied_machine_intelligence/final_project/data:/data
+    ports:
+      - "8000:8000"
+      - "3000:3000"
     environment:
-      - DATA_DIR=/app/data
-    ports:
-      - 8000:5000
-
-  frontend:
-    image: gitlab.lrz.de:5005/ldv/group06/frontend:latest
-    ports:
-      - 3000:5050
-
-volumes:
-  ami_share:
-    driver_opts:
-      type: cifs
-      o: username=ami,password=XXXXXXXXXXX,vers=3.0
-      device: //10.195.6.13/ami
+      - DATA_FOLDER=/data
+      - NUMBA_CACHE_DIR=/tmp 
+    command: supervisord
