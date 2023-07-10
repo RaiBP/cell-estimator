@@ -90,4 +90,7 @@ class ThreeStepClassifier(Classification):
     def _cell_predict(self, df): 
         return self.cell_model.predict(df)
 
+    def _prepare_data(self, X_updated, y_updated):
+        pass
+
 
