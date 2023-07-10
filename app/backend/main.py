@@ -23,7 +23,7 @@ from image_loader import (
 # Setting up logger
 logging.basicConfig(level=logging.INFO)
 
-
+# Initialization values. All of these can be latter changed via POST methods
 # Initializing image loader for dataset
 logging.info("Initializing image loader.")
 #data_folder = Path(os.environ["DATA_FOLDER"])
@@ -114,6 +114,19 @@ async def select_dataset(dataset_filename: str):
     image_loader = ImageLoader.from_file(dataset_path)
     logging.info(f"Image loader initialized with {len(image_loader)} images.")
     return DatasetInfo(file=dataset_path.name, num_images=len(image_loader))
+
+
+@app.post("/select_classifier")
+async def select_classifier(classification_method: str):
+    """
+    Method for initializing a new classifier of type indicated by 'classification_method'
+    """
+    global classifier
+    logging.info(f"Initializing new classifier of type {classification_method}.")
+    classifier = create_classification_model(classification_method)
+    logging.info(f"New classifier of type {classification_method} initialized.")
+    return None
+
 
 
 @app.post("/images")
