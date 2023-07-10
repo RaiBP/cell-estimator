@@ -23,34 +23,62 @@ from image_loader import (
     encode_b64,
 )
 
+
+class PipelineManager:
+    def __init__(self, dataset_path: Path, segmentation_method: str, classification_method: str, feature_extractor: FeatureExtractor):
+        self.set_dataset(dataset_path)
+        self.set_segmentation_method(segmentation_method)
+        self.set_classification_method(classification_method)
+        self.set_feature_extractor(feature_extractor)
+        self.shared_features = None
+
+    def set_dataset(self, dataset_path: Path):
+        logging.info("Initializing image loader with new dataset.")
+        self.image_loader = ImageLoader.from_file(dataset_path)
+        logging.info(f"Image loader initialized with {len(self.image_loader)} images.")
+
+    def set_segmentation_method(self, segmentation_method: str):
+        logging.info(f"Initializing new segmentator of type {segmentation_method}.")
+        self.image_segmentator = create_segmentation_model(segmentation_method)
+        logging.info(f"New segmentator of type {segmentation_method} initialized.")
+
+    def set_classification_method(self, classification_method: str):
+        logging.info(f"Initializing new classifier of type {classification_method}.")
+        self.classifier = create_classification_model(classification_method)
+        logging.info(f"New classifier of type {classification_method} initialized.")
+
+    def set_feature_extractor(self, feature_extractor: FeatureExtractor):
+        logging.info(f"Initializing new feature extractor of type {feature_extractor}.")
+        self.feature_extractor = feature_extractor
+        logging.info(f"New feature extractor of type {feature_extractor} initialized.")
+
+    def set_shared_features(self, shared_features: pd.DataFrame):
+        self.shared_features = shared_features
+
+    def get_current_segmentation_method(self) -> str:
+        return self.image_segmentator.method
+
+    def get_current_classification_method(self) -> str:
+        return self.classifier.method
+
 # Setting up logger
 logging.basicConfig(level=logging.INFO)
 
-# Initialization values. All of these can be latter changed via POST methods
-# Initializing image loader for dataset
 logging.info("Initializing image loader.")
 # data_folder = Path(os.environ["DATA_FOLDER"])
 data_folder = Path("/home/fidelinus/tum/applied_machine_intelligence/final_project/data")
 dataset_path = data_folder / "real_world_sample01.pre"
-image_loader = ImageLoader.from_file(dataset_path)
-logging.info(f"Image loader initialized with {len(image_loader)} images.")
 
 # Initializing image segmentator
-logging.info("Initializing image segmentator.")
 segmentation_method = pipeline_config["image_segmentator"]["method"]
 # image_to_segment = pipeline_config["image_segmentator"]["image_to_segment"]
-image_segmentator = create_segmentation_model(segmentation_method)
-logging.info("Image segmentator initialized.")
 
-logging.info("Initializing feature extractor.")
 feature_extractor = FeatureExtractor()
-logging.info("Feature extractor initialized.")
 
-logging.info("Initializing classifier.")
 classification_method = pipeline_config["classifier"]["method"]
-classifier = create_classification_model(classification_method)
-logging.info("Classifier initialized.")
 
+logging.info("Initializing pipeline manager.")
+pipeline_manager = PipelineManager(dataset_path, segmentation_method, classification_method, feature_extractor)
 
 class ImageSegmentationMethod(str, Enum):
     cellpose = "cellpose"
@@ -110,9 +138,6 @@ class ListOfLists(BaseModel):
 
 app = FastAPI()
 
-# Variable to store the features calculated from feature extraction
-shared_features = None
-
 origins = ["http://localhost:3000", "https://localhost:3000"]
 
 
@@ -135,12 +160,10 @@ async def select_dataset(dataset_filename: str):
     """
     Method for changing the dataset file from which to load the images
     """
-    global image_loader, data_folder, dataset_path
     logging.info("Initializing image loader with new dataset.")
     dataset_path = data_folder / dataset_filename
-    image_loader = ImageLoader.from_file(dataset_path)
-    logging.info(f"Image loader initialized with {len(image_loader)} images.")
-    return DatasetInfo(file=dataset_path.name, num_images=len(image_loader))
+    pipeline_manager.set_dataset(dataset_path)
+    return DatasetInfo(file=dataset_path.name, num_images=len(pipeline_manager.image_loader))
 
 
 @app.post("/select_segmentator")
@@ -148,11 +171,8 @@ async def select_segmentator(segmentation_method: SegmentationMethod):
     """
     Method for initializing a new segmentator of type indicated by 'segmentation_method'
     """
-    global image_segmentator
-    logging.info(f"Initializing new segmentator of type {segmentation_method.method}.")
-    image_segmentator = create_segmentation_model(segmentation_method.method)
-    message = f"New segmentator of type {segmentation_method.method} initialized."
-    logging.info(message)
+    pipeline_manager.set_segmentation_method(segmentation_method.method)
+    message = f"New segmentator of type {pipeline_manager.get_current_segmentation_method()} initialized."
     return {'message': message}
 
 
@@ -161,11 +181,9 @@ async def select_classifier(classification_method: str):
     """
     Method for initializing a new classifier of type indicated by 'classification_method'
     """
-    global classifier
     logging.info(f"Initializing new classifier of type {classification_method}.")
-    classifier = create_classification_model(classification_method)
-    message = f"New classifier of type {classification_method} initialized."
-    logging.info(message)
+    pipeline_manager.set_classification_method(classification_method)
+    message = f"New classifier of type {pipeline_manager.get_current_classification_method()} initialized."
     return {'message': message}
 
 @app.get("/get_segmentation_methods")
