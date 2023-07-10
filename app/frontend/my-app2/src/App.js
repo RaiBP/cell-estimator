@@ -2,25 +2,10 @@ import React, { useEffect, useState } from 'react'
 import { Stage, Layer, Line, Image } from 'react-konva'
 import axios from 'axios'
 import Polygon from './components/Polygon/Polygon'
-import Menu from './components/Menu/Menu'
+import { Menu, MenuContainer } from './components/Menu/Menu'
 
 axios.defaults.baseURL = 'http://localhost:8000'
 
-const MenuContainer = ({ children }) => {
-  const style = {
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'flex-start', // align items to start
-    alignItems: 'center',
-    background: '#3C3E45',
-    width: '10%',
-    padding: '20px',
-    boxSizing: 'border-box',
-    borderRight: '1px solid #eee',
-  }
-
-  return <div style={style}>{children}</div>
-}
 
 const StageContainer = ({ children }) => {
   const style = {
@@ -29,6 +14,8 @@ const StageContainer = ({ children }) => {
     alignItems: 'center',
     flex: 1,
     overflow: 'auto',
+    width: '100%',
+    height: '100%',
     background: '#f0f0f0',
   }
 

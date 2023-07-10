@@ -2,6 +2,8 @@ import Button from '../Button/Button'
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 
+import './Menu.css'
+
 function DatasetSelector({ onChange }) {
   const [datasets, setDatasets] = useState([])
 
@@ -14,9 +16,9 @@ function DatasetSelector({ onChange }) {
   }, [])
 
   return (
-    <div>
-      <label for='dataset-selector'>Choose a dataset: </label>
-      <select id='dataset-selector' onChange={onChange}>
+    <div className="selector-container">
+      <label htmlFor='dataset-selector' className="selector-label">Choose a dataset: </label>
+      <select id='dataset-selector' className="selector" onChange={onChange}>
         {datasets.map((method, index) => (
           <option key={index} value={method}>
             {method}
@@ -39,9 +41,9 @@ function SegmentationMethodsSelector({ onChange }) {
   }, [])
 
   return (
-    <div>
-      <label for='segmentation'>Choose a segmentation method:</label>
-      <select id='segmentation' onChange={onChange}>
+    <div className="selector-container">
+      <label htmlFor='segmentation' className="selector-label">Choose a segmentation method:</label>
+      <select id='segmentation' className="selector" onChange={onChange}>
         {segmentationMethods.map((method, index) => (
           <option key={index} value={method}>
             {method}
@@ -50,6 +52,10 @@ function SegmentationMethodsSelector({ onChange }) {
       </select>
     </div>
   )
+}
+
+const MenuContainer = ({ children }) => {
+  return <div className="menu-container">{children}</div>
 }
 
 function Menu({
@@ -64,27 +70,17 @@ function Menu({
   onDatasetChange,
 }) {
   return (
-    <div
-      style={{
-        position: 'fixed',
-        left: 0,
-        top: 0,
-        bottom: 0,
-        width: '10%',
-        background: '#f0f0f0',
-        padding: '0px',
-      }}
-    >
-      <Button onClick={onReset}>Reset</Button>
-      <Button onClick={onUndo}>Undo</Button>
-      <Button onClick={onSave}>Save</Button>
-      <Button onClick={onNext}>Next Image</Button>
-      <Button onClick={onPrev}>Previous Image</Button>
-      <Button onClick={onToggleImage}>Toggle Image</Button>
-      <form onSubmit={onImageId}>
-        <label>
+    <div className="menu-container">
+      <Button className="menu-button" onClick={onReset}>Reset</Button>
+      <Button className="menu-button" onClick={onUndo}>Undo</Button>
+      <Button className="menu-button" onClick={onSave}>Save</Button>
+      <Button className="menu-button" onClick={onNext}>Next Image</Button>
+      <Button className="menu-button" onClick={onPrev}>Previous Image</Button>
+      <Button className="menu-button" onClick={onToggleImage}>Toggle Image</Button>
+      <form className="selector-container" onSubmit={onImageId}>
+        <label className="selector-label">
           Enter a number between 1 and 1000:
-          <input name='image_id' type='number' />
+          <input className="selector" name='image_id' type='number' />
         </label>
         <input type='submit' value='Submit' />
       </form>
@@ -94,4 +90,8 @@ function Menu({
   )
 }
 
-export default Menu
+export {
+  Menu,
+  MenuContainer
+}
+
