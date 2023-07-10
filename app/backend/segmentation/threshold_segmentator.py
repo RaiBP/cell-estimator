@@ -2,18 +2,20 @@ import numpy as np
 import cv2
 from typing import Optional
 from skimage.measure import label, regionprops
-
+from . import utils
 from .base import ImageSegmentator
 
 
 class ThresholdImageSegmentator(ImageSegmentator):
-    def __init__(self, global_threshold=5, regional_threshold=None, global_kernel_size=23, regional_kernel_size=13, volume_threshold=10):
+    def __init__(self, global_threshold=5, regional_threshold=None, global_kernel_size=23, regional_kernel_size=13, pixel_to_length_ratio = np.sqrt(0.08), volume_threshold=10):
         super().__init__()
         self.global_threshold = global_threshold
         self.regional_threshold = regional_threshold
         self.global_kernel_size = global_kernel_size
         self.regional_kernel_size = regional_kernel_size
+        self.pixel_to_length_ratio = pixel_to_length_ratio
         self.volume_threshold = volume_threshold
+        self.object_counter = 1  # Counter for assigning unique values to objects
 
     def set_image(self, image: np.ndarray) -> Optional[np.ndarray]:
         "Does nothing for this segmentator"
@@ -31,8 +33,9 @@ class ThresholdImageSegmentator(ImageSegmentator):
             initial_mask = self._apply_threshold(image, self.global_threshold, self.global_kernel_size)
 
         masks = self._per_region_segmentation(image, initial_mask)
+        masks = utils.image_to_masks(masks)
 
-        return np.array(masks)
+        return masks
 
     def _apply_threshold(self, image, threshold, kernel_size, use_otsu=False):
 
@@ -59,13 +62,33 @@ class ThresholdImageSegmentator(ImageSegmentator):
         region_mask[labeled_mask == region.label] = 1
         return region_mask
 
+    def _calculate_region_volume(self, region):
+        minr, minc, maxr, maxc = region.bbox
+
+        # Calculate the width and height of the bounding box
+        width = self.pixel_to_length_ratio * (maxc - minc)
+        height = self.pixel_to_length_ratio * (maxr - minr)
+
+        volume = np.pi * width ** 2 * height / 6
+
+        return volume
+
+    def _regional_to_global_mask(self, region_masks):
+        # Combine the region masks using logical OR operatioimg_normn
+        global_mask = np.zeros_like(region_masks[0], dtype=np.uint8)
+        for mask in region_masks:
+            global_mask = cv2.bitwise_or(global_mask, mask)
+
+        return global_mask
+
     def _per_region_segmentation(self, image, mask):
         labeled_mask = label(mask)
-        regions = regionprops(labeled_mask)
+        regions = regionprops(labeled_mask)       
 
         region_masks = []
         for region in regions:
-            volume = region.area
+            #volume = region.area
+            volume = self._calculate_region_volume(region)
             if volume < self.volume_threshold:
                 continue
 
@@ -79,7 +102,12 @@ class ThresholdImageSegmentator(ImageSegmentator):
 
             region_mask_filled = cv2.morphologyEx(region_mask, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5)))
 
+            region_mask_filled = np.where(region_mask_filled == 255, self.object_counter, region_mask_filled)
+            self.object_counter += 1
+
             region_masks.append(region_mask_filled)
 
-        return region_masks
+        global_mask = self._regional_to_global_mask(region_masks)
+        self.object_counter = 1
+        return global_mask
 

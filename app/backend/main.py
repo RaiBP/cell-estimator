@@ -7,6 +7,9 @@ from pydantic import BaseModel
 from typing import List
 from pathlib import Path
 from enum import Enum
+import numpy as np
+import pandas as pd
+import cv2
 
 from segmentation import utils as segmentation_utils
 from pipeline import config as pipeline_config 
@@ -74,6 +77,11 @@ class ImageQuery(BaseModel):
     image_type: int
 
 
+class ImagesGivenID(BaseModel):
+    amplitude_img_data: str
+    phase_img_data: str
+
+
 class ImagesWithPredictions(BaseModel):
     amplitude_img_data: str
     phase_img_data: str
@@ -92,8 +100,18 @@ class DatasetInfo(BaseModel):
     ]
     num_images: int
 
+class PredictionsList(BaseModel):
+    predictions: List[str]
+
+
+class ListOfLists(BaseModel):
+    coordinates: List[List[int]]
+
 
 app = FastAPI()
+
+# Variable to store the features calculated from feature extraction
+shared_features = None
 
 origins = ["http://localhost:3000", "https://localhost:3000"]
 
@@ -157,11 +175,12 @@ async def get_segmentation_methods():
 
 @app.post("/images")
 async def get_images(image_query: ImageQuery):
-
+    global shared_features
     image_id = image_query.image_id
     image_type = image_query.image_type
 
     image_id = image_id % len(image_loader)
+
     if image_id not in image_loader:
         logging.warning(f"Image with id {image_id} not found.")
         return {"message": "Image not found"}
@@ -181,6 +200,7 @@ async def get_images(image_query: ImageQuery):
         contours = [segmentation_utils.get_mask_contour(m) for m in masks]
         contours = [segmentation_utils.normalize_contour(c) for c in contours]
         contours = segmentation_utils.flatten_contours(contours)
+        logging.info(f"Masks of image {image_id} calculated succesfully.")
     except Exception as e:
         logging.error(f"Error while segmenting image with id {image_id}: {e}")
         contours = []
@@ -188,10 +208,12 @@ async def get_images(image_query: ImageQuery):
     logging.info(f"Found {len(masks)} masks in image with id {image_id}")
     try:
         features = feature_extractor.extract_features(phase_image, amplitude_image, masks)
+        shared_features = features
         features_records = features.to_dict('records')
     except Exception as e:
         logging.error(f"Error while extracting features from image with id {image_id}: {e}")
         features = None
+        features_records = {}
     try:
         labels, probabilities = classifier.classify(features)
         print(labels)
@@ -222,3 +244,55 @@ async def get_images(image_query: ImageQuery):
         phase_img_data=phase_img_b64,
         predictions=predictions,
     )
+
+
+@app.post("/process_lists")
+def get_lists(lists: List[ListOfLists]):
+    masks_pre = []
+    # Process the received arrays
+    for list in lists:
+        # Access the NumPy array using array.data
+        shape_coordinates = np.array(list.coordinates)
+        image_shape = (384, 512)
+        msk = np.zeros(image_shape, dtype=np.uint8)
+        cv2.drawContours(msk, [shape_coordinates], 0, 255, -1)
+        masks_pre.append(msk)
+
+    logging.info("Masks created successfully")
+    return {"message": "Masks created successfully"}
+
+
+
+@app.post("/process_predictions")
+async def process_strings_endpoint(predictions: PredictionsList):
+    global shared_features
+
+    predictions = predictions.predictions
+    predictions_enc = np.array([string.encode('UTF-8') for string in predictions])
+
+    # Load saved training data and concatenate with the new data
+    file_path = os.path.join('classification/training_data', 'training_data.csv')
+    new_df = pd.read_csv(file_path)
+
+    y_saved = new_df['Labels'].str[2:-1].values
+    y_saved = np.array([item.encode() for item in y_saved])
+    X_saved = new_df.drop(['Labels'], axis=1)
+
+    shared_features = shared_features.drop(["MaskID"], axis = 1)
+
+    X_updated= pd.concat([X_saved, shared_features], axis=0)
+    y_updated = np.concatenate((y_saved, predictions_enc))
+
+    # Active learning
+    classifier._active_learning(X_updated, y_updated)
+    shared_features = None
+
+    # Save the DataFrame to a CSV file inside the folder
+    y_updated = y_updated.tolist()
+    y_updated = [f"b'{item.decode()}'" for item in y_updated]
+    X_updated['Labels'] = y_updated
+    X_updated.to_csv(file_path, index=False)
+    logging.info("Training data updated succesfully")
+
+    logging.info("Predictions processed succesfully")
+    return {"message": "Predictions processed succesfully"}
