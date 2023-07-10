@@ -104,8 +104,10 @@ class DataForPlotting(BaseModel):
     features_names: List[str]
     feature_1_values: List[float]
     feature_2_values: List[float]
+    cell_types: List[str]
     feature_1_training_values: List[float]
     feature_2_training_values: List[float]
+    cell_types_training: List[str]
 
 class PredictionsList(BaseModel):
     predictions: List[str]
@@ -123,6 +125,7 @@ app = FastAPI()
 # Global help variables
 shared_features = None
 features_to_plot = None
+corrected_predictions = None
 
 origins = ["http://localhost:3000", "https://localhost:3000"]
 
@@ -283,9 +286,10 @@ async def get_corrected_predictions(predictions: PredictionsList):
     Method for performing active learning based on the user-corrected predictions
     """
     global shared_features
+    global corrected_predictions
 
-    predictions = predictions.predictions
-    predictions_enc = np.array([string.encode('UTF-8') for string in predictions])
+    corrected_predictions = predictions.predictions
+    predictions_enc = np.array([string.encode('UTF-8') for string in corrected_predictions])
 
     # Load saved training data and concatenate with the new data
     file_path = os.path.join('classification/training_data', 'training_data.csv')
@@ -302,7 +306,6 @@ async def get_corrected_predictions(predictions: PredictionsList):
 
     # Active learning is performed here
     classifier._active_learning(X_updated, y_updated)
-    shared_features = None
 
     # Save the DataFrame to a CSV file inside the folder
     y_updated = y_updated.tolist()
@@ -321,7 +324,9 @@ async def get_features_and_data_to_plot(features: FeaturesList):
     Method for saving the features that will be used for plotting
     and sending the data that will be plotted
     """
-    global features_to_plot
+    global shared_features
+    global corrected_predictions
+
 
     if features is not None:
         features_to_plot = features.features
@@ -331,12 +336,16 @@ async def get_features_and_data_to_plot(features: FeaturesList):
 
     feature_1_values = shared_features[features_to_plot[0]].tolist()
     feature_2_values = shared_features[features_to_plot[1]].tolist()
+    cell_types = corrected_predictions
 
     feature_1_training_values = training_features[features_to_plot[0]].tolist()
     feature_2_training_values = training_features[features_to_plot[1]].tolist()
+    cell_types_training = training_features['Labels'].str[2:-1].tolist()
 
     return DataForPlotting(features_names=features_to_plot, 
                            feature_1_values=feature_1_values,
                            feature_2_values=feature_2_values,
+                           cell_types = cell_types,
                            feature_1_training_values=feature_1_training_values,
-                           feature_2_training_values=feature_2_training_values)
+                           feature_2_training_values=feature_2_training_values,
+                           cell_types_training = cell_types_training)
