@@ -13,3 +13,7 @@ services:
       - DATA_FOLDER=/data
       - NUMBA_CACHE_DIR=/tmp 
     command: supervisord
+<<<<<<< HEAD
+=======
+
+>>>>>>> 8c0b8d12213c1c1063b906e7688c8389ad8550fc

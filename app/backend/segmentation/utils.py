@@ -11,6 +11,9 @@ IMAGE_HEIGHT = 384
 IMAGE_WIDTH = 512
 
 
+def list_segmentation_methods() -> list[str]:
+    return ['cellpose', 'threshold', 'sam', 'fastsam']
+
 def create_segmentation_model(selector):
     if selector == "cellpose":
         return CellPoseImageSegmentator()   
