@@ -2,6 +2,7 @@ import logging
 import os
 from feature_extraction.feature_extractor import FeatureExtractor
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
@@ -14,6 +15,7 @@ from segmentation import utils as segmentation_utils
 from pipeline import config as pipeline_config 
 from classification.utils import create_classification_model
 from segmentation.utils import create_segmentation_model
+from backend import PipelineManager
 
 from pprint import pprint
 
@@ -28,11 +30,16 @@ from image_loader import (
 logging.basicConfig(level=logging.INFO)
 
 # Initialization values. All of these can be latter changed via POST methods
+user_data_folder = Path(os.environ["USER_DATA_FOLDER"])
+user_dataset = "user.pre"
+user_dataset_path = user_data_folder / user_dataset
+
 # Initializing image loader for dataset
 logging.info("Initializing image loader.")
 data_folder = Path(os.environ["DATA_FOLDER"])
 #data_folder = Path("/home/fidelinus/tum/applied_machine_intelligence/final_project/data")
-dataset_path = data_folder / "real_world_sample01.pre"
+dataset = "real_world_sample01.pre"
+dataset_path = data_folder / dataset
 image_loader = ImageLoader.from_file(dataset_path)
 logging.info(f"Image loader initialized with {len(image_loader)} images.")
 
@@ -51,6 +58,9 @@ logging.info("Initializing classifier.")
 classification_method = pipeline_config["classifier"]["method"]
 classifier = create_classification_model(classification_method)
 logging.info("Classifier initialized.")
+
+img_dims = image_loader.get_image_dimensions()
+manager = PipelineManager(dataset, segmentation_method, classification_method, user_dataset_path, img_dims)
 
 
 class Polygon(BaseModel):
@@ -128,10 +138,18 @@ async def select_dataset(dataset_filename: str):
     Method for changing the dataset file from which to load the images
     """
     global image_loader, data_folder, dataset_path
-    logging.info("Initializing image loader with new dataset.")
-    dataset_path = data_folder / dataset_filename
-    image_loader = ImageLoader.from_file(dataset_path)
-    logging.info(f"Image loader initialized with {len(image_loader)} images.")
+    try:
+        logging.info("Initializing image loader with new dataset.")
+        dataset_path = data_folder / dataset_filename
+        image_loader = ImageLoader.from_file(dataset_path)
+        # save backend state
+        manager.img_dims = image_loader.get_image_dimensions()
+        manager.dataset_id = dataset_filename
+        logging.info(f"Image loader initialized with {len(image_loader)} images.")
+    except Exception as e:
+        logging.error(f"Could not read dataset with filename {dataset_filename}: {e}")
+        return {'message': "Dataset was not changed due to error"}
+ 
     return DatasetInfo(file=dataset_path.name, num_images=len(image_loader))
 
 
@@ -141,10 +159,16 @@ async def select_segmentator(segmentation_method: str):
     Method for initializing a new segmentator of type indicated by 'segmentation_method'
     """
     global image_segmentator
-    logging.info(f"Initializing new segmentator of type {segmentation_method}.")
-    image_segmentator = create_segmentation_model(segmentation_method)
-    message = f"New segmentator of type {segmentation_method} initialized."
-    logging.info(message)
+    try:
+        logging.info(f"Initializing new segmentator of type {segmentation_method}.")
+        image_segmentator = create_segmentation_model(segmentation_method)
+        message = f"New segmentator of type {segmentation_method} initialized."
+        # save backend state
+        manager.segmentation_method = segmentation_method
+        logging.info(message)
+    except Exception as e:
+        logging.error(f"Could not initialize segmentator of type {segmentation_method}: {e}")
+        return {'message': "Segmentator was not changed due to error"}
     return {'message': message}
 
 
@@ -154,10 +178,16 @@ async def select_classifier(classification_method: str):
     Method for initializing a new classifier of type indicated by 'classification_method'
     """
     global classifier
-    logging.info(f"Initializing new classifier of type {classification_method}.")
-    classifier = create_classification_model(classification_method)
-    message = f"New classifier of type {classification_method} initialized."
-    logging.info(message)
+    try:
+        logging.info(f"Initializing new classifier of type {classification_method}.")
+        classifier = create_classification_model(classification_method)
+        message = f"New classifier of type {classification_method} initialized."
+        # save backend state
+        manager.classification_method = classification_method
+        logging.info(message)
+    except Exception as e:
+        logging.error(f"Could not initialize classifier of type {classification_method}: {e}")
+        return {'message': "Classifier was not changed due to error"}
     return {'message': message}
 
 
@@ -172,6 +202,8 @@ async def get_images(image_query: ImageQuery):
     if image_id not in image_loader:
         logging.warning(f"Image with id {image_id} not found.")
         return {"message": "Image not found"}
+
+    manager.image_id = image_id
 
     amplitude_image, phase_image = image_loader.get_images(image_id)
 
@@ -227,11 +259,20 @@ async def get_images(image_query: ImageQuery):
     amplitude_image_b64 = encode_b64(amplitude_image_str)
     phase_img_b64 = encode_b64(phase_image_str)
 
+    manager.save_masks(masks, labels)
+    manager.cell_counter += len(masks)
+    manager.image_counter += 1
+
     return ImagesWithPredictions(
         amplitude_img_data=amplitude_image_b64,
         phase_img_data=phase_img_b64,
         predictions=predictions,
     )
+
+
+@app.get('/download_masks_and_labels')
+async def download_masks_and_labels_route():
+    return FileResponse(user_dataset_path, media_type='application/octet-stream', filename=user_dataset)
 
 
 @app.post("/process_lists")
