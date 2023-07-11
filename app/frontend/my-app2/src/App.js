@@ -234,20 +234,36 @@ const AnnotationArea = () => {
 
   const handleMouseMove = (e) => {
     if (!isDrawing.current) {
-      return
+      return;
     }
+  
+    const pos = e.target.getStage().getPointerPosition();
+    const lastPolygon = currentPolygonRef.current[currentPolygonRef.current.length - 1]
+    const points = lastPolygon.points;
+    console.log(points)
+  
+    const firstPointX = points[0];
+    const firstPointY = points[1];
+  
+    const distance = Math.sqrt(
+      Math.pow(pos.x / window.innerWidth - firstPointX, 2) +
+      Math.pow(pos.y / window.innerHeight - firstPointY, 2)
+    );
+    console.log(distance)
 
-    const pos = e.target.getStage().getPointerPosition()
-    console.log(currentPolygonRef.current)
-    const lastPolygon =
-      currentPolygonRef.current[currentPolygonRef.current.length - 1]
-    console.log(lastPolygon)
-    lastPolygon.points[lastPolygon.points.length - 2] =
-      pos.x / window.innerWidth
-    lastPolygon.points[lastPolygon.points.length - 1] =
-      pos.y / window.innerHeight
-    setCurrentPolygon((prev) => [...prev])
-  }
+    if (distance < 0.025 && points.length > 4) {
+      // Connect the points
+      points.push(firstPointX);
+      points.push(firstPointY);
+      stopDrawing()
+    } else {
+      // Add a new point
+      points[points.length - 2] = pos.x / window.innerWidth;
+      points[points.length - 1] = pos.y / window.innerHeight;
+    }
+  
+    setCurrentPolygon((prev) => [...prev]);
+  };
 
   const nextImage = () => {
     setImageId((prevId) => prevId + 1)
@@ -255,10 +271,6 @@ const AnnotationArea = () => {
 
   const prevImage = () => {
     setImageId((prevId) => prevId - 1)
-  }
-
-  const skip100Images = () => {
-    setImageId((prevId) => prevId + 100)
   }
 
   const handleButtonClick = (e) => {
