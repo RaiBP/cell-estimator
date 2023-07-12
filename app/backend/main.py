@@ -31,15 +31,16 @@ from image_loader import (
 logging.basicConfig(level=logging.INFO)
 
 # Initialization values. All of these can be latter changed via POST methods
-user_data_folder = Path(os.environ["USER_DATA_FOLDER"])
-user_dataset = "user.pre"
+user_data_folder = Path("/home/larintzos/Group06/notebooks/h5py_data")
+user_dataset = "data.pre"
 user_dataset_path = user_data_folder / user_dataset
 
 # Initializing image loader for dataset
 logging.info("Initializing image loader.")
-data_folder = Path(os.environ["DATA_FOLDER"])
+#data_folder = Path(os.environ["DATA_FOLDER"])
 #data_folder = Path("/home/fidelinus/tum/applied_machine_intelligence/final_project/data")
-dataset = "real_world_sample01.pre"
+data_folder = Path("/mnt/w")
+dataset = "sample01.pre"
 dataset_path = data_folder / dataset
 # data_folder = Path(os.environ["DATA_FOLDER"])
 image_loader = ImageLoader.from_file(dataset_path)
@@ -221,6 +222,7 @@ async def get_images(image_query: ImageQuery):
     image_type = image_query.image_type
 
     image_id = image_id % len(image_loader)
+    image_id = 2
 
     if image_id not in image_loader:
         logging.warning(f"Image with id {image_id} not found.")
@@ -302,12 +304,16 @@ def get_lists_of_coordinates(lists: List[ListsOfCoordinates]):
     """
     Method for converting the Polygon's coordinates to masks
     """
+    global img_dims
     masks_pre = []
     # Process the received arrays
     for list in lists:
         # Access the NumPy array using array.data
         shape_coordinates = np.array(list.coordinates)
-        image_shape = (384, 512)
+        if len(img_dims) == 2:
+            image_shape = (img_dims[0], img_dims[1])
+        else:        
+            image_shape = (img_dims[1], img_dims[2])
         msk = np.zeros(image_shape, dtype=np.uint8)
         cv2.drawContours(msk, [shape_coordinates], 0, 255, -1)
         masks_pre.append(msk)
@@ -342,23 +348,33 @@ async def retrain_model():
     # Load saved training data and concatenate with the new data
     file_path = os.path.join('classification/training_data', 'training_data.csv')
     new_df = pd.read_csv(file_path)
+    
+    if classification_method == 'tsc':
+        y_saved = new_df['Labels'].str.strip("b'")
+    else:
+        y_saved = new_df['Labels'].str[2:-1].values
+        y_saved = np.array([item.encode() for item in y_saved])
 
-    y_saved = new_df['Labels'].str.strip("b'")
     X_saved = new_df.drop('Labels', axis=1)
 
     X_updated = pd.concat([X_saved, new_features], axis=0)
     y_updated = np.concatenate((y_saved, new_predictions))
 
-    model_filename = f"user_model_{manager.cell_count}_new_cells.pkl"
+    model_filename = f"user_model_{manager.cell_counter}_new_cells.pkl"
 
     # Active learning
     manager.classifier.fit(X_updated, y_updated, model_filename=model_filename)
     manager.set_shared_features(None)
     manager.set_predictions(None)
 
-    # Save the DataFrame to a CSV file inside the folder
+# Save the DataFrame to a CSV file inside the folder
     y_updated = y_updated.tolist()
-    y_updated = [item.encode() for item in y_updated]
+
+    if classification_method == 'tsc':
+        y_updated = [item.decode() for item in y_updated]
+    else:
+        y_updated = [f"b'{item.decode()}'" for item in y_updated]
+
     X_updated['Labels'] = y_updated
     X_updated.to_csv(file_path, index=False)
     logging.info(f"Training data updated succesfully and saved in {file_path}")
