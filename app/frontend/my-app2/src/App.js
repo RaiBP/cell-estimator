@@ -1,72 +1,11 @@
-import { wait } from '@testing-library/user-event/dist/utils'
 import React, { useEffect, useState } from 'react'
-import { Stage, Layer, Group, Line, Circle, Image } from 'react-konva'
+import { Stage, Layer, Line, Image } from 'react-konva'
 import axios from 'axios'
+import Polygon from './components/Polygon/Polygon'
+import { Menu, MenuContainer } from './components/Menu/Menu'
 
 axios.defaults.baseURL = 'http://localhost:8000'
 
-function SegmentationMethodsSelector({ onChange }) {
-  const [segmentationMethods, setSegmentationMethods] = useState([])
-
-  useEffect(() => {
-    async function fetchData() {
-      const response = await axios.get('/get_segmentation_methods')
-      setSegmentationMethods(response.data.segmentation_methods)
-    }
-    fetchData()
-  }, [])
-
-  return (
-    <div>
-      <label for='segmentation'>Choose a segmentation method:</label>
-      <select id='segmentation' onChange={onChange}>
-        {segmentationMethods.map((method, index) => (
-          <option key={index} value={method}>
-            {method}
-          </option>
-        ))}
-      </select>
-    </div>
-  )
-}
-
-const MenuContainer = ({ children }) => {
-  const style = {
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'flex-start', // align items to start
-    alignItems: 'center',
-    background: '#3C3E45',
-    width: '10%',
-    padding: '20px',
-    boxSizing: 'border-box',
-    borderRight: '1px solid #eee',
-  }
-
-  return <div style={style}>{children}</div>
-}
-
-const Button = ({ children, onClick }) => {
-  const style = {
-    display: 'block',
-    padding: '20px 20px',
-    marginBottom: '10px',
-    backgroundColor: '#5A5F6C',
-    color: '#FFF',
-    borderRadius: '4px',
-    textAlign: 'center',
-    cursor: 'pointer',
-    width: '80%',
-    height: '7%',
-    fontSize: '100%',
-  }
-
-  return (
-    <button onClick={onClick} style={style}>
-      {children}
-    </button>
-  )
-}
 
 const StageContainer = ({ children }) => {
   const style = {
@@ -75,50 +14,12 @@ const StageContainer = ({ children }) => {
     alignItems: 'center',
     flex: 1,
     overflow: 'auto',
+    width: '100%',
+    height: '100%',
     background: '#f0f0f0',
   }
 
   return <div style={style}>{children}</div>
-}
-
-function Menu({
-  onReset,
-  onUndo,
-  onSave,
-  onNext,
-  onPrev,
-  onImageId,
-  onToggleImage,
-  onSegmentationMethodChange,
-}) {
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        left: 0,
-        top: 0,
-        bottom: 0,
-        width: '10%',
-        background: '#f0f0f0',
-        padding: '0px',
-      }}
-    >
-      <Button onClick={onReset}>Reset</Button>
-      <Button onClick={onUndo}>Undo</Button>
-      <Button onClick={onSave}>Save</Button>
-      <Button onClick={onNext}>Next Image</Button>
-      <Button onClick={onPrev}>Previous Image</Button>
-      <Button onClick={onToggleImage}>Toggle Image</Button>
-      <form onSubmit={onImageId}>
-        <label>
-          Enter a number between 1 and 1000:
-          <input name='image_id' type='number' />
-        </label>
-        <input type='submit' value='Submit' />
-      </form>
-      <SegmentationMethodsSelector onChange={onSegmentationMethodChange} />
-    </div>
-  )
 }
 
 function ImageAnnotation({
@@ -195,6 +96,7 @@ const AnnotationArea = () => {
   const [showAmplitudeImage, setShowAmplitudeImage] = useState(true) // 0 for amplitude, 1 for phase
   const [image, setImage] = useState(null)
   const [imageId, setImageId] = useState(0)
+  const [currentDataset, setCurrentDataset] = useState(null)
   const img = new window.Image()
 
   // Polygon management
@@ -262,7 +164,7 @@ const AnnotationArea = () => {
   useEffect(() => {
     const image_type = showAmplitudeImage ? 0 : 1
     getImageWithPredictions(imageId, image_type, setImageCallback)
-  }, [imageId, showAmplitudeImage])
+  }, [imageId, showAmplitudeImage, currentDataset])
 
   // Hook for keeping track of lines
   useEffect(() => {
@@ -332,20 +234,36 @@ const AnnotationArea = () => {
 
   const handleMouseMove = (e) => {
     if (!isDrawing.current) {
-      return
+      return;
     }
+  
+    const pos = e.target.getStage().getPointerPosition();
+    const lastPolygon = currentPolygonRef.current[currentPolygonRef.current.length - 1]
+    const points = lastPolygon.points;
+    console.log(points)
+  
+    const firstPointX = points[0];
+    const firstPointY = points[1];
+  
+    const distance = Math.sqrt(
+      Math.pow(pos.x / window.innerWidth - firstPointX, 2) +
+      Math.pow(pos.y / window.innerHeight - firstPointY, 2)
+    );
+    console.log(distance)
 
-    const pos = e.target.getStage().getPointerPosition()
-    console.log(currentPolygonRef.current)
-    const lastPolygon =
-      currentPolygonRef.current[currentPolygonRef.current.length - 1]
-    console.log(lastPolygon)
-    lastPolygon.points[lastPolygon.points.length - 2] =
-      pos.x / window.innerWidth
-    lastPolygon.points[lastPolygon.points.length - 1] =
-      pos.y / window.innerHeight
-    setCurrentPolygon((prev) => [...prev])
-  }
+    if (distance < 0.025 && points.length > 4) {
+      // Connect the points
+      points.push(firstPointX);
+      points.push(firstPointY);
+      stopDrawing()
+    } else {
+      // Add a new point
+      points[points.length - 2] = pos.x / window.innerWidth;
+      points[points.length - 1] = pos.y / window.innerHeight;
+    }
+  
+    setCurrentPolygon((prev) => [...prev]);
+  };
 
   const nextImage = () => {
     setImageId((prevId) => prevId + 1)
@@ -353,10 +271,6 @@ const AnnotationArea = () => {
 
   const prevImage = () => {
     setImageId((prevId) => prevId - 1)
-  }
-
-  const skip100Images = () => {
-    setImageId((prevId) => prevId + 100)
   }
 
   const handleButtonClick = (e) => {
@@ -436,6 +350,25 @@ const AnnotationArea = () => {
       })
   }
 
+  function onDatasetChange(e) {
+    const selectedDataset = e.target.value
+
+    console.log(`Selected dataset: ${selectedDataset}`)
+
+    axios
+      .post('/select_dataset', {
+        filename: selectedDataset,
+      })
+      .then((response) => {
+        console.log(response.data) // Output the server's response to the console.
+      })
+      .catch((error) => {
+        console.error(`Error selecting dataset: ${error}`)
+      })
+
+    setCurrentDataset(selectedDataset)
+  }
+
   return (
     <div style={style}>
       <MenuContainer>
@@ -448,6 +381,7 @@ const AnnotationArea = () => {
           onImageId={handleButtonClick}
           onToggleImage={toggleImage}
           onSegmentationMethodChange={onSegmentationMethodChange}
+          onDatasetChange={onDatasetChange}
         />
       </MenuContainer>
       <StageContainer>
@@ -461,36 +395,6 @@ const AnnotationArea = () => {
         />
       </StageContainer>
     </div>
-  )
-}
-
-const Polygon = (props) => {
-  return (
-    <Group>
-      {props.lines.map((line, i) => (
-        <React.Fragment key={'polygon-' + props.id + '-line-' + i}>
-          <Line
-            points={line.points.map((p, index) => {
-              // Rescale the points to the current canvas size
-              return index % 2 === 0
-                ? p * window.innerWidth
-                : p * window.innerHeight
-            })}
-            stroke={line.color}
-            strokeWidth={3}
-            tension={0.2}
-          />
-          {
-            <Circle
-              x={line.points[2] * window.innerWidth}
-              y={line.points[3] * window.innerHeight}
-              radius={1.0}
-              fill='green'
-            />
-          }
-        </React.Fragment>
-      ))}
-    </Group>
   )
 }
 

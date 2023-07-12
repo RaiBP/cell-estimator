@@ -114,6 +114,10 @@ class ThreeStepClassifier(Classification):
         return self.cell_model.predict(df)
 
 
+    def name(self):
+        return 'TSC'
+
+
     def fit(self, X, y, model_filename=None):
         """
         Method for retraining the models. Note that we use a "user_models_folder" to save them so we 

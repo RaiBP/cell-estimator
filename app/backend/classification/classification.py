@@ -71,6 +71,9 @@ class Classification(ABC):
         else:
             raise FileNotFoundError(f"Model file '{file_path}' does not exist.")
 
+    @abstractmethod 
+    def name(self):
+        pass
 
     @abstractmethod
     def save_model(self, folder_path, file_name):

@@ -35,3 +35,6 @@ class FastSAMImageSegmentator(ImageSegmentator):
 
     def prompt(self, query: dict = None) -> np.ndarray:
         raise NotImplementedError("FastSAM does not support querying yet")
+
+    def name(self) -> str:
+        return "fastsam"

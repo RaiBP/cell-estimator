@@ -38,6 +38,9 @@ class OneStepClassifier(Classification):
     
     def _get_model_filename(self):
         return "osc_" + self.model_type.lower() + "_model.pkl"
+
+    def name(self):
+        return self.model_type
  
     
     def fit(self, X, y, model_filename=None):
