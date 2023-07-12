@@ -228,7 +228,7 @@ async def get_images(image_query: ImageQuery):
     image_type = image_query.image_type
 
     image_id = image_id % len(image_loader)
-    image_id = 10
+    image_id = 2
 
     if image_id not in image_loader:
         logging.warning(f"Image with id {image_id} not found.")
@@ -309,12 +309,16 @@ def get_lists_of_coordinates(lists: List[ListsOfCoordinates]):
     """
     Method for converting the Polygon's coordinates to masks
     """
+    global img_dims
     masks_pre = []
     # Process the received arrays
     for list in lists:
         # Access the NumPy array using array.data
         shape_coordinates = np.array(list.coordinates)
-        image_shape = (384, 512)                #  <-------------------------------------------  change dimensions
+        if len(img_dims) == 2:
+            image_shape = (img_dims[0], img_dims[1])
+        else:        
+            image_shape = (img_dims[1], img_dims[2])
         msk = np.zeros(image_shape, dtype=np.uint8)
         cv2.drawContours(msk, [shape_coordinates], 0, 255, -1)
         masks_pre.append(msk)
