@@ -33,6 +33,7 @@ class PipelineManager:
                 dataset_group.create_dataset('labels', shape=(0,), maxshape=(None,), dtype=h5py.string_dtype(encoding='utf-8'))
                 dataset_group.create_dataset('image_ids', shape=(0,), maxshape=(None,), dtype=np.uint32)
 
+
     def save_masks(self, masks, labels):
         # Save the masks and labels in the h5 file
         with h5py.File(self.user_dataset, 'a') as f:

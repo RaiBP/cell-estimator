@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 
 
 class Classification(ABC):
-    def __init__(self): 
+    def __init__(self, use_user_models=False): 
         self.out_of_focus_label = "oof"
         self.aggregate_label = "agg"
         self.wbc_label = "wbc"
@@ -19,7 +19,10 @@ class Classification(ABC):
         self.labels_column_name = "Labels"
         self.mask_id_column_name = "MaskID"
 
-        self.models_folder = os.path.join("classification", "models")
+        self.user_models_folder = os.path.join("classification", "user_models")
+        self.models_folder = self.user_models_folder if use_user_models else os.path.join("classification", "models")
+
+        self.model = None
 
 
     def classify(self, features):
@@ -55,24 +58,28 @@ class Classification(ABC):
 
         return features_copy
     
-    def _load_model(self, folder_path, file_name):
+
+    def get_model(self):
+        return self.model
+
+
+    @staticmethod
+    def load_model(folder_path, file_name):
         file_path = os.path.join(folder_path, file_name)
         if os.path.exists(file_path):
             return joblib.load(file_path)
         else:
             raise FileNotFoundError(f"Model file '{file_path}' does not exist.")
+
+
+    @abstractmethod
+    def save_model(self, folder_path, file_name):
+        pass
         
-    def _save_model(self, model, folder_path, file_name):
-        folder_path = os.path.join("classification", "models_test")
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
-        file_path = os.path.join(folder_path, file_name)
-        joblib.dump(model, file_path)
-        logging.info(f"Model saved succesfully at {file_path}")
-        #return {"message": "Model retrained and saved succesfully"}
-        
-    def _active_learning(self, X_updated, y_updated):
-        return self._prepare_data(X_updated, y_updated)
+
+    @abstractmethod 
+    def fit(self, X, y, model_filename=None):
+        pass
 
 
     @abstractmethod 
@@ -83,8 +90,3 @@ class Classification(ABC):
     @abstractmethod
     def _get_probabilities(self, features):
         pass
-
-    @abstractmethod
-    def _prepare_data(self, X_updated, y_updated):
-        pass
-

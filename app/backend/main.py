@@ -222,12 +222,11 @@ async def get_segmentation_methods():
 
 @app.post("/images")
 async def get_images(image_query: ImageQuery):
-    global shared_features
+    global shared_features, image_segmentator, feature_extractor, classifier
     image_id = image_query.image_id
     image_type = image_query.image_type
 
     image_id = image_id % len(image_loader)
-    image_id = 2
 
     if image_id not in image_loader:
         logging.warning(f"Image with id {image_id} not found.")
@@ -290,7 +289,6 @@ async def get_images(image_query: ImageQuery):
     phase_img_b64 = encode_b64(phase_image_str)
 
     manager.save_masks(masks, labels)
-    manager.cell_counter += len(masks)
 
     return ImagesWithPredictions(
         amplitude_img_data=amplitude_image_b64,
@@ -328,8 +326,7 @@ async def get_corrected_predictions(predictions: PredictionsList):
     """
     Method for performing active learning based on the user-corrected predictions
     """
-    global shared_features
-    global corrected_predictions
+    global shared_features, corrected_predictions, manager
 
     corrected_predictions = predictions.predictions
     predictions_enc = np.array([string.encode('UTF-8') for string in corrected_predictions])
@@ -338,21 +335,20 @@ async def get_corrected_predictions(predictions: PredictionsList):
     file_path = os.path.join('classification/training_data', 'training_data.csv')
     new_df = pd.read_csv(file_path)
 
-    y_saved = new_df['Labels'].str[2:-1].values
-    y_saved = np.array([item.encode() for item in y_saved])
-    X_saved = new_df.drop(['Labels'], axis=1)
+    y_saved = new_df['Labels'].str.strip("b'")
+    X_saved = new_df.drop('Labels', axis=1)
 
-    shared_features = shared_features.drop(["MaskID"], axis = 1)
+    shared_features = shared_features.drop("MaskID", axis = 1)
 
-    X_updated= pd.concat([X_saved, shared_features], axis=0)
+    X_updated = pd.concat([X_saved, shared_features], axis=0)
     y_updated = np.concatenate((y_saved, predictions_enc))
 
     # Active learning is performed here
-    classifier._active_learning(X_updated, y_updated)
+    classifier.fit(X_updated, y_updated, f"user_model_{manager.cell_count}_new_cells.pkl")
 
     # Save the DataFrame to a CSV file inside the folder
     y_updated = y_updated.tolist()
-    y_updated = [f"b'{item.decode()}'" for item in y_updated]
+    y_updated = [item.decode() for item in y_updated]
     X_updated['Labels'] = y_updated
     X_updated.to_csv(file_path, index=False)
     logging.info("Training data updated succesfully")

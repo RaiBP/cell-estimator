@@ -1,4 +1,8 @@
+import os
+import joblib
+
 import pandas as pd
+import numpy as np
 
 from classification.classification import Classification
 
@@ -20,9 +24,28 @@ class ThreeStepClassifier(Classification):
         else:
             self.cell_model_filename = cell_model_filename
 
-        self.oof_model = self._load_model(self.models_folder, self.oof_model_filename)
-        self.agg_model = self._load_model(self.models_folder, self.agg_model_filename)     
-        self.cell_model = self._load_model(self.models_folder, self.cell_model_filename)     
+        self.model_filename = {'oof': self.oof_model_filename, 'agg': self.agg_model_filename, 'cell': self.cell_model_filename}
+
+        self.oof_model = self.load_model(self.models_folder, self.oof_model_filename)
+        self.agg_model = self.load_model(self.models_folder, self.agg_model_filename)     
+        self.cell_model = self.load_model(self.models_folder, self.cell_model_filename)     
+
+        self.model = {'oof': self.oof_model, 'agg': self.agg_model, 'cell': self.cell_model}
+
+
+    def save_model(self, folder_path, file_name):
+        assert self.model is not None
+
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+
+        oof_file_path = os.path.join(folder_path, 'oof_' + file_name)
+        agg_file_path = os.path.join(folder_path, 'agg_' + file_name)
+        cell_file_path = os.path.join(folder_path, 'cell_' + file_name)
+
+        joblib.dump(self.oof_model, oof_file_path)
+        joblib.dump(self.agg_model, agg_file_path)
+        joblib.dump(self.cell_model, cell_file_path)
 
 
     def _get_predictions(self, features):
@@ -91,3 +114,21 @@ class ThreeStepClassifier(Classification):
         return self.cell_model.predict(df)
 
 
+    def fit(self, X, y, model_filename=None):
+        """
+        Method for retraining the models. Note that we use a "user_models_folder" to save them so we 
+        do not overwrite our original models. 'model_filename' is an optional input for giving a 
+        desired name to the model pickle file.
+        """
+        y_oof_binary = np.where(y == 'oof', 1, 0)
+        y_agg_binary = np.where(y == 'agg', 1, 0)
+
+        cell_mask = (y == 'plt') | (y == 'wbc') | (y == 'rbc')
+        X_cells = X[cell_mask]
+        y_cells = y[cell_mask]
+
+        self.oof_model.fit(X, y_oof_binary) 
+        self.agg_model.fit(X, y_agg_binary) 
+        self.cell_model.fit(X_cells, y_cells) 
+
+        self.save_model(self.user_models_folder, model_filename)
