@@ -340,8 +340,13 @@ async def get_corrected_predictions(predictions: PredictionsList):
     # Load saved training data and concatenate with the new data
     file_path = os.path.join('classification/training_data', 'training_data.csv')
     new_df = pd.read_csv(file_path)
+    
+    if classification_method == 'tsc':
+        y_saved = new_df['Labels'].str.strip("b'")
+    else:
+        y_saved = new_df['Labels'].str[2:-1].values
+        y_saved = np.array([item.encode() for item in y_saved])
 
-    y_saved = new_df['Labels'].str.strip("b'")
     X_saved = new_df.drop('Labels', axis=1)
 
     shared_features = shared_features.drop("MaskID", axis = 1)
@@ -350,11 +355,16 @@ async def get_corrected_predictions(predictions: PredictionsList):
     y_updated = np.concatenate((y_saved, predictions_enc))
 
     # Active learning is performed here
-    classifier.fit(X_updated, y_updated, f"user_model_{manager.cell_count}_new_cells.pkl")
+    classifier.fit(X_updated, y_updated, f"user_{classification_method}_{manager.cell_counter}_new_cells.pkl")
 
     # Save the DataFrame to a CSV file inside the folder
     y_updated = y_updated.tolist()
-    y_updated = [item.decode() for item in y_updated]
+
+    if classification_method == 'tsc':
+        y_updated = [item.decode() for item in y_updated]
+    else:
+        y_updated = [f"b'{item.decode()}'" for item in y_updated]
+
     X_updated['Labels'] = y_updated
     X_updated.to_csv(file_path, index=False)
     logging.info("Training data updated succesfully")
