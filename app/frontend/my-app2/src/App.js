@@ -102,6 +102,7 @@ const AnnotationArea = () => {
   // Polygon management
   const [polygons, setPolygons] = useState({})
   const [polygonCounter, setPolygonCounter] = useState(0)
+  const [newPolygonCounter, setnewPolygonCounter] = useState(0)
   const [currentPolygon, setCurrentPolygon] = useState([])
   const currentPolygonRef = React.useRef(currentPolygon)
 
@@ -218,7 +219,8 @@ const AnnotationArea = () => {
           color: '#ff0000',
         },
       ])
-    } else {
+    } 
+    else {
       // If a polygon has been started, add a new point to the last polygon
       setCurrentPolygon((prev) => {
         const newPrev = [...prev]
@@ -236,11 +238,11 @@ const AnnotationArea = () => {
     if (!isDrawing.current) {
       return;
     }
-  
+    console.log(currentPolygonRef)
+
     const pos = e.target.getStage().getPointerPosition();
     const lastPolygon = currentPolygonRef.current[currentPolygonRef.current.length - 1]
     const points = lastPolygon.points;
-    console.log(points)
   
     const firstPointX = points[0];
     const firstPointY = points[1];
@@ -249,14 +251,15 @@ const AnnotationArea = () => {
       Math.pow(pos.x / window.innerWidth - firstPointX, 2) +
       Math.pow(pos.y / window.innerHeight - firstPointY, 2)
     );
-    console.log(distance)
 
     if (distance < 0.025 && points.length > 4) {
       // Connect the points
       points.push(firstPointX);
       points.push(firstPointY);
       stopDrawing()
-    } else {
+      setnewPolygonCounter((prev) => prev+1)
+    } 
+    else {
       // Add a new point
       points[points.length - 2] = pos.x / window.innerWidth;
       points[points.length - 1] = pos.y / window.innerHeight;
@@ -324,6 +327,28 @@ const AnnotationArea = () => {
   }
 
   function reset() {
+    console.log(polygonCounter)
+    console.log(newPolygonCounter)
+    const itemstodelete=polygonCounter-newPolygonCounter
+    console.log(itemstodelete)
+    setPolygons(prev => {
+      const filteredDictionary = Object.entries(prev)
+        .filter(([k, v]) => k < itemstodelete) // Change the condition based on your requirement
+        .reduce((obj, [k, v]) => {
+          obj[k] = v;
+          return obj;
+        }, {});
+
+      return filteredDictionary;
+    });
+    setCurrentPolygon([])
+    setPolygonCounter(itemstodelete)
+    console.log(polygonCounter)
+    setnewPolygonCounter(0)
+    setPreviewLine(null)
+  }
+
+  function oldreset() {
     setPolygons({})
     setCurrentPolygon([])
     setPolygonCounter(0)
@@ -332,7 +357,13 @@ const AnnotationArea = () => {
 
   function undo() {
     setPreviewLine(null)
-    setCurrentPolygon((lines) => lines.slice(0, -1))
+    if (currentPolygonRef.current.points!=[]){
+    setCurrentPolygon((prev) => {
+      const copy=currentPolygonRef.current
+      copy[0].points = copy[0].points.slice(0,-4)
+      return copy
+    }, {});
+    }
   }
 
   function onSegmentationMethodChange(e) {

@@ -63,7 +63,7 @@ logging.basicConfig(level=logging.INFO)
 
 logging.info("Initializing image loader.")
 # data_folder = Path(os.environ["DATA_FOLDER"])
-data_folder = Path("/home/fidelinus/tum/applied_machine_intelligence/final_project/data")
+data_folder = Path("/mnt/z")
 dataset_path = data_folder / "real_world_sample01.pre"
 
 # Initializing image segmentator
