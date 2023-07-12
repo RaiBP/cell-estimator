@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react'
-import { Stage, Layer, Line, Image } from 'react-konva'
+import { Stage, Layer, Line, Image, Circle, Group } from 'react-konva'
 import axios from 'axios'
-import Polygon from './components/Polygon/Polygon'
 import { Menu, MenuContainer } from './components/Menu/Menu'
+import { v4 as uuidv4 } from 'uuid'
+
+import './AnnotationArea.css'
 
 axios.defaults.baseURL = 'http://localhost:8000'
-
 
 const StageContainer = ({ children }) => {
   const style = {
@@ -14,57 +15,9 @@ const StageContainer = ({ children }) => {
     alignItems: 'center',
     flex: 1,
     overflow: 'auto',
-    width: '100%',
-    height: '100%',
-    background: '#f0f0f0',
   }
 
   return <div style={style}>{children}</div>
-}
-
-function ImageAnnotation({
-  image,
-  polygons,
-  currentPolygon,
-  previewLine,
-  onMouseDown,
-  onMouseMove,
-}) {
-  return (
-    <Stage
-      width={window.innerWidth}
-      height={window.innerHeight}
-      onMouseDown={onMouseDown}
-      onMouseMove={onMouseMove}
-    >
-      <Layer>
-        {image && (
-          <Image
-            image={image}
-            x={0}
-            y={0}
-            width={window.innerWidth}
-            height={window.innerHeight}
-          />
-        )}
-        {Object.entries(polygons).map(([polygonId, polygon]) => {
-          return <Polygon key={polygonId} id={polygonId} lines={polygon} />
-        })}
-        <Polygon key='current' id='current' lines={currentPolygon} />
-        {previewLine && (
-          <Line
-            points={previewLine.points}
-            stroke='#df4b26'
-            strokeWidth={5}
-            tension={0.5}
-            lineCap='round'
-            lineJoin='round'
-            closed={true}
-          />
-        )}
-      </Layer>
-    </Stage>
-  )
 }
 
 async function getImageWithPredictions(imageId, imageType, callback) {
@@ -87,7 +40,8 @@ const AnnotationArea = () => {
     display: 'flex',
     alignItems: 'flex-start', // align items vertically
     justifyContent: 'flex-start', // align items horizontally
-    height: '100vh', // 100% of the viewport height
+    height: '100%', // 100% of the viewport height
+    width: '100%', // 100% of the viewport height
   }
 
   // Image management
@@ -100,11 +54,12 @@ const AnnotationArea = () => {
   const img = new window.Image()
 
   // Polygon management
-  const [polygons, setPolygons] = useState({})
+  const [polygons, setPolygons] = useState([])
   const [polygonCounter, setPolygonCounter] = useState(0)
   const [newPolygonCounter, setnewPolygonCounter] = useState(0)
   const [currentPolygon, setCurrentPolygon] = useState([])
   const currentPolygonRef = React.useRef(currentPolygon)
+  const [nextPoint, setNextPoint] = useState(null)
 
   // Preview line management
   const [previewLine, setPreviewLine] = useState(null)
@@ -135,17 +90,24 @@ const AnnotationArea = () => {
     setPhaseImage(`data:image/jpeg;base64,${response_json.phase_img_data}`)
 
     const polygonsWithPredictions = response_json.predictions
-    const transformedPolygons = {}
+    const transformedPolygons = []
+
     polygonsWithPredictions.forEach((polygonWithPrediction, index) => {
-      const polygonPoints = polygonWithPrediction.polygon.points
-      const color = getColorByClassId(polygonWithPrediction.class_id)
-      transformedPolygons[index] = [
-        {
-          points: polygonPoints,
-          color,
-        },
-      ]
-      setPolygonCounter(index + 1)
+
+      const currentPolygon = []
+      for (let i = 0; i < polygonWithPrediction.polygon.points.length; i += 8) {
+        currentPolygon.push({
+          x: polygonWithPrediction.polygon.points[i] * window.innerWidth,
+          y: polygonWithPrediction.polygon.points[i+1] * window.innerHeight,
+          color: getColorByClassId(polygonWithPrediction.class_id),
+          id: uuidv4()
+        })
+      }
+      transformedPolygons.push(currentPolygon)
+      // const polygonPoints = polygonWithPrediction.polygon.points
+      // const color = getColorByClassId(polygonWithPrediction.class_id)
+      // transformedPolygons.push(polygonPoints)
+      // setPolygonCounter(index + 1)
     })
     setPolygons(transformedPolygons)
   }
@@ -184,7 +146,7 @@ const AnnotationArea = () => {
       } else if (event.key === 'z' && event.ctrlKey) {
         undo()
       } else if (event.key === 'Escape') {
-        stopDrawing()
+        finishPolygon()
       } else if (event.key === 's') {
         saveMask()
       } else if (event.key === 'ArrowRight') {
@@ -202,71 +164,26 @@ const AnnotationArea = () => {
     }
   }, [])
 
-  const handleMouseDown = (e) => {
-    isDrawing.current = true
-    const pos = e.target.getStage().getPointerPosition()
-    if (currentPolygon.length === 0) {
-      // If there's no polygon started, start a new one
-      setCurrentPolygon((prev) => [
-        ...prev,
-        {
-          points: [
-            pos.x / window.innerWidth,
-            pos.y / window.innerHeight,
-            pos.x / window.innerWidth,
-            pos.y / window.innerHeight,
-          ],
-          color: '#ff0000',
-        },
-      ])
-    } 
-    else {
-      // If a polygon has been started, add a new point to the last polygon
-      setCurrentPolygon((prev) => {
-        const newPrev = [...prev]
-        const lastPolygon = newPrev[newPrev.length - 1]
-        lastPolygon.points.push(
-          pos.x / window.innerWidth,
-          pos.y / window.innerHeight
-        )
-        return newPrev
-      })
-    }
+  const handleClick = (e) => {
+    setCurrentPolygon([
+      ...currentPolygon,
+      { x: e.evt.x, y: e.evt.y, id: uuidv4() },
+    ])
+    console.log(currentPolygon)
   }
 
   const handleMouseMove = (e) => {
-    if (!isDrawing.current) {
-      return;
-    }
-    console.log(currentPolygonRef)
+    setNextPoint({ x: e.evt.x, y: e.evt.y })
+  }
 
-    const pos = e.target.getStage().getPointerPosition();
-    const lastPolygon = currentPolygonRef.current[currentPolygonRef.current.length - 1]
-    const points = lastPolygon.points;
-  
-    const firstPointX = points[0];
-    const firstPointY = points[1];
-  
-    const distance = Math.sqrt(
-      Math.pow(pos.x / window.innerWidth - firstPointX, 2) +
-      Math.pow(pos.y / window.innerHeight - firstPointY, 2)
-    );
-
-    if (distance < 0.025 && points.length > 4) {
-      // Connect the points
-      points.push(firstPointX);
-      points.push(firstPointY);
-      stopDrawing()
-      setnewPolygonCounter((prev) => prev+1)
-    } 
-    else {
-      // Add a new point
-      points[points.length - 2] = pos.x / window.innerWidth;
-      points[points.length - 1] = pos.y / window.innerHeight;
+  const finishPolygon = () => {
+    if (currentPolygonRef.current.length > 1) {
+      console.log(polygons)
+      setPolygons((prevPolygons) => [...prevPolygons, currentPolygonRef.current])
     }
-  
-    setCurrentPolygon((prev) => [...prev]);
-  };
+    setCurrentPolygon([])
+    setNextPoint(null)
+  }
 
   const nextImage = () => {
     setImageId((prevId) => prevId + 1)
@@ -329,18 +246,18 @@ const AnnotationArea = () => {
   function reset() {
     console.log(polygonCounter)
     console.log(newPolygonCounter)
-    const itemstodelete=polygonCounter-newPolygonCounter
+    const itemstodelete = polygonCounter - newPolygonCounter
     console.log(itemstodelete)
-    setPolygons(prev => {
+    setPolygons((prev) => {
       const filteredDictionary = Object.entries(prev)
         .filter(([k, v]) => k < itemstodelete) // Change the condition based on your requirement
         .reduce((obj, [k, v]) => {
-          obj[k] = v;
-          return obj;
-        }, {});
+          obj[k] = v
+          return obj
+        }, {})
 
-      return filteredDictionary;
-    });
+      return filteredDictionary
+    })
     setCurrentPolygon([])
     setPolygonCounter(itemstodelete)
     console.log(polygonCounter)
@@ -357,12 +274,12 @@ const AnnotationArea = () => {
 
   function undo() {
     setPreviewLine(null)
-    if (currentPolygonRef.current.points!=[]){
-    setCurrentPolygon((prev) => {
-      const copy=currentPolygonRef.current
-      copy[0].points = copy[0].points.slice(0,-4)
-      return copy
-    }, {});
+    if (currentPolygonRef.current.points != []) {
+      setCurrentPolygon((prev) => {
+        const copy = currentPolygonRef.current
+        copy[0].points = copy[0].points.slice(0, -4)
+        return copy
+      }, {})
     }
   }
 
@@ -416,14 +333,81 @@ const AnnotationArea = () => {
         />
       </MenuContainer>
       <StageContainer>
-        <ImageAnnotation
-          image={image}
-          polygons={polygons}
-          currentPolygon={currentPolygon}
-          previewLine={previewLine}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-        />
+        <Stage key='main-stage' width={window.innerWidth} height={window.innerHeight} onClick={handleClick} onMouseMove={handleMouseMove}>
+          <Layer key='0'>{image && <Image width={window.innerWidth} height={window.innerHeight} image={image} x={0} y={0} />}</Layer>
+          <Layer key='1'>
+            {polygons.map((polygon, i) => (
+              <Group
+                key={`group-${i}-${polygon[0].id}`}
+                draggable
+                onClick={(e) => {
+                  e.cancelBubble = true
+                  console.log('Clicked on polygon', i)
+                }}
+                onDragEnd={(e) => {
+                  const newPolygon = polygon.map((p) => ({
+                    x: p.x + e.target.x(),
+                    y: p.y + e.target.y(),
+                    color: p.color,
+                    id: p.id,
+                  }))
+                  const newPolygons = [...polygons]
+                  newPolygons[i] = newPolygon
+                  setPolygons(newPolygons)
+                  e.target.position({ x: 0, y: 0 }) // Reset group's position
+                }}
+              >
+                <Line
+                  points={polygon.flatMap((p) => [p.x, p.y])}
+                  fill={polygon[0].color}
+                  opacity={0.5}
+                  stroke={polygon[0].color}
+                  strokeWidth={4}
+                  closed
+                />
+                {polygon.map((point, j) => (
+                  <Circle
+                    key={`circle-${j}-${point.id}`}
+                    x={point.x}
+                    y={point.y}
+                    radius={3}
+                    fill='#ffff00'
+                    draggable
+                    onDragEnd={(e) => {
+                      e.cancelBubble = true // stop event propagation
+                      const newPoint = {
+                        x: e.target.x() + e.target.getParent().x(),
+                        y: e.target.y() + e.target.getParent().y(),
+                        id: point.id,
+                      }
+                      const newPolygon = [...polygon]
+                      newPolygon[j] = newPoint
+                      const newPolygons = [...polygons]
+                      newPolygons[i] = newPolygon
+                      setPolygons(newPolygons)
+                    }}
+                  />
+                ))}
+              </Group>
+            ))}
+            {currentPolygon.length > 0 && (
+              <Line
+                key='preview'
+                points={[
+                  ...currentPolygon.flatMap((p) => [p.x, p.y]),
+                  nextPoint
+                    ? nextPoint.x
+                    : currentPolygon[currentPolygon.length - 1].x,
+                  nextPoint
+                    ? nextPoint.y
+                    : currentPolygon[currentPolygon.length - 1].y,
+                ]}
+                stroke='#000'
+                strokeWidth={4}
+              />
+            )}
+          </Layer>
+        </Stage>
       </StageContainer>
     </div>
   )
