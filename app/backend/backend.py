@@ -1,4 +1,5 @@
 import h5py 
+import cv2
 
 import pandas as pd
 import numpy as np
@@ -6,20 +7,20 @@ import numpy as np
 from pathlib import Path
 
 from feature_extraction.feature_extractor import FeatureExtractor
-from image_loader import ImageLoader
+from image_loader import ImageLoader, prepare_phase_img, prepare_amplitude_img
 from classification.utils import create_classification_model
 from segmentation.utils import create_segmentation_model
 
 
 class PipelineManager:
     def __init__(self,  logging, dataset_path: Path, segmentation_method: str, classification_method: str, feature_extractor: FeatureExtractor, user_defined_dataset_path):
-        self.image_id = 0
+        self.set_image_id(0)
+        self.image_type = 0
         self.classification_method = classification_method
         self.cell_counter = 0
         self.image_counter = 0
-        self.user_dataset = user_defined_dataset_path
 
-        self._create_user_dataset()
+        self.logging = logging
 
         self.set_dataset(dataset_path)
         self.set_segmentation_method(segmentation_method)
@@ -27,8 +28,13 @@ class PipelineManager:
         self.set_feature_extractor(feature_extractor)
         self.shared_features = None
         self.predictions = None
+        self.phase_image = None
+        self.phase_image_str = None
+        self.amplitude_image = None
+        self.amplitude_image_str = None
 
-        self.logging = logging
+        self.user_dataset = user_defined_dataset_path
+        self._create_user_dataset()
 
 
     def set_dataset(self, dataset_path: Path):
@@ -66,12 +72,23 @@ class PipelineManager:
     def get_current_segmentation_method(self) -> str:
         return self.image_segmentator.name()
 
+    def get_image_dimensions(self):
+        return self.img_dims
+
     def set_dataset_id(self, dataset_id):
         self.dataset_id = dataset_id
 
-
     def set_image_id(self, image_id):
         self.image_id = image_id
+
+    def set_amplitude_phase_images(self, image_id):
+        self.amplitude_image, self.phase_image = self.image_loader.get_images(image_id)
+        self.amplitude_image_str = prepare_amplitude_img(self.amplitude_image)
+        self.phase_image_str = prepare_phase_img(self.phase_image)
+
+
+    def set_image_type(self, image_type):
+        self.image_type = image_type
 
 
     def _create_user_dataset(self):
@@ -189,3 +206,20 @@ class PipelineManager:
             # Increment the image_counter
             self.image_counter += 1
             self.cell_counter += len(masks)
+
+
+    def get_masks_from_polygons(self, polygons):
+        """
+        Method for converting the polygons coordinates to masks
+        """
+        image_shape = self.get_image_dimensions()
+        masks = []
+        # Process the received arrays
+        for polygon in polygons:
+            # Access the NumPy array using array.data
+            shape_coordinates = np.array(polygon.points)
+            msk = np.zeros(image_shape, dtype=np.uint8)
+            cv2.drawContours(msk, [shape_coordinates], 0, 255, -1)
+            masks.append(msk)
+        self.logging.info(f"{len(masks)} masks created successfully from received polygons")
+        return masks

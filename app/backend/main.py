@@ -31,18 +31,15 @@ from image_loader import (
 logging.basicConfig(level=logging.INFO)
 
 # Initialization values. All of these can be latter changed via POST methods
-user_data_folder = Path("/home/larintzos/Group06/notebooks/h5py_data")
-user_dataset = "data.pre"
+user_data_folder = Path(os.environ["USER_DATA_FOLDER"])
+user_dataset = "user_data.pre"
 user_dataset_path = user_data_folder / user_dataset
 
 # Initializing image loader for dataset
 logging.info("Initializing image loader.")
-#data_folder = Path(os.environ["DATA_FOLDER"])
-#data_folder = Path("/home/fidelinus/tum/applied_machine_intelligence/final_project/data")
-data_folder = Path("/mnt/w")
+data_folder = Path(os.environ["DATA_FOLDER"])
 dataset = "sample01.pre"
 dataset_path = data_folder / dataset
-# data_folder = Path(os.environ["DATA_FOLDER"])
 image_loader = ImageLoader.from_file(dataset_path)
 logging.info(f"Image loader initialized with {len(image_loader)} images.")
 
@@ -56,7 +53,7 @@ classification_method = pipeline_config["classifier"]["method"]
 
 
 logging.info("Initializing pipeline manager.")
-manager = PipelineManager(logging, dataset_path, segmentation_method, classification_method, feature_extractor, dataset, user_dataset_path)
+manager = PipelineManager(logging, dataset_path, segmentation_method, classification_method, feature_extractor, user_dataset_path)
 
 class ImageSegmentationMethod(str, Enum):
     cellpose = "cellpose"
@@ -81,6 +78,12 @@ class PolygonWithPredictions(BaseModel):
     features: dict
 
 
+class Predictions(BaseModel):
+    class_id: str
+    confidence: dict
+    features: dict
+
+
 class ImageQuery(BaseModel):
     image_id: int
     image_type: int
@@ -95,6 +98,11 @@ class ImagesWithPredictions(BaseModel):
     amplitude_img_data: str
     phase_img_data: str
     predictions: List[PolygonWithPredictions]
+
+class ImagesWithPolygons(BaseModel):
+    amplitude_img_data: str
+    phase_img_data: str
+    polygons: List[Polygon]
 
 
 class DatasetInfo(BaseModel):
@@ -124,7 +132,6 @@ class PredictionsList(BaseModel):
 class FeaturesList(BaseModel):
     features: List[str]
 
-
 class ListsOfCoordinates(BaseModel):
     coordinates: List[List[int]]
 
@@ -149,6 +156,7 @@ app.add_middleware(
 @app.get("/datasets")
 async def get_datasets():
     return {
+        # are we sure all the datasets will be in .pre file format?
         "datasets": [dataset.name for dataset in data_folder.glob("*.pre")],
     }
 
@@ -162,7 +170,7 @@ async def select_dataset(dataset: Dataset):
     """
     Method for changing the dataset file from which to load the images
     """
-    global manager, data_folder
+    global manager, data_folder, logging
     try:
         logging.info("Initializing image loader with new dataset.")
         dataset_path = data_folder / dataset.filename
@@ -181,7 +189,7 @@ async def select_segmentator(segmentation_method: SegmentationMethod):
     """
     Method for initializing a new segmentator of type indicated by 'segmentation_method'
     """
-    global manager
+    global manager, logging
     try:
         manager.set_segmentation_method(segmentation_method.method)
     except Exception as e:
@@ -195,7 +203,7 @@ async def select_classifier(classification_method: str):
     """
     Method for initializing a new classifier of type indicated by 'classification_method'
     """
-    global classifier
+    global manager, logging
     try:
         manager.set_classification_method(classification_method)
         message = f"New classifier of type {classification_method} initialized."
@@ -210,9 +218,157 @@ async def get_segmentation_methods():
     return {"segmentation_methods": list_segmentation_methods()}
 
 
+@app.post("set_image")
+async def set_image(image_query: ImageQuery):
+    """
+    Method to set an image as the current image in the backend manager. All subsequent operations will be 
+    performed on this image until this method is called again and sets a different image.
+    """
+    global manager, logging
+    image_loader = manager.image_loader
+
+    image_id = image_query.image_id
+    image_id = image_id % len(image_loader)
+
+    image_type = image_query.image_type
+
+    manager.set_image_id(image_id)
+    manager.set_image_tpye(image_type)
+    manager.set_shared_features(None)
+    manager.set_predictions(None)
+
+    if image_id not in image_loader:
+        logging.warning(f"Image with id {image_id} not found.")
+        return {"message": "Image not found"}
+    else:
+        manager.set_amplitude_phase_images(image_id)
+        return {"message": f"Image with id {image_id} from dataset {manager.dataset_id} is set as active image."}
+
+
+@app.post("/segment")
+async def segment():
+    global manager, logging
+
+    image_segmentator = manager.image_segmentator
+    image_id = manager.image_id
+    image_type = manager.image_type
+
+    amplitude_image, phase_image = manager.get_amplitude_phase_images()
+    amplitude_image_str, phase_image_str = manager.get_amplitude_phase_images_str()
+
+    segmentation_method = manager.get_current_segmentation_method()
+
+    if segmentation_method in ["fastsam", "sam"]:
+        image_to_be_segmented = amplitude_image_str if image_type == 0 else phase_image_str
+    else:
+        image_to_be_segmented = amplitude_image if image_type == 0 else phase_image
+
+    try:
+        masks = image_segmentator.segment_image(image_to_be_segmented)
+        contours = [segmentation_utils.get_mask_contour(m) for m in masks]
+        contours = [segmentation_utils.normalize_contour(c) for c in contours]
+        contours = segmentation_utils.flatten_contours(contours)
+        logging.info(f"Masks of image {image_id} calculated succesfully.")
+
+    except Exception as e:
+        logging.error(f"Error while segmenting image with id {image_id}: {e}")
+        contours = []
+        masks = []
+
+    logging.info(f"Found {len(masks)} masks in image with id {image_id}")
+
+    polygons = [Polygon(points=polygon) for polygon in contours]
+
+    logging.info(f"Sending image with id {image_id} and {len(polygons)} masks to client.")
+
+    amplitude_image_b64 = encode_b64(amplitude_image_str)
+    phase_img_b64 = encode_b64(phase_image_str)
+
+    return ImagesWithPolygons(
+        amplitude_img_data=amplitude_image_b64,
+        phase_img_data=phase_img_b64,
+        polygons=polygons,
+    )
+
+
+@app.post("/classify")
+async def classify(polygons: List[Polygon]):
+    global manager, logging
+
+    masks = manager.get_masks_from_polygons(polygons)
+    amplitude_image, phase_image = manager.get_amplitude_phase_images()
+    image_id = manager.image_id
+    classifier = manager.classifier
+
+    try:
+        features = feature_extractor.extract_features(phase_image, amplitude_image, masks)
+        manager.set_shared_features(features)
+        features_records = features.to_dict('records')
+    except Exception as e:
+        logging.error(f"Error while extracting features from image with id {image_id}: {e}")
+        features = None
+        features_records = {}
+    if features is not None:
+        try:
+            labels, probabilities = classifier.classify(features)
+        except Exception as e:
+            logging.error(f"Error while classifying image with id {image_id}: {e}")
+            probabilities = []
+            labels = []
+            manager.set_shared_features(None)
+            manager.set_predictions(None)
+    else:
+        probabilities = []
+        labels = []
+        manager.set_shared_features(None)
+        manager.set_predictions(None)
+
+    if (not features_records) or (not probabilities) or (not labels):
+        # if any of these is empty, then predictions is also empty
+        predictions = []
+    else:
+        predictions = [
+            Predictions(
+                class_id=label,
+                confidence=prob,
+                features=mask_features
+            )
+            for label, prob, mask_features in zip(labels, probabilities, features_records)]
+
+    logging.info(f"Sending {len(predictions)} predictions to client for image with id {image_id}.")
+    return predictions
+
+
+@app.post("/save_masks_and_labels")
+async def save_masks_and_labels(polygons: List[Polygon], predictions: List[str]):
+    """
+    Method to save the masks and labels once the user has confirmed that they are correct.
+    They are saved to a h5 file found in 'user_dataset_path' (defined at the start of this file).
+    ### TODO ###
+    right now we are saving only image indeces, masks and labels, but we could also:
+        - save the features
+        - MORE IMPORTANTLY: save cell "position" (actually a requirement, I am not making it up).
+            We can calculate the mask centroid coordinates and save them as additional features
+    """
+    global manager, logging, user_dataset
+    try:
+        assert len(polygons) == len(predictions)
+    except:
+        logging.error(f"Error: given list of masks and labels do not coincide in length")
+        return {"error": "Masks and labels are not equal in number"}
+
+    masks = manager.get_masks_from_polygons(polygons)
+     
+    try:
+        manager.save_masks(masks, predictions)
+        logging.info(f"Masks and labels saved as {user_dataset}")
+    except Exception as e:
+        logging.error(f"Error while classifying image with id {manager.image_id}: {e}")
+    
+
 @app.post("/images")
 async def get_images(image_query: ImageQuery):
-    global manager
+    global manager, logging
 
     image_loader = manager.image_loader
     image_segmentator = manager.image_segmentator
@@ -222,7 +378,6 @@ async def get_images(image_query: ImageQuery):
     image_type = image_query.image_type
 
     image_id = image_id % len(image_loader)
-    image_id = 2
 
     if image_id not in image_loader:
         logging.warning(f"Image with id {image_id} not found.")
@@ -299,28 +454,6 @@ async def download_masks_and_labels_route():
     return FileResponse(user_dataset_path, media_type='application/octet-stream', filename=user_dataset)
 
 
-@app.post("/process_lists_of_coordinates")
-def get_lists_of_coordinates(lists: List[ListsOfCoordinates]):
-    """
-    Method for converting the Polygon's coordinates to masks
-    """
-    global img_dims
-    masks_pre = []
-    # Process the received arrays
-    for list in lists:
-        # Access the NumPy array using array.data
-        shape_coordinates = np.array(list.coordinates)
-        if len(img_dims) == 2:
-            image_shape = (img_dims[0], img_dims[1])
-        else:        
-            image_shape = (img_dims[1], img_dims[2])
-        msk = np.zeros(image_shape, dtype=np.uint8)
-        cv2.drawContours(msk, [shape_coordinates], 0, 255, -1)
-        masks_pre.append(msk)
-
-    logging.info("Masks created successfully")
-    return {"message": "Masks created successfully"}
-
 @app.post("/receive_predictions")
 async def receive_predictions(predictions_list: PredictionsList):
     """
@@ -389,8 +522,6 @@ async def get_features_and_data_to_plot(features: FeaturesList):
     and sending the data that will be plotted
     IMPORTANT: the POST method "receive_predictions" must be called first
     """
-
-
     if features is not None:
         features_to_plot = features.features
 
