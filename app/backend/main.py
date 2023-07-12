@@ -31,15 +31,16 @@ from image_loader import (
 logging.basicConfig(level=logging.INFO)
 
 # Initialization values. All of these can be latter changed via POST methods
-user_data_folder = Path(os.environ["USER_DATA_FOLDER"])
-user_dataset = "user.pre"
+user_data_folder = Path("/home/larintzos/Group06/notebooks/h5py_data")
+user_dataset = "data.pre"
 user_dataset_path = user_data_folder / user_dataset
 
 # Initializing image loader for dataset
 logging.info("Initializing image loader.")
-data_folder = Path(os.environ["DATA_FOLDER"])
+#data_folder = Path(os.environ["DATA_FOLDER"])
 #data_folder = Path("/home/fidelinus/tum/applied_machine_intelligence/final_project/data")
-dataset = "real_world_sample01.pre"
+data_folder = Path("/mnt/w")
+dataset = "sample01.pre"
 dataset_path = data_folder / dataset
 # data_folder = Path(os.environ["DATA_FOLDER"])
 image_loader = ImageLoader.from_file(dataset_path)
@@ -227,6 +228,7 @@ async def get_images(image_query: ImageQuery):
     image_type = image_query.image_type
 
     image_id = image_id % len(image_loader)
+    image_id = 10
 
     if image_id not in image_loader:
         logging.warning(f"Image with id {image_id} not found.")
@@ -312,7 +314,7 @@ def get_lists_of_coordinates(lists: List[ListsOfCoordinates]):
     for list in lists:
         # Access the NumPy array using array.data
         shape_coordinates = np.array(list.coordinates)
-        image_shape = (384, 512)
+        image_shape = (384, 512)                #  <-------------------------------------------  change dimensions
         msk = np.zeros(image_shape, dtype=np.uint8)
         cv2.drawContours(msk, [shape_coordinates], 0, 255, -1)
         masks_pre.append(msk)
