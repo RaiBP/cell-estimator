@@ -507,7 +507,7 @@ async def retrain_model():
     assert new_features is not None and new_predictions is not None
 
     # Load saved training data and concatenate with the new data
-    file_path = os.path.join('classification/training_data', 'training_data.csv')
+    file_path = os.path.join('classification/data', 'training_data_user.csv')
     new_df = pd.read_csv(file_path)
     
     if classification_method == 'tsc':
@@ -553,7 +553,7 @@ async def get_features_and_data_to_plot(features: FeaturesList):
     if features is not None:
         features_to_plot = features.features
 
-    file_path = os.path.join('classification/training_data', 'training_data.csv')
+    file_path = os.path.join('classification/data', 'training_data_base.csv')
     training_features = pd.read_csv(file_path)
     
     shared_features = manager.get_shared_features()
