@@ -1,5 +1,6 @@
 import h5py 
 import cv2
+import os
 
 import pandas as pd
 import numpy as np
@@ -219,16 +220,16 @@ class PipelineManager:
 
     def get_masks_from_polygons(self, polygons):
         """
-        Method for converting the polygons coordinates to masks
+        Method for converting the polygons to masks
         """
         image_shape = self.get_image_dimensions()
         masks = []
         # Process the received arrays
         for polygon in polygons:
-            # Access the NumPy array using array.data
-            shape_coordinates = np.array(polygon.points)
-            msk = np.zeros(image_shape, dtype=np.uint8)
-            cv2.drawContours(msk, [shape_coordinates], 0, 255, -1)
-            masks.append(msk)
+            mask = np.zeros(image_shape, dtype=np.uint8)
+            contour = np.array(polygon.points).reshape((-1, 2)) * np.array([image_shape[1], image_shape[0]])
+            contour = contour.astype(np.int32)
+            cv2.drawContours(mask, [contour], -1, 255, thickness=cv2.FILLED)
+            masks.append(mask)
         self.logging.info(f"{len(masks)} masks created successfully from received polygons")
         return masks

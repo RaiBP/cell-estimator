@@ -80,7 +80,7 @@ class ClassificationMethod(BaseModel):
     method: CellClassificationMethod
 
 class Polygon(BaseModel):
-    points: List[int] | None
+    points: List[float] | None
 
 
 class PolygonWithPredictions(BaseModel):
@@ -154,7 +154,6 @@ app = FastAPI()
 shared_features = None
 features_to_plot = None
 corrected_predictions = None
-masks_segmentator = None
 
 origins = ["http://localhost:3000", "https://localhost:3000"]
 
@@ -266,7 +265,7 @@ async def set_image(image_query: ImageQuery):
 
 @app.post("/segment")
 async def segment():
-    global manager, logging, masks_segmentator
+    global manager, logging
 
     image_segmentator = manager.image_segmentator
     image_id = manager.image_id
@@ -284,7 +283,6 @@ async def segment():
 
     try:
         masks = image_segmentator.segment_image(image_to_be_segmented)
-        masks_segmentator = masks
         contours = [segmentation_utils.get_mask_contour(m) for m in masks]
         contours = [segmentation_utils.normalize_contour(c) for c in contours]
         contours = segmentation_utils.flatten_contours(contours)
@@ -294,7 +292,6 @@ async def segment():
         logging.error(f"Error while segmenting image with id {image_id}: {e}")
         contours = []
         masks = []
-        masks_segmentator = []
 
     logging.info(f"Found {len(masks)} masks in image with id {image_id}")
 
@@ -313,12 +310,10 @@ async def segment():
 
 
 @app.post("/classify")
-async def classify(polygons: List[Polygons]):
-    global manager, logging, masks_segmentator
+async def classify(polygons: List[Polygon]):
+    global manager, logging
 
     masks = manager.get_masks_from_polygons(polygons)
-    if len(masks_segmentator) != 0:
-        masks = masks + masks_segmentator
 
     amplitude_image, phase_image = manager.get_amplitude_phase_images()
     image_id = manager.image_id
