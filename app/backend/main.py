@@ -19,6 +19,7 @@ from classification.utils import create_classification_model
 from backend import PipelineManager
 
 from segmentation.utils import create_segmentation_model, list_segmentation_methods
+from classification.utils import list_classification_methods
 
 from image_loader import (
     ImageLoader,
@@ -31,13 +32,15 @@ from image_loader import (
 logging.basicConfig(level=logging.INFO)
 
 # Initialization values. All of these can be latter changed via POST methods
-user_data_folder = Path(os.environ["USER_DATA_FOLDER"])
+#user_data_folder = Path(os.environ["USER_DATA_FOLDER"])
+user_data_folder = Path("/home/larintzos/Group06/notebooks/h5py_data")
 user_dataset = "user_data.pre"
 user_dataset_path = user_data_folder / user_dataset
 
 # Initializing image loader for dataset
 logging.info("Initializing image loader.")
-data_folder = Path(os.environ["DATA_FOLDER"])
+#data_folder = Path(os.environ["DATA_FOLDER"])
+data_folder = Path("/mnt/w")
 dataset = "sample01.pre"
 dataset_path = data_folder / dataset
 image_loader = ImageLoader.from_file(dataset_path)
@@ -61,14 +64,23 @@ class ImageSegmentationMethod(str, Enum):
     fastsam = "fastsam"
     sam = "sam"
 
+class CellClassificationMethod(str, Enum):
+    svc = "svc"
+    rfc = "rfc"
+    knn = "knn"
+    tsc = "tsc"
+
 class Dataset(BaseModel):
     filename: str
 
 class SegmentationMethod(BaseModel):
     method: ImageSegmentationMethod
 
+class ClassificationMethod(BaseModel):
+    method: CellClassificationMethod
+
 class Polygon(BaseModel):
-    points: List[float] | None
+    points: List[int] | None
 
 
 class PolygonWithPredictions(BaseModel):
@@ -132,8 +144,8 @@ class PredictionsList(BaseModel):
 class FeaturesList(BaseModel):
     features: List[str]
 
-class ListsOfCoordinates(BaseModel):
-    coordinates: List[List[int]]
+class Polygons(BaseModel):
+    points: List[List[int]]
 
 
 app = FastAPI()
@@ -142,6 +154,8 @@ app = FastAPI()
 shared_features = None
 features_to_plot = None
 corrected_predictions = None
+masks_segmentator = None
+
 origins = ["http://localhost:3000", "https://localhost:3000"]
 
 
@@ -199,16 +213,16 @@ async def select_segmentator(segmentation_method: SegmentationMethod):
 
 
 @app.post("/select_classifier")
-async def select_classifier(classification_method: str):
+async def select_classifier(classification_method: ClassificationMethod):
     """
     Method for initializing a new classifier of type indicated by 'classification_method'
     """
     global manager, logging
     try:
-        manager.set_classification_method(classification_method)
-        message = f"New classifier of type {classification_method} initialized."
+        manager.set_classification_method(classification_method.method)
+        message = f"New classifier of type {classification_method.method} initialized."
     except Exception as e:
-        logging.error(f"Could not initialize classifier of type {classification_method}: {e}")
+        logging.error(f"Could not initialize classifier of type {classification_method.method}: {e}")
         return {'message': "Classifier was not changed due to error"}
     return {'message': message}
 
@@ -218,7 +232,12 @@ async def get_segmentation_methods():
     return {"segmentation_methods": list_segmentation_methods()}
 
 
-@app.post("set_image")
+@app.get("/get_classification_methods")
+async def get_classification_methods():
+    return {"classification_methods": list_classification_methods()}
+
+
+@app.post("/set_image")
 async def set_image(image_query: ImageQuery):
     """
     Method to set an image as the current image in the backend manager. All subsequent operations will be 
@@ -233,7 +252,7 @@ async def set_image(image_query: ImageQuery):
     image_type = image_query.image_type
 
     manager.set_image_id(image_id)
-    manager.set_image_tpye(image_type)
+    manager.set_image_type(image_type)
     manager.set_shared_features(None)
     manager.set_predictions(None)
 
@@ -247,7 +266,7 @@ async def set_image(image_query: ImageQuery):
 
 @app.post("/segment")
 async def segment():
-    global manager, logging
+    global manager, logging, masks_segmentator
 
     image_segmentator = manager.image_segmentator
     image_id = manager.image_id
@@ -265,6 +284,7 @@ async def segment():
 
     try:
         masks = image_segmentator.segment_image(image_to_be_segmented)
+        masks_segmentator = masks
         contours = [segmentation_utils.get_mask_contour(m) for m in masks]
         contours = [segmentation_utils.normalize_contour(c) for c in contours]
         contours = segmentation_utils.flatten_contours(contours)
@@ -274,6 +294,7 @@ async def segment():
         logging.error(f"Error while segmenting image with id {image_id}: {e}")
         contours = []
         masks = []
+        masks_segmentator = []
 
     logging.info(f"Found {len(masks)} masks in image with id {image_id}")
 
@@ -292,10 +313,13 @@ async def segment():
 
 
 @app.post("/classify")
-async def classify(polygons: List[Polygon]):
-    global manager, logging
+async def classify(polygons: List[Polygons]):
+    global manager, logging, masks_segmentator
 
     masks = manager.get_masks_from_polygons(polygons)
+    if len(masks_segmentator) != 0:
+        masks = masks + masks_segmentator
+
     amplitude_image, phase_image = manager.get_amplitude_phase_images()
     image_id = manager.image_id
     classifier = manager.classifier
@@ -473,7 +497,11 @@ async def retrain_model():
     IMPORTANT: the POST method "receive_predictions" must be called first
     """
     global manager
+
     new_predictions = manager.get_predictions()
+    if classification_method != 'tsc':
+        new_predictions = np.array([string.encode('UTF-8') for string in new_predictions])
+
     new_features = manager.get_shared_features().drop(["MaskID"], axis = 1)
 
     assert new_features is not None and new_predictions is not None
@@ -500,7 +528,7 @@ async def retrain_model():
     manager.set_shared_features(None)
     manager.set_predictions(None)
 
-# Save the DataFrame to a CSV file inside the folder
+    # Save the DataFrame to a CSV file inside the folder
     y_updated = y_updated.tolist()
 
     if classification_method == 'tsc':
@@ -511,7 +539,7 @@ async def retrain_model():
     X_updated['Labels'] = y_updated
     X_updated.to_csv(file_path, index=False)
     logging.info(f"Training data updated succesfully and saved in {file_path}")
-    logging.info(f"Model retrained succesfully on {manager.cell_count} data points and saved as {model_filename}")
+    logging.info(f"Model retrained succesfully on {manager.cell_counter} data points and saved as {model_filename}")
     return {"message": "Model retrained succesfully"}
 
 

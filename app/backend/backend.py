@@ -63,6 +63,9 @@ class PipelineManager:
     def set_shared_features(self, shared_features: pd.DataFrame):
         self.shared_features = shared_features
 
+    def get_shared_features(self):
+        return self.shared_features
+
     def set_predictions(self, predictions):
         self.predictions = predictions
 
@@ -85,7 +88,13 @@ class PipelineManager:
         self.amplitude_image, self.phase_image = self.image_loader.get_images(image_id)
         self.amplitude_image_str = prepare_amplitude_img(self.amplitude_image)
         self.phase_image_str = prepare_phase_img(self.phase_image)
-
+    
+    def get_amplitude_phase_images(self):
+        return self.amplitude_image, self.phase_image
+    
+    def get_amplitude_phase_images_str(self):
+        return self.amplitude_image_str, self.phase_image_str
+    
 
     def set_image_type(self, image_type):
         self.image_type = image_type
