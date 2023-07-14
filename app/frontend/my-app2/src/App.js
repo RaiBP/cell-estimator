@@ -2,9 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { Stage, Layer, Line, Image, Circle, Group } from 'react-konva'
 import axios from 'axios'
 import { Menu, MenuContainer } from './components/Menu/Menu'
+import { PopupMenu } from './components/PopupMenu/PopupMenu'
 import { v4 as uuidv4 } from 'uuid'
-
-import './AnnotationArea.css'
 
 axios.defaults.baseURL = 'http://localhost:8000'
 
@@ -56,7 +55,6 @@ const AnnotationArea = () => {
   // Polygon management
   const [polygons, setPolygons] = useState([])
   const [polygonCounter, setPolygonCounter] = useState(0)
-  const [newPolygonCounter, setnewPolygonCounter] = useState(0)
   const [currentPolygon, setCurrentPolygon] = useState([])
   const currentPolygonRef = React.useRef(currentPolygon)
   const [nextPoint, setNextPoint] = useState(null)
@@ -64,6 +62,12 @@ const AnnotationArea = () => {
   // Preview line management
   const [previewLine, setPreviewLine] = useState(null)
   const isDrawing = React.useRef(false)
+
+  // Popup menu
+  const [IsLKeyPressed,setIsLKeyPressed] = useState(false);
+  const [showPopup,setShowPopup] = useState(false);
+  const [selectedOption, setSelectedOption] = useState("");
+
 
   function getColorByClassId(classId) {
     switch (classId) {
@@ -152,12 +156,22 @@ const AnnotationArea = () => {
         prevImage()
       } else if (event.key === 't') {
         toggleImage()
+      } else if (event.key === "l") {
+        setIsLKeyPressed(true);
+      }
+    }
+
+    const handleKeyUp = (event) => {
+      if (event.key === "l") {
+        setIsLKeyPressed(false);
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener("keyup", handleKeyUp);
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener("keyup", handleKeyUp);
     }
   }, [])
 
@@ -246,6 +260,11 @@ const AnnotationArea = () => {
 
   function deleteall() {
     setPolygons([])
+  }
+
+  function handleOptionClick(option) {
+    setSelectedOption(option);
+    showPopup(false)
   }
 
   function onSegmentationMethodChange(e) {
@@ -362,6 +381,14 @@ const AnnotationArea = () => {
                   newPolygons[i] = newPolygon
                   setPolygons(newPolygons)
                   e.target.position({ x: 0, y: 0 }) // Reset group's position
+                }}
+                onMouseOver={(e) =>{
+                  console.log("Mouse over polygon", i)
+                  if (IsLKeyPressed===true){
+                    setShowPopup(true)
+                    console.log(showPopup)
+                  }
+                  showPopup && <PopupMenu handleOptionClick={handleOptionClick}/>               
                 }}
               >
                 <Line
