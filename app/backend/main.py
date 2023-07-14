@@ -1,6 +1,7 @@
 import logging
 import os
 from re import A
+from shutil import which
 from feature_extraction.feature_extractor import FeatureExtractor
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
@@ -96,8 +97,8 @@ class PolygonWithPredictions(BaseModel):
 # I leave this class just to use the get_images method (which is deprecated)
 class PolygonWithPredictions_LEGACY(BaseModel):
     polygon: Polygon
-    class_id: dict
-    confidence: float
+    class_id: str 
+    confidence: dict
     features: dict
 
 class ImagesWithPredictions_LEGACY(BaseModel):
