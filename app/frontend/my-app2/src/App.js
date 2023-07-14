@@ -68,6 +68,9 @@ const AnnotationArea = () => {
   const [showPopup,setShowPopup] = useState(false);
   const [selectedOption, setSelectedOption] = useState("");
 
+  //Deletion
+  const [IsDKeyPressed,setIsDKeyPressed] = useState(false);
+
 
   function getColorByClassId(classId) {
     switch (classId) {
@@ -158,13 +161,19 @@ const AnnotationArea = () => {
         toggleImage()
       } else if (event.key === "l") {
         setIsLKeyPressed(true);
+      } else if (event.key === "d"){
+        setIsDKeyPressed(true);
       }
     }
 
     const handleKeyUp = (event) => {
       if (event.key === "l") {
         setIsLKeyPressed(false);
+      } else if (event.key === "d"){
+        setIsDKeyPressed(false);
       }
+      
+      
     }
 
     window.addEventListener('keydown', handleKeyDown)
@@ -388,7 +397,12 @@ const AnnotationArea = () => {
                     setShowPopup(true)
                     console.log(showPopup)
                   }
-                  showPopup && <PopupMenu handleOptionClick={handleOptionClick}/>               
+                  showPopup && <PopupMenu handleOptionClick={handleOptionClick}/>
+                  console.log(IsDKeyPressed)
+                  if (IsDKeyPressed===true){
+                    polygons.splice(i,1)
+                    setIsDKeyPressed(false)
+                  }               
                 }}
               >
                 <Line
