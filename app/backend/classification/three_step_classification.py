@@ -137,6 +137,8 @@ class ThreeStepClassifier(Classification):
         do not overwrite our original models. 'model_filename' is an optional input for giving a 
         desired name to the model pickle file.
         """
+        X = self._drop_columns(X)
+
         y_oof_binary = np.where(y == 'oof', 1, 0)
         y_agg_binary = np.where(y == 'agg', 1, 0)
 

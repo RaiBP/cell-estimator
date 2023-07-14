@@ -53,6 +53,7 @@ class OneStepClassifier(Classification):
  
     
     def fit(self, X, y, model_filename=None):
+        X = self._drop_columns(X)
         self.model.fit(X, y) 
 
         model_filename = self.model_filename if model_filename is None else model_filename

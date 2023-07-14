@@ -47,6 +47,10 @@ class Classification(ABC):
             columns_to_drop.append(self.labels_column_name)
         if self.mask_id_column_name in df.columns:
             columns_to_drop.append(self.mask_id_column_name)
+        if "ImageID" in df.columns:
+            columns_to_drop.append("ImageID")
+        if "DatasetID" in df.columns:
+            columns_to_drop.append("DatasetID")
         return columns_to_drop
 
 
