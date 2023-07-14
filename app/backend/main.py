@@ -284,15 +284,18 @@ async def set_image(image_query: ImageQuery):
 
         manager.set_shared_features(features)
         manager.set_predictions(labels)
+        if features is not None:
+            features_records = (features.drop("LabelsEntropy", axis=1)).to_dict('records')
 
-        features_records = (features.drop("LabelsEntropy", axis=1)).to_dict('records')
-        logging.info (f"Image with id {image_id} from dataset {manager.dataset_id} is set as active image.")
-        
-        try:
-            entropies = features['LabelsEntropy']
-        except Exception as e:
+            try:
+                entropies = features['LabelsEntropy']
+            except Exception as e:
+                entropies = []
+                logging.error(f"Error reading entropies of image with id {image_id}: {e}")
+        else:
+            features_records = {}
             entropies = []
-            logging.error(f"Error reading entropies of image with id {image_id}: {e}")
+        logging.info (f"Image with id {image_id} from dataset {manager.dataset_id} is set as active image.") 
 
         amplitude_image_str, phase_image_str = manager.get_amplitude_phase_images_str()
 

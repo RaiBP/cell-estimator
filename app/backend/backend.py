@@ -128,7 +128,7 @@ class PipelineManager:
             return None
 
 
-    def get_saved_masks(self, image_id, dataset_id): 
+    def get_saved_masks_and_labels(self, image_id, dataset_id): 
         with h5py.File(self.user_dataset, 'r') as f:
             if self.dataset_id not in f:
                 return None, None
