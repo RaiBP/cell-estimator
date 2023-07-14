@@ -321,3 +321,12 @@ async def process_strings_endpoint(predictions: PredictionsList):
 
     logging.info("Predictions processed succesfully")
     return {"message": "Predictions processed succesfully"}
+
+
+@app.post("/new_masks")
+async def recieve_masks(masks: List[ListOfLists]):
+    """
+    Method for receving the new masks
+    """
+    logging.info("New_masks are sent.")
+    return {"message": "Masks processed succesfully"}

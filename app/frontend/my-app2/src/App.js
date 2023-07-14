@@ -138,13 +138,10 @@ const AnnotationArea = () => {
   useEffect(() => {
     // Handling keydown events -- registering callback
     const handleKeyDown = (event) => {
-      if (event.key === 'r' && event.ctrlKey) {
-        reset()
-      }
       if (event.key === 'r') {
-        resetCurrentPolygon()
+        deleteall()
       } else if (event.key === 'z' && event.ctrlKey) {
-        undo()
+        deletelast()
       } else if (event.key === 'Escape') {
         finishPolygon()
       } else if (event.key === 's') {
@@ -243,44 +240,12 @@ const AnnotationArea = () => {
     setPreviewLine(null)
   }
 
-  function reset() {
-    console.log(polygonCounter)
-    console.log(newPolygonCounter)
-    const itemstodelete = polygonCounter - newPolygonCounter
-    console.log(itemstodelete)
-    setPolygons((prev) => {
-      const filteredDictionary = Object.entries(prev)
-        .filter(([k, v]) => k < itemstodelete) // Change the condition based on your requirement
-        .reduce((obj, [k, v]) => {
-          obj[k] = v
-          return obj
-        }, {})
-
-      return filteredDictionary
-    })
-    setCurrentPolygon([])
-    setPolygonCounter(itemstodelete)
-    console.log(polygonCounter)
-    setnewPolygonCounter(0)
-    setPreviewLine(null)
+  function deletelast() {
+    setPolygons(prev => prev.slice(0,-1))
   }
 
-  function oldreset() {
-    setPolygons({})
-    setCurrentPolygon([])
-    setPolygonCounter(0)
-    setPreviewLine(null)
-  }
-
-  function undo() {
-    setPreviewLine(null)
-    if (currentPolygonRef.current.points != []) {
-      setCurrentPolygon((prev) => {
-        const copy = currentPolygonRef.current
-        copy[0].points = copy[0].points.slice(0, -4)
-        return copy
-      }, {})
-    }
+  function deleteall() {
+    setPolygons([])
   }
 
   function onSegmentationMethodChange(e) {
@@ -317,12 +282,53 @@ const AnnotationArea = () => {
     setCurrentDataset(selectedDataset)
   }
 
+
+  function divideElements(objectOfArrays) {
+    const width = window.innerWidth;
+    const height = window.innerHeight;  
+    const result = {};
+  
+    for (let key in objectOfArrays) {
+      if (objectOfArrays.hasOwnProperty(key)) {
+        result[key] = objectOfArrays[key].map((element) => {
+          return {
+            x: element.x / width,
+            y: element.y / height
+          };
+        });
+      }
+    }
+  
+    return result;
+  }
+
+  function onClassification(e) {
+    const masks = divideElements(polygons)
+
+    console.log(polygons)
+    console.log(masks)
+    
+    console.log(`Masks: ${masks}`)
+
+    axios
+      .post('/new_masks', {
+        filename: masks,
+      })
+      .then((response) => {
+        console.log(response.data) // Output the server's response to the console.
+      })
+      .catch((error) => {
+        console.error(`Error sending masks: ${error}`)
+      })
+
+  }
+
   return (
     <div style={style}>
       <MenuContainer>
         <Menu
-          onReset={reset}
-          onUndo={undo}
+          onReset={deletelast}
+          onUndo={deleteall}
           onSave={saveMask}
           onNext={nextImage}
           onPrev={prevImage}
@@ -330,6 +336,7 @@ const AnnotationArea = () => {
           onToggleImage={toggleImage}
           onSegmentationMethodChange={onSegmentationMethodChange}
           onDatasetChange={onDatasetChange}
+          onClassification={onClassification}
         />
       </MenuContainer>
       <StageContainer>

@@ -68,11 +68,12 @@ function Menu({
   onToggleImage,
   onSegmentationMethodChange,
   onDatasetChange,
+  onClassification
 }) {
   return (
     <div className="menu-container">
-      <Button className="menu-button" onClick={onReset}>Reset</Button>
-      <Button className="menu-button" onClick={onUndo}>Undo</Button>
+      <Button className="menu-button" onClick={onReset}>Delete Last Drawn Polygon</Button>
+      <Button className="menu-button" onClick={onUndo}>Delete All Polygons</Button>
       <Button className="menu-button" onClick={onSave}>Save</Button>
       <Button className="menu-button" onClick={onNext}>Next Image</Button>
       <Button className="menu-button" onClick={onPrev}>Previous Image</Button>
@@ -86,6 +87,7 @@ function Menu({
       </form>
       <SegmentationMethodsSelector onChange={onSegmentationMethodChange} />
       <DatasetSelector onChange={onDatasetChange} />
+      <Button className="menu-button" onClick={onClassification}>Classify</Button>
     </div>
   )
 }
