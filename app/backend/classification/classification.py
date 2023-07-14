@@ -36,6 +36,10 @@ class Classification(ABC):
         probabilities = self._get_probabilities(features)
         return predictions, probabilities
 
+    @abstractmethod
+    def calculate_entropy(self, labels, probabilities):
+        pass
+
 
     def _find_columns_to_drop(self, df):
         columns_to_drop = []

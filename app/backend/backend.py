@@ -29,6 +29,7 @@ class PipelineManager:
         self.set_feature_extractor(feature_extractor)
         self.shared_features = None
         self.predictions = None
+        self.probabilities = None
         self.phase_image = None
         self.phase_image_str = None
         self.amplitude_image = None
@@ -76,6 +77,9 @@ class PipelineManager:
     def get_current_segmentation_method(self) -> str:
         return self.image_segmentator.name()
 
+    def get_current_classification_method(self) -> str:
+        return self.classifier.name()
+
     def get_image_dimensions(self):
         return self.img_dims
 
@@ -85,17 +89,19 @@ class PipelineManager:
     def set_image_id(self, image_id):
         self.image_id = image_id
 
+    def get_dataset_id(self):
+        return self.dataset_id
+
     def set_amplitude_phase_images(self, image_id):
         self.amplitude_image, self.phase_image = self.image_loader.get_images(image_id)
         self.amplitude_image_str = prepare_amplitude_img(self.amplitude_image)
         self.phase_image_str = prepare_phase_img(self.phase_image)
-    
+
     def get_amplitude_phase_images(self):
         return self.amplitude_image, self.phase_image
-    
+
     def get_amplitude_phase_images_str(self):
         return self.amplitude_image_str, self.phase_image_str
-    
 
     def set_image_type(self, image_type):
         self.image_type = image_type
@@ -111,6 +117,38 @@ class PipelineManager:
                 dataset_group.create_dataset('labels', shape=(0,), maxshape=(None,), dtype=h5py.string_dtype(encoding='utf-8'))
                 dataset_group.create_dataset('image_ids', shape=(0,), maxshape=(None,), dtype=np.uint32)
 
+    def get_saved_features(self, image_id, dataset_id, features_path):
+        features = pd.read_csv(features_path)
+
+        is_match_present = (features['DatasetID'] == dataset_id) & (features['ImageID'] == image_id)
+        if any(is_match_present):
+            # if we already have features by the image ID, we delete those
+            return features[is_match_present]
+        else:
+            return None
+
+
+    def get_saved_masks(self, image_id, dataset_id): 
+        with h5py.File(self.user_dataset, 'r') as f:
+            if self.dataset_id not in f:
+                return None, None
+
+            dataset_group = f[dataset_id]
+            image_ids_dataset = dataset_group['image_ids']
+
+             # Check if the image_id already exists in the file
+            if image_id not in image_ids_dataset:
+                return None, None
+
+            indeces = np.where(image_ids_dataset[:] == image_id)[0]
+            mask_dataset = dataset_group['masks']
+            label_dataset = dataset_group['labels']
+
+            masks = mask_dataset[indeces]
+            labels = label_dataset[indeces]
+
+            return masks, labels
+
     def save_masks(self, masks, labels):
         # Save the masks and labels in the h5 file
         with h5py.File(self.user_dataset, 'a') as f:
@@ -119,7 +157,7 @@ class PipelineManager:
                 self._create_user_dataset()
 
             dataset_group = f[self.dataset_id]
-
+            
             image_ids_dataset = dataset_group['image_ids']
 
              # Check if the image_id already exists in the file
@@ -130,6 +168,7 @@ class PipelineManager:
                 len_occur = (end_occur - start_occur) + 1
                 len_masks = len(masks)
                 init_len = dataset_group['masks'].shape[0]
+                new_masks = len_occur - len_masks
 
                 if len_masks == len_occur:
                     for mask, label in zip(masks, labels):
@@ -168,8 +207,8 @@ class PipelineManager:
                         image_id_dataset[start_occur] = self.image_id
 
                         start_occur += 1
-
-                elif len_masks < len_occur:
+                # len_masks < len_ocurr
+                else:
                     mask_dataset = dataset_group['masks']
                     label_dataset = dataset_group['labels']
                     image_id_dataset = dataset_group['image_ids']
@@ -197,6 +236,7 @@ class PipelineManager:
                     mask_dataset.resize(init_len + (len_masks-len_occur), axis=0)
                     label_dataset.resize(init_len + (len_masks-len_occur), axis=0)
                     image_id_dataset.resize(init_len + (len_masks-len_occur), axis=0)
+                self.cell_counter += new_masks
             else:
                 # Save the masks, labels, and image_ids as separate datasets
                 for mask, label in zip(masks, labels):
@@ -212,10 +252,10 @@ class PipelineManager:
                     image_id_dataset = dataset_group['image_ids']
                     image_id_dataset.resize(image_id_dataset.shape[0] + 1, axis=0)
                     image_id_dataset[-1] = self.image_id
-
+ 
+                self.cell_counter += len(masks)
             # Increment the image_counter
             self.image_counter += 1
-            self.cell_counter += len(masks)
 
 
     def get_masks_from_polygons(self, polygons):

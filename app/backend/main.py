@@ -31,16 +31,20 @@ from image_loader import (
 # Setting up logger
 logging.basicConfig(level=logging.INFO)
 
+training_data_folder = Path(os.environ["TRAINING_DATA_FOLDER"])
+training_data_filename = "training_data_user.csv"
+training_data_path = training_data_folder / training_data_filename
+
 # Initialization values. All of these can be latter changed via POST methods
-#user_data_folder = Path(os.environ["USER_DATA_FOLDER"])
-user_data_folder = Path("/home/larintzos/Group06/notebooks/h5py_data")
+user_data_folder = Path(os.environ["USER_DATA_FOLDER"])
+#user_data_folder = Path("/home/larintzos/Group06/notebooks/h5py_data")
 user_dataset = "user_data.pre"
 user_dataset_path = user_data_folder / user_dataset
 
 # Initializing image loader for dataset
 logging.info("Initializing image loader.")
-#data_folder = Path(os.environ["DATA_FOLDER"])
-data_folder = Path("/mnt/w")
+data_folder = Path(os.environ["DATA_FOLDER"])
+#data_folder = Path("/mnt/w")
 dataset = "sample01.pre"
 dataset_path = data_folder / dataset
 image_loader = ImageLoader.from_file(dataset_path)
@@ -86,13 +90,24 @@ class Polygon(BaseModel):
 class PolygonWithPredictions(BaseModel):
     polygon: Polygon
     class_id: str
-    confidence: dict
+    confidence: float
     features: dict
 
+# I leave this class just to use the get_images method (which is deprecated)
+class PolygonWithPredictions_LEGACY(BaseModel):
+    polygon: Polygon
+    class_id: dict
+    confidence: float
+    features: dict
+
+class ImagesWithPredictions_LEGACY(BaseModel):
+    amplitude_img_data: str
+    phase_img_data: str
+    predictions: List[PolygonWithPredictions_LEGACY]
 
 class Predictions(BaseModel):
     class_id: str
-    confidence: dict
+    confidence: float
     features: dict
 
 
@@ -114,6 +129,9 @@ class ImagesWithPredictions(BaseModel):
 class ImagesWithPolygons(BaseModel):
     amplitude_img_data: str
     phase_img_data: str
+    polygons: List[Polygon]
+
+class ListOfPolygons(BaseModel):
     polygons: List[Polygon]
 
 
@@ -241,8 +259,10 @@ async def set_image(image_query: ImageQuery):
     """
     Method to set an image as the current image in the backend manager. All subsequent operations will be 
     performed on this image until this method is called again and sets a different image.
+    Note that this method looks for features, masks and labels that are already saved in the server and returns them 
+    to the frontend
     """
-    global manager, logging
+    global manager, logging, training_data_path
     image_loader = manager.image_loader
 
     image_id = image_query.image_id
@@ -250,17 +270,71 @@ async def set_image(image_query: ImageQuery):
 
     image_type = image_query.image_type
 
-    manager.set_image_id(image_id)
-    manager.set_image_type(image_type)
-    manager.set_shared_features(None)
-    manager.set_predictions(None)
-
     if image_id not in image_loader:
         logging.warning(f"Image with id {image_id} not found.")
-        return {"message": "Image not found"}
+        return {"error": "Image not found"}
     else:
         manager.set_amplitude_phase_images(image_id)
-        return {"message": f"Image with id {image_id} from dataset {manager.dataset_id} is set as active image."}
+
+        manager.set_image_id(image_id)
+        manager.set_image_type(image_type)
+
+        features = manager.get_saved_features(image_id, manager.get_dataset_id(), training_data_path)
+        masks, labels = manager.get_saved_masks_and_labels(image_id, manager.get_dataset_id())
+
+        manager.set_shared_features(features)
+        manager.set_predictions(labels)
+
+        features_records = (features.drop("LabelsEntropy", axis=1)).to_dict('records')
+        logging.info (f"Image with id {image_id} from dataset {manager.dataset_id} is set as active image.")
+        
+        try:
+            entropies = features['LabelsEntropy']
+        except Exception as e:
+            entropies = []
+            logging.error(f"Error reading entropies of image with id {image_id}: {e}")
+
+        amplitude_image_str, phase_image_str = manager.get_amplitude_phase_images_str()
+
+        amplitude_image_b64 = encode_b64(amplitude_image_str)
+        phase_img_b64 = encode_b64(phase_image_str)
+
+        if masks is None or features is None or labels is None:
+            return ImagesWithPredictions(
+                amplitude_img_data=amplitude_image_b64,
+                phase_img_data=phase_img_b64,
+                predictions=[]
+            )
+
+        else:
+            if not entropies:
+                predictions = [
+                        PolygonWithPredictions(
+                            polygon=Polygon(points=polygon),
+                            class_id=label,
+                            confidence=-1.0,
+                            features=mask_features
+                        )
+                        for polygon, label, mask_features in zip(masks, labels, features_records)
+                    ]
+            
+            else:
+                predictions = [
+                        PolygonWithPredictions(
+                            polygon=Polygon(points=polygon),
+                            class_id=label,
+                            confidence=entropy,
+                            features=mask_features
+                        )
+                        for polygon, label, entropy, mask_features in zip(masks, labels, entropies, features_records)
+                    ]
+
+            
+            return ImagesWithPredictions(
+                amplitude_img_data=amplitude_image_b64,
+                phase_img_data=phase_img_b64,
+                predictions=predictions,
+            )
 
 
 @app.post("/segment")
@@ -299,13 +373,9 @@ async def segment():
 
     logging.info(f"Sending image with id {image_id} and {len(polygons)} masks to client.")
 
-    amplitude_image_b64 = encode_b64(amplitude_image_str)
-    phase_img_b64 = encode_b64(phase_image_str)
 
-    return ImagesWithPolygons(
-        amplitude_img_data=amplitude_image_b64,
-        phase_img_data=phase_img_b64,
-        polygons=polygons,
+    return ListOfPolygons(
+        polygons=polygons
     )
 
 
@@ -321,8 +391,6 @@ async def classify(polygons: List[Polygon]):
 
     try:
         features = feature_extractor.extract_features(phase_image, amplitude_image, masks)
-        manager.set_shared_features(features)
-        features_records = features.to_dict('records')
     except Exception as e:
         logging.error(f"Error while extracting features from image with id {image_id}: {e}")
         features = None
@@ -330,59 +398,102 @@ async def classify(polygons: List[Polygon]):
     if features is not None:
         try:
             labels, probabilities = classifier.classify(features)
+            entropies = classifier.calculate_entropy(labels, probabilities)
+            features_records = features.to_dict('records')
+            features['LabelsEntropy'] = entropies
+
+            manager.set_shared_features(features)
+            manager.set_predictions(labels)
         except Exception as e:
             logging.error(f"Error while classifying image with id {image_id}: {e}")
-            probabilities = []
             labels = []
+            features_records = {}
             manager.set_shared_features(None)
             manager.set_predictions(None)
+            entropies = []
     else:
-        probabilities = []
+        entropies = []
         labels = []
+        features_records = {}
         manager.set_shared_features(None)
         manager.set_predictions(None)
 
-    if (not features_records) or (not probabilities) or (not labels):
+    if (not features_records) or (not entropies) or (not labels):
         # if any of these is empty, then predictions is also empty
         predictions = []
     else:
         predictions = [
             Predictions(
                 class_id=label,
-                confidence=prob,
+                confidence=entropy,
                 features=mask_features
             )
-            for label, prob, mask_features in zip(labels, probabilities, features_records)]
+            for label, entropy, mask_features in zip(labels, entropies, features_records)]
 
     logging.info(f"Sending {len(predictions)} predictions to client for image with id {image_id}.")
     return predictions
 
 
 @app.post("/save_masks_and_labels")
-async def save_masks_and_labels(polygons: List[Polygon], predictions: List[str]):
+async def save_masks_and_labels(polygons: List[Polygon], predictions: List[str], mask_id_list: List[int]):
     """
     Method to save the masks and labels once the user has confirmed that they are correct.
     They are saved to a h5 file found in 'user_dataset_path' (defined at the start of this file).
-    ### TODO ###
-    right now we are saving only image indeces, masks and labels, but we could also:
-        - save the features
-        - MORE IMPORTANTLY: save cell "position" (actually a requirement, I am not making it up).
-            We can calculate the mask centroid coordinates and save them as additional features
     """
-    global manager, logging, user_dataset
+    global manager, logging, user_dataset, training_data_path
     try:
         assert len(polygons) == len(predictions)
     except:
         logging.error(f"Error: given list of masks and labels do not coincide in length")
         return {"error": "Masks and labels are not equal in number"}
 
+    image_id = manager.image_id
     masks = manager.get_masks_from_polygons(polygons)
-     
+    manager.set_predictions(predictions)
+
     try:
         manager.save_masks(masks, predictions)
         logging.info(f"Masks and labels saved as {user_dataset}")
     except Exception as e:
-        logging.error(f"Error while classifying image with id {manager.image_id}: {e}")
+        logging.error(f"Error while saving masks and labels of image with id {image_id}: {e}")
+        return {"error": f"Masks and labels of image with id {image_id} could not be saved"}
+
+    try:
+        # the backend has the features from all the masks
+        features_all_masks = manager.get_shared_features()
+
+        # for this to pass, we must have the features saved in the manager beforehand
+        # the features will be in the manager either because they were saved there
+        # during the classify method or during the set_image method
+        assert features_all_masks is not None
+        
+        # we extract the features of the masks that we care about
+        features = features_all_masks[features_all_masks['MaskID'].isin(mask_id_list)]
+        # now the length of features and the length of labels should be the same
+
+        # we don't save the mask IDs, as they are irrelevant for the classification models
+        features = features.drop(["MaskID"], axis = 1)
+
+        dataset_id = manager.get_dataset_id()
+
+        training_df = pd.read_csv(training_data_path)
+
+        is_match_present = (training_df['DatasetID'] == dataset_id) & (training_df['ImageID'] == image_id)
+        if any(is_match_present):
+            # if we already have features by the image ID, we delete those and write the new ones
+            training_df = training_df[~is_match_present]
+
+        features['DatasetID'] = dataset_id
+        features['ImageID'] = image_id
+        features['Labels'] = predictions
+
+        new_training_df = pd.concat([training_df, features], ignore_index=True)
+
+        new_training_df.to_csv(training_data_path, index=False)
+        logging.info(f"Training data updated succesfully and saved as {training_data_path.name}")
+    except Exception as e:
+        logging.error(f"Error while saving training data of image with id {image_id}: {e}")
+    return {"message": "User data has been saved"}
     
 
 @app.post("/images")
@@ -445,7 +556,7 @@ async def get_images(image_query: ImageQuery):
 
 
     predictions = [
-        PolygonWithPredictions(
+        PolygonWithPredictions_LEGACY(
             polygon=Polygon(points=polygon),
             class_id=label,
             confidence=prob,
@@ -461,7 +572,7 @@ async def get_images(image_query: ImageQuery):
 
     manager.save_masks(masks, labels)
 
-    return ImagesWithPredictions(
+    return ImagesWithPredictions_LEGACY(
         amplitude_img_data=amplitude_image_b64,
         phase_img_data=phase_img_b64,
         predictions=predictions,
@@ -489,52 +600,32 @@ async def receive_predictions(predictions_list: PredictionsList):
 async def retrain_model():
     """
     Method for performing active learning based on the user-corrected predictions
-    IMPORTANT: the POST method "receive_predictions" must be called first
+    Training data is taken from csv in 'training_data_path'. To add new data, please
+    use method 'save_masks_and_labels'
     """
-    global manager
+    global manager, training_data_path
+    try:
+        # Load saved training data and concatenate with the new data
+        training_data = pd.read_csv(training_data_path)
+        training_data = training_data.drop("LabelsEntropy", axis=1)
+        classification_method = manager.get_current_classification_model()
+        
+        if classification_method == 'tsc':
+            y = training_data['Labels'].str.strip("b'")
+        else:
+            y = training_data['Labels'].str[2:-1].values
+            y = np.array([item.encode() for item in y])
 
-    new_predictions = manager.get_predictions()
-    if classification_method != 'tsc':
-        new_predictions = np.array([string.encode('UTF-8') for string in new_predictions])
+        X = training_data.drop('Labels', axis=1)
 
-    new_features = manager.get_shared_features().drop(["MaskID"], axis = 1)
+        model_filename = f"{manager.get_current_classification_model()}_user_model.pkl"
 
-    assert new_features is not None and new_predictions is not None
-
-    # Load saved training data and concatenate with the new data
-    file_path = os.path.join('classification/data', 'training_data_user.csv')
-    new_df = pd.read_csv(file_path)
-    
-    if classification_method == 'tsc':
-        y_saved = new_df['Labels'].str.strip("b'")
-    else:
-        y_saved = new_df['Labels'].str[2:-1].values
-        y_saved = np.array([item.encode() for item in y_saved])
-
-    X_saved = new_df.drop('Labels', axis=1)
-
-    X_updated = pd.concat([X_saved, new_features], axis=0)
-    y_updated = np.concatenate((y_saved, new_predictions))
-
-    model_filename = f"user_model_{manager.cell_counter}_new_cells.pkl"
-
-    # Active learning
-    manager.classifier.fit(X_updated, y_updated, model_filename=model_filename)
-    manager.set_shared_features(None)
-    manager.set_predictions(None)
-
-    # Save the DataFrame to a CSV file inside the folder
-    y_updated = y_updated.tolist()
-
-    if classification_method == 'tsc':
-        y_updated = [item.decode() for item in y_updated]
-    else:
-        y_updated = [f"b'{item.decode()}'" for item in y_updated]
-
-    X_updated['Labels'] = y_updated
-    X_updated.to_csv(file_path, index=False)
-    logging.info(f"Training data updated succesfully and saved in {file_path}")
-    logging.info(f"Model retrained succesfully on {manager.cell_counter} data points and saved as {model_filename}")
+        # Active learning
+        manager.classifier.fit(X, y, model_filename=model_filename)
+        logging.info(f"Model retrained succesfully on {manager.cell_counter} data points and saved as {model_filename}")
+    except Exception as e:
+        logging.error(f"Error while retraining model: {e}")
+        return {"error": "Error while retraining model"}
     return {"message": "Model retrained succesfully"}
 
 

@@ -1,5 +1,6 @@
 import os
 import joblib 
+import numpy as np
 
 from classification.classification import Classification
 
@@ -20,6 +21,14 @@ class OneStepClassifier(Classification):
             os.makedirs(folder_path)
         file_path = os.path.join(folder_path, file_name)
         joblib.dump(self.model, file_path)
+
+
+    def calculate_entropy(self, labels, probabilities):
+        entropy = []
+        for idx, _ in enumerate(labels):
+            probas = np.array(probabilities[idx]['proba'])
+            entropy.append(-1 * np.sum(probas * np.log2(probas)))
+        return entropy
 
 
     def _get_probabilities(self, features):

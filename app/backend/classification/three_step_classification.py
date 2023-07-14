@@ -48,6 +48,19 @@ class ThreeStepClassifier(Classification):
         joblib.dump(self.cell_model, cell_file_path)
 
 
+    def calculate_entropy(self, labels, probabilities):
+        entropy = []
+        for idx, label in enumerate(labels):
+            if label == self.out_of_focus_label:
+                probas = np.array(probabilities[idx]['oof_proba'])
+            elif label == self.aggregate_label:
+                probas = np.array(probabilities[idx]['agg_proba'])
+            else:
+                probas = np.array(probabilities[idx]['cell_proba'])
+            entropy.append(-1 * np.sum(probas * np.log2(probas)))
+        return entropy
+
+
     def _get_predictions(self, features):
         df = self._predict(features)
         return df[self.labels_column_name].tolist()
