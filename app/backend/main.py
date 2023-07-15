@@ -32,20 +32,21 @@ from image_loader import (
 # Setting up logger
 logging.basicConfig(level=logging.INFO)
 
-training_data_folder = Path(os.environ["TRAINING_DATA_FOLDER"])
+#training_data_folder = Path(os.environ["TRAINING_DATA_FOLDER"])
+training_data_folder = Path("/home/larintzos/Group06/app/backend/classification/data")
 training_data_filename = "training_data_user.csv"
 training_data_path = training_data_folder / training_data_filename
 
 # Initialization values. All of these can be latter changed via POST methods
-user_data_folder = Path(os.environ["USER_DATA_FOLDER"])
-#user_data_folder = Path("/home/larintzos/Group06/notebooks/h5py_data")
+#user_data_folder = Path(os.environ["USER_DATA_FOLDER"])
+user_data_folder = Path("/home/larintzos/Group06/notebooks/h5py_data")
 user_dataset = "user_data.pre"
 user_dataset_path = user_data_folder / user_dataset
 
 # Initializing image loader for dataset
 logging.info("Initializing image loader.")
-data_folder = Path(os.environ["DATA_FOLDER"])
-#data_folder = Path("/mnt/w")
+#data_folder = Path(os.environ["DATA_FOLDER"])
+data_folder = Path("/mnt/w")
 dataset = "sample01.pre"
 dataset_path = data_folder / dataset
 image_loader = ImageLoader.from_file(dataset_path)
@@ -584,7 +585,7 @@ async def retrain_model():
     try:
         # Load saved training data and concatenate with the new data
         training_data = pd.read_csv(training_data_path)
-        classification_method = manager.get_current_classification_model()
+        classification_method = manager.get_current_classification_method()
         
         if classification_method == 'tsc':
             y = training_data['Labels'].str.strip("b'")
@@ -594,7 +595,7 @@ async def retrain_model():
 
         X = training_data.drop('Labels', axis=1)
 
-        model_filename = f"{manager.get_current_classification_model()}_user_model.pkl"
+        model_filename = f"{manager.get_current_classification_method()}_user_model.pkl"
 
         # Active learning
         manager.classifier.fit(X, y, model_filename=model_filename)
