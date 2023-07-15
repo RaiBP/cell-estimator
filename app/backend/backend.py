@@ -30,6 +30,7 @@ class PipelineManager:
         self.shared_features = None
         self.predictions = None
         self.probabilities = None
+        self.masks = None
         self.phase_image = None
         self.phase_image_str = None
         self.amplitude_image = None
@@ -37,6 +38,12 @@ class PipelineManager:
 
         self.user_dataset = user_defined_dataset_path
         self._create_user_dataset()
+
+    def set_masks(self, masks):
+        self.masks = masks
+
+    def get_masks(self):
+        return self.masks
 
 
     def set_dataset(self, dataset_path: Path):

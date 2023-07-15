@@ -278,7 +278,8 @@ async def set_image(image_query: ImageQuery):
 
         features = manager.get_saved_features(image_id, manager.get_dataset_id(), training_data_path)
         masks, labels = manager.get_saved_masks_and_labels(image_id, manager.get_dataset_id())
-
+        
+        manager.set_masks(masks)
         manager.set_shared_features(features)
         manager.set_predictions(labels)
         if features is not None:
@@ -341,11 +342,13 @@ async def segment():
         contours = [segmentation_utils.normalize_contour(c) for c in contours]
         contours = segmentation_utils.flatten_contours(contours)
         logging.info(f"Masks of image {image_id} calculated succesfully.")
+        manager.set_masks(masks)
 
     except Exception as e:
         logging.error(f"Error while segmenting image with id {image_id}: {e}")
         contours = []
         masks = []
+        manager.set_masks([])
 
     logging.info(f"Found {len(masks)} masks in image with id {image_id}")
 
@@ -360,10 +363,21 @@ async def segment():
 
 
 @app.post("/classify")
-async def classify(polygons: List[Polygon]):
+async def classify(polygons: List[Polygon], use_backend_masks: bool):
     global manager, logging
 
-    masks = manager.get_masks_from_polygons(polygons)
+    if use_backend_masks:
+        try:
+            masks = manager.get_masks()
+            assert(masks is not None)
+        except Exception as e:
+            logging.error(f"No masks found in backend manager: {e}")
+            logging.info("Using provided polygon list instead.")    
+            masks = manager.get_masks_from_polygons(polygons)
+            manager.set_masks(masks)
+    else:
+        masks = manager.get_masks_from_polygons(polygons)
+        manager.set_masks(masks)
 
     amplitude_image, phase_image = manager.get_amplitude_phase_images()
     image_id = manager.image_id
@@ -414,20 +428,29 @@ async def classify(polygons: List[Polygon]):
 
 
 @app.post("/save_masks_and_labels")
-async def save_masks_and_labels(polygons: List[Polygon], predictions: List[str], mask_id_list: List[int]):
+async def save_masks_and_labels(predictions: List[str]):
     """
     Method to save the masks and labels once the user has confirmed that they are correct.
     They are saved to a h5 file found in 'user_dataset_path' (defined at the start of this file).
+    Note that the classify method must have been called before this one, in order for there to be 
+    masks saved in the manager. The classify method basically "saves" the masks to the manager.
+    i.e. if the user changes the masks after classifying, he will have to call the classify method again.
     """
     global manager, logging, user_dataset, training_data_path
-    try:
-        assert len(polygons) == len(predictions)
+    masks = manager.get_masks()
+    try: 
+        assert masks is not None
     except:
-        logging.error(f"Error: given list of masks and labels do not coincide in length")
+        logging.error(f"Error: No masks found in the backend manager")
+        return {"error": "Masks not found."}
+
+    try:
+        assert len(masks) == len(predictions)
+    except:
+        logging.error(f"Error: given list of labels do not coincide in length with given masks")
         return {"error": "Masks and labels are not equal in number"}
 
     image_id = manager.image_id
-    masks = manager.get_masks_from_polygons(polygons)
     manager.set_predictions(predictions)
 
     try:
@@ -439,17 +462,13 @@ async def save_masks_and_labels(polygons: List[Polygon], predictions: List[str],
 
     try:
         # the backend has the features from all the masks
-        features_all_masks = manager.get_shared_features()
+        features = manager.get_shared_features()
 
         # for this to pass, we must have the features saved in the manager beforehand
         # the features will be in the manager either because they were saved there
         # during the classify method or during the set_image method
-        assert features_all_masks is not None
-        
-        # we extract the features of the masks that we care about
-        features = features_all_masks[features_all_masks['MaskID'].isin(mask_id_list)]
-        # now the length of features and the length of labels should be the same
-
+        assert features is not None
+    
         # we don't save the mask IDs, as they are irrelevant for the classification models
         features = features.drop(["MaskID"], axis = 1)
 
