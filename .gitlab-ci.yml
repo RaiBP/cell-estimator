@@ -15,6 +15,7 @@ build:
   # Only when a commit tag is set the image should be build
   only:
     - tags 
+    - main
 
   # Chose the gitlab runner tag
   tags:
