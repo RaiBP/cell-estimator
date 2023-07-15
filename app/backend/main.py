@@ -288,6 +288,11 @@ async def set_image(image_query: ImageQuery):
             features_records = {}
         logging.info (f"Image with id {image_id} from dataset {manager.dataset_id} is set as active image.") 
 
+
+        contours = [segmentation_utils.get_mask_contour(m) for m in masks]
+        contours = [segmentation_utils.normalize_contour(c) for c in contours]
+        contours = segmentation_utils.flatten_contours(contours)
+
         amplitude_image_str, phase_image_str = manager.get_amplitude_phase_images_str()
 
         amplitude_image_b64 = encode_b64(amplitude_image_str)
@@ -307,7 +312,7 @@ async def set_image(image_query: ImageQuery):
                         class_id=label,
                         features=mask_features
                     )
-                    for polygon, label, mask_features in zip(masks, labels, features_records)
+                    for polygon, label, mask_features in zip(contours, labels, features_records)
                 ]
 
             
