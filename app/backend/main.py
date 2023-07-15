@@ -288,10 +288,10 @@ async def set_image(image_query: ImageQuery):
             features_records = {}
         logging.info (f"Image with id {image_id} from dataset {manager.dataset_id} is set as active image.") 
 
-
-        contours = [segmentation_utils.get_mask_contour(m) for m in masks]
-        contours = [segmentation_utils.normalize_contour(c) for c in contours]
-        contours = segmentation_utils.flatten_contours(contours)
+        if masks is not None:
+            contours = [segmentation_utils.get_mask_contour(m) for m in masks]
+            contours = [segmentation_utils.normalize_contour(c) for c in contours]
+            contours = segmentation_utils.flatten_contours(contours)
 
         amplitude_image_str, phase_image_str = manager.get_amplitude_phase_images_str()
 
