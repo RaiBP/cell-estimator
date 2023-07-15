@@ -88,6 +88,9 @@ class ClassificationMethod(BaseModel):
 class Polygon(BaseModel):
     points: List[float] | None
 
+class ClassifyQuery(BaseModel):
+    use_backend_masks: bool
+    polygons: List[Polygon]
 
 class PolygonWithPredictions(BaseModel):
     polygon: Polygon
@@ -369,8 +372,11 @@ async def segment():
 
 
 @app.post("/classify")
-async def classify(polygons: List[Polygon], use_backend_masks: bool):
+async def classify(classify_query: ClassifyQuery): 
     global manager, logging
+
+    polygons = classify_query.polygons
+    use_backend_masks = classify_query.use_backend_masks
 
     if use_backend_masks:
         try:
@@ -611,19 +617,19 @@ async def retrain_model():
         training_data = pd.read_csv(training_data_path)
         classification_method = manager.get_current_classification_method()
         
-        if classification_method == 'tsc':
-            y = training_data['Labels'].str.strip("b'")
-        else:
-            y = training_data['Labels'].str[2:-1].values
+        y = training_data['Labels'].str.strip("b'")
+        if classification_method != 'tsc':
             y = np.array([item.encode() for item in y])
 
         X = training_data.drop('Labels', axis=1)
 
         model_filename = f"{manager.get_current_classification_method()}_user_model.pkl"
 
+        cell_count = len(training_data)
+
         # Active learning
         manager.classifier.fit(X, y, model_filename=model_filename)
-        logging.info(f"Model retrained succesfully on {manager.cell_counter} data points and saved as {model_filename}")
+        logging.info(f"Model retrained succesfully on {cell_count} data points and saved as {model_filename}")
     except Exception as e:
         logging.error(f"Error while retraining model: {e}")
         return {"error": "Error while retraining model"}
