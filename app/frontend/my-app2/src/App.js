@@ -4,8 +4,14 @@ import axios from 'axios'
 import { Menu, MenuContainer } from './components/Menu/Menu'
 import { PopupMenu } from './components/PopupMenu/PopupMenu'
 import { v4 as uuidv4 } from 'uuid'
+import Portal from "./Portal"
 
 axios.defaults.baseURL = 'http://localhost:8000'
+
+const stageDimensions = {
+  width: 1000,
+  height: 800
+}
 
 const StageContainer = ({ children }) => {
   const style = {
@@ -13,6 +19,9 @@ const StageContainer = ({ children }) => {
     justifyContent: 'center',
     alignItems: 'center',
     flex: 1,
+    width: '100%',
+    height: '100%',
+    padding: '20px',
     overflow: 'auto',
   }
 
@@ -41,6 +50,7 @@ const AnnotationArea = () => {
     justifyContent: 'flex-start', // align items horizontally
     height: '100%', // 100% of the viewport height
     width: '100%', // 100% of the viewport height
+    backgroundColor: '#F5F5F5'
   }
 
   // Image management
@@ -67,9 +77,13 @@ const AnnotationArea = () => {
   const [IsLKeyPressed,setIsLKeyPressed] = useState(false);
   const [showPopup,setShowPopup] = useState(false);
   const [selectedOption, setSelectedOption] = useState("");
+  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0 });
 
   //Deletion
   const [IsDKeyPressed,setIsDKeyPressed] = useState(false);
+
+  // Component management
+  const stageRef = React.useRef()
 
 
   function getColorByClassId(classId) {
@@ -104,8 +118,8 @@ const AnnotationArea = () => {
       const currentPolygon = []
       for (let i = 0; i < polygonWithPrediction.polygon.points.length; i += 8) {
         currentPolygon.push({
-          x: polygonWithPrediction.polygon.points[i] * window.innerWidth,
-          y: polygonWithPrediction.polygon.points[i+1] * window.innerHeight,
+          x: polygonWithPrediction.polygon.points[i] * stageDimensions.width,
+          y: polygonWithPrediction.polygon.points[i + 1] * stageDimensions.height,
           color: getColorByClassId(polygonWithPrediction.class_id),
           id: uuidv4()
         })
@@ -185,15 +199,22 @@ const AnnotationArea = () => {
   }, [])
 
   const handleClick = (e) => {
-    setCurrentPolygon([
-      ...currentPolygon,
-      { x: e.evt.x, y: e.evt.y, id: uuidv4() },
-    ])
-    console.log(currentPolygon)
+    if (e.evt.button === 0) {
+      const mousePos = stageRef.current.getStage().getPointerPosition()
+      setCurrentPolygon([
+        ...currentPolygon,
+        { x: mousePos.x, y: mousePos.y, id: uuidv4() },
+      ])
+      console.log(currentPolygon)
+    } else if (e.type === 'contextmenu') {
+      e.evt.preventDefault();
+      console.log('Right Click HandleClick')
+    }
   }
 
   const handleMouseMove = (e) => {
-    setNextPoint({ x: e.evt.x, y: e.evt.y })
+    const mousePos = stageRef.current.getStage().getPointerPosition()
+    setNextPoint({ x: mousePos.x, y: mousePos.y })
   }
 
   const finishPolygon = () => {
@@ -272,8 +293,9 @@ const AnnotationArea = () => {
   }
 
   function handleOptionClick(option) {
-    setSelectedOption(option);
-    showPopup(false)
+    setSelectedOption(option)
+    setContextMenu({ visible: false})
+    console.log('Selected', option)
   }
 
   function onSegmentationMethodChange(e) {
@@ -312,8 +334,8 @@ const AnnotationArea = () => {
 
 
   function divideElements(objectOfArrays) {
-    const width = window.innerWidth;
-    const height = window.innerHeight;  
+    const width = stageDimensions.width
+    const height = stageDimensions.height  
     const result = {};
   
     for (let key in objectOfArrays) {
@@ -368,16 +390,44 @@ const AnnotationArea = () => {
         />
       </MenuContainer>
       <StageContainer>
-        <Stage key='main-stage' width={window.innerWidth} height={window.innerHeight} onClick={handleClick} onMouseMove={handleMouseMove}>
-          <Layer key='0'>{image && <Image width={window.innerWidth} height={window.innerHeight} image={image} x={0} y={0} />}</Layer>
+        <Stage 
+          ref={stageRef} 
+          key='main-stage' 
+          width={stageDimensions.width}
+          height={stageDimensions.height}
+          onClick={handleClick} 
+          onMouseMove={handleMouseMove}
+        >
+          <Layer key='0'>
+            {image && (
+              <Image 
+                width={stageDimensions.width}
+                height={stageDimensions.height} 
+                image={image} 
+                x={0} 
+                y={0} 
+              />
+            )}
+          </Layer>
           <Layer key='1'>
             {polygons.map((polygon, i) => (
               <Group
                 key={`group-${i}-${polygon[0].id}`}
                 draggable
                 onClick={(e) => {
-                  e.cancelBubble = true
-                  console.log('Clicked on polygon', i)
+                  if (e.evt.button === 0) {
+                    console.log('Click', contextMenu.visible, contextMenu.x, contextMenu.y)
+                    e.cancelBubble = true
+                    console.log('Clicked on polygon', i)
+                  }
+                }}
+                onContextMenu={(e) => {
+                  e.evt.preventDefault();
+                  const mousePos = stageRef.current.getStage().getPointerPosition()
+                  console.log(contextMenu.visible, mousePos.x, mousePos.y)
+                  
+                  setContextMenu({ visible: true, x:mousePos.x, y:mousePos.y })
+                  
                 }}
                 onDragEnd={(e) => {
                   const newPolygon = polygon.map((p) => ({
@@ -397,7 +447,7 @@ const AnnotationArea = () => {
                     setShowPopup(true)
                     console.log(showPopup)
                   }
-                  showPopup && <PopupMenu handleOptionClick={handleOptionClick}/>
+                  
                   console.log(IsDKeyPressed)
                   if (IsDKeyPressed===true){
                     polygons.splice(i,1)
@@ -413,6 +463,7 @@ const AnnotationArea = () => {
                   strokeWidth={4}
                   closed
                 />
+                
                 {polygon.map((point, j) => (
                   <Circle
                     key={`circle-${j}-${point.id}`}
@@ -437,6 +488,7 @@ const AnnotationArea = () => {
                   />
                 ))}
               </Group>
+
             ))}
             {currentPolygon.length > 0 && (
               <Line
@@ -454,9 +506,12 @@ const AnnotationArea = () => {
                 strokeWidth={4}
               />
             )}
+            
           </Layer>
         </Stage>
+        
       </StageContainer>
+      {contextMenu.visible && (<PopupMenu x={contextMenu.x} y={contextMenu.y} handleOptionClick={handleOptionClick}/>)}
     </div>
   )
 }
