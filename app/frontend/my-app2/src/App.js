@@ -3,6 +3,7 @@ import { Stage, Layer, Line, Image, Circle, Group } from 'react-konva'
 import axios from 'axios'
 import { Menu, MenuContainer } from './components/Menu/Menu'
 import { PopupMenu } from './components/PopupMenu/PopupMenu'
+import { ExplainMenu } from './components/ExplainMenu/ExplainMenu'
 import { v4 as uuidv4 } from 'uuid'
 
 
@@ -77,8 +78,9 @@ const AnnotationArea = () => {
   const [previewLine, setPreviewLine] = useState(null)
   const isDrawing = React.useRef(false)
 
-  // Popup menu
+  // Context Menu for Polygon-editing
   const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, polygonID: -1 });
+  const [explainMenu, setExplainMenu] = useState({ visible: false, polygonID: -1 });
 
   // Component management
   const stageRef = React.useRef()
@@ -317,6 +319,9 @@ const AnnotationArea = () => {
         setDeletedPolygons([...deletedPolygons, ...polygonToDelete])
         setNumberOfDeletedPolygons([...numberOfDeletedPolygons, 1])
         break
+      case 'explain':
+        setExplainMenu({ visible:true, polygonID: contextMenu.polygonID})
+        break
       case 'noAction':
         noAction = true
     }
@@ -327,8 +332,14 @@ const AnnotationArea = () => {
       }
     }
 
-    setContextMenu({ visible: false})
+    setContextMenu({ visible: false })
     console.log('Selected', option)
+  }
+
+  function handleExplainMenuClick(option) {
+    if (option === 'close') {
+      setExplainMenu({ visible: false })
+    }
   }
 
   function onSegmentationMethodChange(e) {
@@ -530,6 +541,7 @@ const AnnotationArea = () => {
         
       </StageContainer>
       {contextMenu.visible && (<PopupMenu x={contextMenu.x} y={contextMenu.y} handleOptionClick={handleOptionClick}/>)}
+      {explainMenu.visible && (<ExplainMenu handleOptionClick={handleExplainMenuClick}/>)}
     </div>
   )
 }
