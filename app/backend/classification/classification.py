@@ -36,10 +36,22 @@ class Classification(ABC):
         probabilities = self._get_probabilities(features)
         return predictions, probabilities
 
+    @abstractmethod 
+    def add_class_probabilities_columns(features):
+        pass
+
+    @abstractmethod
+    def get_classes(self):
+        pass
+
     @abstractmethod
     def calculate_entropy(self, labels, probabilities):
         pass
 
+
+    @abstractmethod
+    def calculate_probability_per_label(self, labels, probabilities):
+        pass
 
     def _find_columns_to_drop(self, df):
         columns_to_drop = []
@@ -51,6 +63,11 @@ class Classification(ABC):
             columns_to_drop.append("ImageID")
         if "DatasetID" in df.columns:
             columns_to_drop.append("DatasetID")
+        if "LabelsEntropy" in df.columns:
+            columns_to_drop.append("LabelsEntropy")
+        prob_columns = df.filter(like='Probability').columns.tolist()
+        if prob_columns:
+            columns_to_drop += prob_columns
         return columns_to_drop
 
 
@@ -69,6 +86,16 @@ class Classification(ABC):
 
     def get_model(self):
         return self.model
+
+ 
+    @staticmethod
+    def add_class_probabilities_columns(features, proba_dict):
+        features_copy = features.copy()
+        for i, dict_values in enumerate(proba_dict):
+            for key, value in dict_values.items():
+                column_name = f"{key}Probability"
+                features_copy.loc[i, column_name] = value
+        return features_copy
 
 
     @staticmethod

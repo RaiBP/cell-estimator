@@ -91,7 +91,6 @@ class Polygon(BaseModel):
 class PolygonWithPredictions(BaseModel):
     polygon: Polygon
     class_id: str
-    confidence: float
     features: dict
 
 # I leave this class just to use the get_images method (which is deprecated)
@@ -108,14 +107,11 @@ class ImagesWithPredictions_LEGACY(BaseModel):
 
 class Predictions(BaseModel):
     class_id: str
-    confidence: float
     features: dict
-
 
 class ImageQuery(BaseModel):
     image_id: int
     image_type: int
-
 
 class ImagesGivenID(BaseModel):
     amplitude_img_data: str
@@ -286,16 +282,9 @@ async def set_image(image_query: ImageQuery):
         manager.set_shared_features(features)
         manager.set_predictions(labels)
         if features is not None:
-            features_records = (features.drop("LabelsEntropy", axis=1)).to_dict('records')
-
-            try:
-                entropies = features['LabelsEntropy']
-            except Exception as e:
-                entropies = []
-                logging.error(f"Error reading entropies of image with id {image_id}: {e}")
+            features_records = features.to_dict('records')
         else:
             features_records = {}
-            entropies = []
         logging.info (f"Image with id {image_id} from dataset {manager.dataset_id} is set as active image.") 
 
         amplitude_image_str, phase_image_str = manager.get_amplitude_phase_images_str()
@@ -311,27 +300,14 @@ async def set_image(image_query: ImageQuery):
             )
 
         else:
-            if not entropies:
-                predictions = [
-                        PolygonWithPredictions(
-                            polygon=Polygon(points=polygon),
-                            class_id=label,
-                            confidence=-1.0,
-                            features=mask_features
-                        )
-                        for polygon, label, mask_features in zip(masks, labels, features_records)
-                    ]
-            
-            else:
-                predictions = [
-                        PolygonWithPredictions(
-                            polygon=Polygon(points=polygon),
-                            class_id=label,
-                            confidence=entropy,
-                            features=mask_features
-                        )
-                        for polygon, label, entropy, mask_features in zip(masks, labels, entropies, features_records)
-                    ]
+            predictions = [
+                    PolygonWithPredictions(
+                        polygon=Polygon(points=polygon),
+                        class_id=label,
+                        features=mask_features
+                    )
+                    for polygon, label, mask_features in zip(masks, labels, features_records)
+                ]
 
             
             return ImagesWithPredictions(
@@ -341,7 +317,7 @@ async def set_image(image_query: ImageQuery):
             )
 
 
-@app.post("/segment")
+@app.get("/segment")
 async def segment():
     global manager, logging
 
@@ -403,8 +379,10 @@ async def classify(polygons: List[Polygon]):
         try:
             labels, probabilities = classifier.classify(features)
             entropies = classifier.calculate_entropy(labels, probabilities)
+            proba_per_label = classifier.calculate_probability_per_label(labels, probabilities)
             features_records = features.to_dict('records')
             features['LabelsEntropy'] = entropies
+            features = classifier.add_class_probabilities_columns(features, proba_per_label)
 
             manager.set_shared_features(features)
             manager.set_predictions(labels)
@@ -414,25 +392,22 @@ async def classify(polygons: List[Polygon]):
             features_records = {}
             manager.set_shared_features(None)
             manager.set_predictions(None)
-            entropies = []
     else:
-        entropies = []
         labels = []
         features_records = {}
         manager.set_shared_features(None)
         manager.set_predictions(None)
 
-    if (not features_records) or (not entropies) or (not labels):
+    if (not features_records) or (not labels):
         # if any of these is empty, then predictions is also empty
         predictions = []
     else:
         predictions = [
             Predictions(
                 class_id=label,
-                confidence=entropy,
                 features=mask_features
             )
-            for label, entropy, mask_features in zip(labels, entropies, features_records)]
+            for label, mask_features in zip(labels, features_records)]
 
     logging.info(f"Sending {len(predictions)} predictions to client for image with id {image_id}.")
     return predictions
@@ -551,8 +526,6 @@ async def get_images(image_query: ImageQuery):
         features_records = {}
     try:
         labels, probabilities = classifier.classify(features)
-        print(labels)
-        print(probabilities)
     except Exception as e:
         logging.error(f"Error while classifying image with id {image_id}: {e}")
         probabilities = []
@@ -611,7 +584,6 @@ async def retrain_model():
     try:
         # Load saved training data and concatenate with the new data
         training_data = pd.read_csv(training_data_path)
-        training_data = training_data.drop("LabelsEntropy", axis=1)
         classification_method = manager.get_current_classification_model()
         
         if classification_method == 'tsc':

@@ -60,6 +60,46 @@ class ThreeStepClassifier(Classification):
             entropy.append(-1 * np.sum(probas * np.log2(probas)))
         return entropy
 
+    def get_classes(self):
+        oof_binary_classes = self.oof_model.classes_
+        oof_classes = ['infocus' if value == 0 else 'oof' for value in oof_binary_classes]
+
+        agg_binary_classes = self.agg_model.classes_
+        agg_classes = ['single_cell' if value == 0 else 'agg' for value in agg_binary_classes]
+        
+        return {'oof': oof_classes, 'agg': agg_classes, 'cell': self.cell_model.classes_}
+
+    def calculate_probability_per_label(self, labels, probabilities):
+        probability = []
+        classes = self.get_classes()
+        oof_classes = classes['oof']
+        agg_classes = classes['agg']
+        cell_classes = classes['cell']
+        for idx, _ in enumerate(labels):
+            proba_dict = {}
+            probas_oof = probabilities[idx]['oof_proba']
+            probas_agg = probabilities[idx]['agg_proba']
+            probas_cell = probabilities[idx]['cell_proba'] 
+
+            prob_oof = probas_oof[oof_classes.index('oof')]
+            prob_agg = probas_agg[agg_classes.index('agg')]
+            prob_wbc = probas_cell[cell_classes.index('wbc')]
+            prob_rbc = probas_cell[cell_classes.index('rbc')]
+            prob_plt = probas_cell[cell_classes.index('plt')]
+
+            total_prob_agg = (1-prob_oof) * prob_agg
+            total_prob_wbc = (1-prob_oof) * (1-prob_agg) * prob_wbc
+            total_prob_rbc = (1-prob_oof) * (1-prob_agg) * prob_rbc
+            total_prob_plt = (1-prob_oof) * (1-prob_agg) * prob_plt
+
+            proba_dict['oof'] = prob_oof 
+            proba_dict['agg'] = total_prob_agg
+            proba_dict['wbc'] = total_prob_wbc
+            proba_dict['rbc'] = total_prob_rbc
+            proba_dict['plt'] = total_prob_plt
+
+            probability.append(proba_dict)
+        return probability
 
     def _get_predictions(self, features):
         df = self._predict(features)

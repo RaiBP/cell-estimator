@@ -30,6 +30,24 @@ class OneStepClassifier(Classification):
             entropy.append(-1 * np.sum(probas * np.log2(probas)))
         return entropy
 
+    def calculate_probability_per_label(self, labels, probabilities):
+        probability = []
+        classes = self.get_classes()
+        for idx, _ in enumerate(labels):
+            proba_dict = {}
+            probas = probabilities[idx]['proba']
+            for idx2, label in enumerate(classes):
+                proba_dict[label] = probas[idx2]
+            probability.append(proba_dict)
+        return probability
+            
+
+    def get_classes(self):
+        assert(self.model is not None)
+        classes_enc = self.model.classes_
+        classes = [item.decode('utf-8') for item in classes_enc]
+        return classes
+
 
     def _get_probabilities(self, features):
         assert(self.model is not None)
