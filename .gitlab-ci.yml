@@ -15,9 +15,6 @@ build:
       --destination $CI_REGISTRY_IMAGE/app:$CI_COMMIT_TAG
       --destination $CI_REGISTRY_IMAGE/app:latest
 
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-    
   # Only when a commit tag is set the image should be build
   only:
     - tags
