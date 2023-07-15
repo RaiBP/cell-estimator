@@ -4,7 +4,7 @@ import axios from 'axios'
 import { Menu, MenuContainer } from './components/Menu/Menu'
 import { PopupMenu } from './components/PopupMenu/PopupMenu'
 import { v4 as uuidv4 } from 'uuid'
-import Portal from "./Portal"
+
 
 axios.defaults.baseURL = 'http://localhost:8000'
 
