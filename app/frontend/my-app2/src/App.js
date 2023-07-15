@@ -16,12 +16,13 @@ const stageDimensions = {
 const StageContainer = ({ children }) => {
   const style = {
     display: 'flex',
-    justifyContent: 'center',
+    justifyContent: 'left',
     alignItems: 'center',
     flex: 1,
     width: '100%',
     height: '100%',
-    padding: '20px',
+    paddingLeft: '1px',
+    paddingTop: '50px',
     overflow: 'auto',
   }
 
@@ -68,19 +69,16 @@ const AnnotationArea = () => {
   const [currentPolygon, setCurrentPolygon] = useState([])
   const currentPolygonRef = React.useRef(currentPolygon)
   const [nextPoint, setNextPoint] = useState(null)
+  const [deletedPolygons, setDeletedPolygons] = useState([])
+  const [numberOfDeletedPolygons, setNumberOfDeletedPolygons] = useState([])
+  
 
   // Preview line management
   const [previewLine, setPreviewLine] = useState(null)
   const isDrawing = React.useRef(false)
 
   // Popup menu
-  const [IsLKeyPressed,setIsLKeyPressed] = useState(false);
-  const [showPopup,setShowPopup] = useState(false);
-  const [selectedOption, setSelectedOption] = useState("");
-  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0 });
-
-  //Deletion
-  const [IsDKeyPressed,setIsDKeyPressed] = useState(false);
+  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, polygonID: -1 });
 
   // Component management
   const stageRef = React.useRef()
@@ -162,7 +160,7 @@ const AnnotationArea = () => {
       if (event.key === 'r') {
         deleteall()
       } else if (event.key === 'z' && event.ctrlKey) {
-        deletelast()
+        
       } else if (event.key === 'Escape') {
         finishPolygon()
       } else if (event.key === 's') {
@@ -173,28 +171,12 @@ const AnnotationArea = () => {
         prevImage()
       } else if (event.key === 't') {
         toggleImage()
-      } else if (event.key === "l") {
-        setIsLKeyPressed(true);
-      } else if (event.key === "d"){
-        setIsDKeyPressed(true);
-      }
-    }
-
-    const handleKeyUp = (event) => {
-      if (event.key === "l") {
-        setIsLKeyPressed(false);
-      } else if (event.key === "d"){
-        setIsDKeyPressed(false);
-      }
-      
-      
+      } 
     }
 
     window.addEventListener('keydown', handleKeyDown)
-    window.addEventListener("keyup", handleKeyUp);
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
-      window.removeEventListener("keyup", handleKeyUp);
     }
   }, [])
 
@@ -206,9 +188,8 @@ const AnnotationArea = () => {
         { x: mousePos.x, y: mousePos.y, id: uuidv4() },
       ])
       console.log(currentPolygon)
-    } else if (e.type === 'contextmenu') {
-      e.evt.preventDefault();
-      console.log('Right Click HandleClick')
+    } else if (e.evt.button === 2) {
+      e.evt.preventDefault()
     }
   }
 
@@ -228,10 +209,14 @@ const AnnotationArea = () => {
 
   const nextImage = () => {
     setImageId((prevId) => prevId + 1)
+    setDeletedPolygons([])
+    setNumberOfDeletedPolygons([])
   }
 
   const prevImage = () => {
     setImageId((prevId) => prevId - 1)
+    setDeletedPolygons([])
+    setNumberOfDeletedPolygons([])
   }
 
   const handleButtonClick = (e) => {
@@ -284,16 +269,64 @@ const AnnotationArea = () => {
     setPreviewLine(null)
   }
 
-  function deletelast() {
-    setPolygons(prev => prev.slice(0,-1))
+  function undoLast() {    
+    let lastNumber = numberOfDeletedPolygons.splice(-1,1)
+    lastNumber = lastNumber[0]
+    let recoveredPolygon = []
+
+    if ( lastNumber === 1) {
+      recoveredPolygon = deletedPolygons.splice(-1,1)            
+    } else if ( lastNumber > 1) {
+        recoveredPolygon = deletedPolygons.splice(-lastNumber, lastNumber)
+    }
+    
+    polygons.push(...recoveredPolygon)
   }
 
   function deleteall() {
+    setNumberOfDeletedPolygons([...numberOfDeletedPolygons, polygons.length])
+    setDeletedPolygons([...deletedPolygons, ...polygons])
     setPolygons([])
   }
 
   function handleOptionClick(option) {
-    setSelectedOption(option)
+    let chosenColor = polygons[contextMenu.polygonID][0].color
+    let deletePolygon = false
+    let noAction = false
+    
+    switch (option) {
+      case 'rbc':
+        chosenColor = '#ff0000'
+        break
+      case 'wbc':
+        chosenColor = '#ffffff'
+        break
+      case 'plt':
+        chosenColor = '#0000ff'
+        break
+      case 'agg':
+        chosenColor = '#00ff00'
+        break
+      case 'oof':
+        chosenColor = '#ffff00'
+        break
+      case 'delete':
+        deletePolygon = true
+        let polygonToDelete = []
+        polygonToDelete = polygons.splice(contextMenu.polygonID, 1)
+        setDeletedPolygons([...deletedPolygons, ...polygonToDelete])
+        setNumberOfDeletedPolygons([...numberOfDeletedPolygons, 1])
+        break
+      case 'noAction':
+        noAction = true
+    }
+
+    if (!deletePolygon && !noAction) {
+      for (let i = 0; i < polygons[contextMenu.polygonID].length; i += 1) {
+        polygons[contextMenu.polygonID][i].color = chosenColor
+      }
+    }
+
     setContextMenu({ visible: false})
     console.log('Selected', option)
   }
@@ -377,9 +410,8 @@ const AnnotationArea = () => {
     <div style={style}>
       <MenuContainer>
         <Menu
-          onReset={deletelast}
+          onReset={undoLast}
           onUndo={deleteall}
-          onSave={saveMask}
           onNext={nextImage}
           onPrev={prevImage}
           onImageId={handleButtonClick}
@@ -416,18 +448,14 @@ const AnnotationArea = () => {
                 draggable
                 onClick={(e) => {
                   if (e.evt.button === 0) {
-                    console.log('Click', contextMenu.visible, contextMenu.x, contextMenu.y)
                     e.cancelBubble = true
                     console.log('Clicked on polygon', i)
                   }
                 }}
                 onContextMenu={(e) => {
                   e.evt.preventDefault();
-                  const mousePos = stageRef.current.getStage().getPointerPosition()
-                  console.log(contextMenu.visible, mousePos.x, mousePos.y)
-                  
-                  setContextMenu({ visible: true, x:mousePos.x, y:mousePos.y })
-                  
+                  const mousePos = stageRef.current.getStage().getPointerPosition()                  
+                  setContextMenu({ visible: true, x:mousePos.x, y:mousePos.y, polygonID: i })
                 }}
                 onDragEnd={(e) => {
                   const newPolygon = polygon.map((p) => ({
@@ -442,23 +470,13 @@ const AnnotationArea = () => {
                   e.target.position({ x: 0, y: 0 }) // Reset group's position
                 }}
                 onMouseOver={(e) =>{
-                  console.log("Mouse over polygon", i)
-                  if (IsLKeyPressed===true){
-                    setShowPopup(true)
-                    console.log(showPopup)
-                  }
-                  
-                  console.log(IsDKeyPressed)
-                  if (IsDKeyPressed===true){
-                    polygons.splice(i,1)
-                    setIsDKeyPressed(false)
-                  }               
+                  console.log("Mouse over polygon", i)               
                 }}
               >
                 <Line
                   points={polygon.flatMap((p) => [p.x, p.y])}
                   fill={polygon[0].color}
-                  opacity={0.5}
+                  opacity={0.25}
                   stroke={polygon[0].color}
                   strokeWidth={4}
                   closed
