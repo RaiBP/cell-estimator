@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 
 
 class Classification(ABC):
-    def __init__(self): 
+    def __init__(self, use_user_models=False): 
         self.out_of_focus_label = "oof"
         self.aggregate_label = "agg"
         self.wbc_label = "wbc"
@@ -19,7 +19,10 @@ class Classification(ABC):
         self.labels_column_name = "Labels"
         self.mask_id_column_name = "MaskID"
 
-        self.models_folder = os.path.join("classification", "models")
+        self.user_models_folder = os.path.join("classification", "user_models")
+        self.models_folder = self.user_models_folder if use_user_models else os.path.join("classification", "models")
+
+        self.model = None
 
 
     def classify(self, features):
@@ -33,6 +36,22 @@ class Classification(ABC):
         probabilities = self._get_probabilities(features)
         return predictions, probabilities
 
+    @abstractmethod 
+    def add_class_probabilities_columns(features):
+        pass
+
+    @abstractmethod
+    def get_classes(self):
+        pass
+
+    @abstractmethod
+    def calculate_entropy(self, labels, probabilities):
+        pass
+
+
+    @abstractmethod
+    def calculate_probability_per_label(self, labels, probabilities):
+        pass
 
     def _find_columns_to_drop(self, df):
         columns_to_drop = []
@@ -40,6 +59,15 @@ class Classification(ABC):
             columns_to_drop.append(self.labels_column_name)
         if self.mask_id_column_name in df.columns:
             columns_to_drop.append(self.mask_id_column_name)
+        if "ImageID" in df.columns:
+            columns_to_drop.append("ImageID")
+        if "DatasetID" in df.columns:
+            columns_to_drop.append("DatasetID")
+        if "LabelsEntropy" in df.columns:
+            columns_to_drop.append("LabelsEntropy")
+        prob_columns = df.filter(like='Probability').columns.tolist()
+        if prob_columns:
+            columns_to_drop += prob_columns
         return columns_to_drop
 
 
@@ -55,24 +83,41 @@ class Classification(ABC):
 
         return features_copy
     
-    def _load_model(self, folder_path, file_name):
+
+    def get_model(self):
+        return self.model
+
+ 
+    @staticmethod
+    def add_class_probabilities_columns(features, proba_dict):
+        features_copy = features.copy()
+        for i, dict_values in enumerate(proba_dict):
+            for key, value in dict_values.items():
+                column_name = f"{key}Probability"
+                features_copy.loc[i, column_name] = value
+        return features_copy
+
+
+    @staticmethod
+    def load_model(folder_path, file_name):
         file_path = os.path.join(folder_path, file_name)
         if os.path.exists(file_path):
             return joblib.load(file_path)
         else:
             raise FileNotFoundError(f"Model file '{file_path}' does not exist.")
+
+    @abstractmethod 
+    def name(self):
+        pass
+
+    @abstractmethod
+    def save_model(self, folder_path, file_name):
+        pass
         
-    def _save_model(self, model, folder_path, file_name):
-        folder_path = os.path.join("classification", "models_test")
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
-        file_path = os.path.join(folder_path, file_name)
-        joblib.dump(model, file_path)
-        logging.info(f"Model saved succesfully at {file_path}")
-        #return {"message": "Model retrained and saved succesfully"}
-        
-    def _active_learning(self, X_updated, y_updated):
-        return self._prepare_data(X_updated, y_updated)
+
+    @abstractmethod 
+    def fit(self, X, y, model_filename=None):
+        pass
 
 
     @abstractmethod 
@@ -83,8 +128,3 @@ class Classification(ABC):
     @abstractmethod
     def _get_probabilities(self, features):
         pass
-
-    @abstractmethod
-    def _prepare_data(self, X_updated, y_updated):
-        pass
-

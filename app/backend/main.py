@@ -1,7 +1,10 @@
 import logging
 import os
+from re import A
+from shutil import which
 from feature_extraction.feature_extractor import FeatureExtractor
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
@@ -14,7 +17,10 @@ import cv2
 from segmentation import utils as segmentation_utils
 from pipeline import config as pipeline_config 
 from classification.utils import create_classification_model
+from backend import PipelineManager
+
 from segmentation.utils import create_segmentation_model, list_segmentation_methods
+from classification.utils import list_classification_methods
 
 from image_loader import (
     ImageLoader,
@@ -23,48 +29,28 @@ from image_loader import (
     encode_b64,
 )
 
-
-class PipelineManager:
-    def __init__(self, dataset_path: Path, segmentation_method: str, classification_method: str, feature_extractor: FeatureExtractor):
-        self.set_dataset(dataset_path)
-        self.set_segmentation_method(segmentation_method)
-        self.set_classification_method(classification_method)
-        self.set_feature_extractor(feature_extractor)
-        self.shared_features = None
-
-    def set_dataset(self, dataset_path: Path):
-        logging.info(f"Initializing image loader with new dataset with path {dataset_path}.")
-        self.image_loader = ImageLoader.from_file(dataset_path)
-        logging.info(f"Image loader initialized dataset with {len(self.image_loader)} images.")
-
-    def set_segmentation_method(self, segmentation_method: str):
-        logging.info(f"Initializing new segmentator of type {segmentation_method}.")
-        self.image_segmentator = create_segmentation_model(segmentation_method)
-        logging.info(f"New segmentator of type {segmentation_method} initialized.")
-
-    def set_classification_method(self, classification_method: str):
-        logging.info(f"Initializing new classifier of type {classification_method}.")
-        self.classifier = create_classification_model(classification_method)
-        logging.info(f"New classifier of type {classification_method} initialized.")
-
-    def set_feature_extractor(self, feature_extractor: FeatureExtractor):
-        logging.info(f"Initializing new feature extractor of type {feature_extractor}.")
-        self.feature_extractor = feature_extractor
-        logging.info(f"New feature extractor of type {feature_extractor} initialized.")
-
-    def set_shared_features(self, shared_features: pd.DataFrame):
-        self.shared_features = shared_features
-
-    def get_current_segmentation_method(self) -> str:
-        return self.image_segmentator.name()
-
 # Setting up logger
 logging.basicConfig(level=logging.INFO)
 
+training_data_folder = Path(os.environ["TRAINING_DATA_FOLDER"])
+#training_data_folder = Path("/home/larintzos/Group06/app/backend/classification/data")
+training_data_filename = "training_data_user.csv"
+training_data_path = training_data_folder / training_data_filename
+
+# Initialization values. All of these can be latter changed via POST methods
+user_data_folder = Path(os.environ["USER_DATA_FOLDER"])
+#user_data_folder = Path("/home/larintzos/Group06/notebooks/h5py_data")
+user_dataset = "user_data.pre"
+user_dataset_path = user_data_folder / user_dataset
+
+# Initializing image loader for dataset
 logging.info("Initializing image loader.")
-# data_folder = Path(os.environ["DATA_FOLDER"])
-data_folder = Path("/mnt/z")
-dataset_path = data_folder / "real_world_sample01.pre"
+data_folder = Path(os.environ["DATA_FOLDER"])
+#data_folder = Path("/mnt/w")
+dataset = "sample01.pre"
+dataset_path = data_folder / dataset
+image_loader = ImageLoader.from_file(dataset_path)
+logging.info(f"Image loader initialized with {len(image_loader)} images.")
 
 # Initializing image segmentator
 segmentation_method = pipeline_config["image_segmentator"]["method"]
@@ -74,8 +60,9 @@ feature_extractor = FeatureExtractor()
 
 classification_method = pipeline_config["classifier"]["method"]
 
+
 logging.info("Initializing pipeline manager.")
-pipeline_manager = PipelineManager(dataset_path, segmentation_method, classification_method, feature_extractor)
+manager = PipelineManager(logging, dataset_path, segmentation_method, classification_method, feature_extractor, user_dataset_path)
 
 class ImageSegmentationMethod(str, Enum):
     cellpose = "cellpose"
@@ -83,27 +70,52 @@ class ImageSegmentationMethod(str, Enum):
     fastsam = "fastsam"
     sam = "sam"
 
+class CellClassificationMethod(str, Enum):
+    svc = "svc"
+    rfc = "rfc"
+    knn = "knn"
+    tsc = "tsc"
+
 class Dataset(BaseModel):
     filename: str
 
 class SegmentationMethod(BaseModel):
     method: ImageSegmentationMethod
 
+class ClassificationMethod(BaseModel):
+    method: CellClassificationMethod
+
 class Polygon(BaseModel):
     points: List[float] | None
 
+class ClassifyQuery(BaseModel):
+    use_backend_masks: bool
+    polygons: List[Polygon]
 
 class PolygonWithPredictions(BaseModel):
     polygon: Polygon
     class_id: str
+    features: dict
+
+# I leave this class just to use the get_images method (which is deprecated)
+class PolygonWithPredictions_LEGACY(BaseModel):
+    polygon: Polygon
+    class_id: str 
     confidence: dict
     features: dict
 
+class ImagesWithPredictions_LEGACY(BaseModel):
+    amplitude_img_data: str
+    phase_img_data: str
+    predictions: List[PolygonWithPredictions_LEGACY]
+
+class Predictions(BaseModel):
+    class_id: str
+    features: dict
 
 class ImageQuery(BaseModel):
     image_id: int
     image_type: int
-
 
 class ImagesGivenID(BaseModel):
     amplitude_img_data: str
@@ -114,6 +126,14 @@ class ImagesWithPredictions(BaseModel):
     amplitude_img_data: str
     phase_img_data: str
     predictions: List[PolygonWithPredictions]
+
+class ImagesWithPolygons(BaseModel):
+    amplitude_img_data: str
+    phase_img_data: str
+    polygons: List[Polygon]
+
+class ListOfPolygons(BaseModel):
+    polygons: List[Polygon]
 
 
 class DatasetInfo(BaseModel):
@@ -128,15 +148,31 @@ class DatasetInfo(BaseModel):
     ]
     num_images: int
 
+class DataForPlotting(BaseModel):
+    features_names: List[str]
+    feature_1_values: List[float]
+    feature_2_values: List[float]
+    cell_types: List[str]
+    feature_1_training_values: List[float]
+    feature_2_training_values: List[float]
+    cell_types_training: List[str]
+
 class PredictionsList(BaseModel):
     predictions: List[str]
 
+class FeaturesList(BaseModel):
+    features: List[str]
 
-class ListOfLists(BaseModel):
-    coordinates: List[List[int]]
+class Polygons(BaseModel):
+    points: List[List[int]]
 
 
 app = FastAPI()
+
+# Global help variables
+shared_features = None
+features_to_plot = None
+corrected_predictions = None
 
 origins = ["http://localhost:3000", "https://localhost:3000"]
 
@@ -152,6 +188,7 @@ app.add_middleware(
 @app.get("/datasets")
 async def get_datasets():
     return {
+        # are we sure all the datasets will be in .pre file format?
         "datasets": [dataset.name for dataset in data_folder.glob("*.pre")],
     }
 
@@ -165,10 +202,18 @@ async def select_dataset(dataset: Dataset):
     """
     Method for changing the dataset file from which to load the images
     """
-    logging.info("Initializing image loader with new dataset.")
-    dataset_path = data_folder / dataset.filename
-    pipeline_manager.set_dataset(dataset_path)
-    return DatasetInfo(file=dataset_path.name, num_images=len(pipeline_manager.image_loader))
+    global manager, data_folder, logging
+    try:
+        logging.info("Initializing image loader with new dataset.")
+        dataset_path = data_folder / dataset.filename
+        # save backend state
+        manager.set_dataset(dataset_path)
+        num_imgs = len(manager.image_loader)
+        logging.info(f"Image loader initialized with {num_imgs} images.")
+    except Exception as e:
+        logging.error(f"Could not read dataset with filename {dataset.filename}: {e}")
+        return {'message': "Dataset was not changed due to error"} 
+    return DatasetInfo(file=dataset_path.name, num_images=num_imgs)
 
 
 @app.post("/select_segmentator")
@@ -176,30 +221,298 @@ async def select_segmentator(segmentation_method: SegmentationMethod):
     """
     Method for initializing a new segmentator of type indicated by 'segmentation_method'
     """
-    pipeline_manager.set_segmentation_method(segmentation_method.method)
-    message = f"New segmentator of type {pipeline_manager.get_current_segmentation_method()} initialized."
-    return {'message': message}
+    global manager, logging
+    try:
+        manager.set_segmentation_method(segmentation_method.method)
+    except Exception as e:
+        logging.error(f"Could not initialize segmentator of type {segmentation_method}: {e}")
+        return {'message': "Segmentator was not changed due to error"}
+    return {'message': f"New segmentator of type {manager.get_current_segmentation_method()} initialized."}
 
 
 @app.post("/select_classifier")
-async def select_classifier(classification_method: str):
+async def select_classifier(classification_method: ClassificationMethod):
     """
     Method for initializing a new classifier of type indicated by 'classification_method'
     """
-    pipeline_manager.set_classification_method(classification_method)
+    global manager, logging
+    try:
+        manager.set_classification_method(classification_method.method)
+        message = f"New classifier of type {classification_method.method} initialized."
+    except Exception as e:
+        logging.error(f"Could not initialize classifier of type {classification_method.method}: {e}")
+        return {'message': "Classifier was not changed due to error"}
     return {'message': message}
+
 
 @app.get("/get_segmentation_methods")
 async def get_segmentation_methods():
     return {"segmentation_methods": list_segmentation_methods()}
 
 
+@app.get("/get_classification_methods")
+async def get_classification_methods():
+    return {"classification_methods": list_classification_methods()}
+
+
+@app.post("/set_image")
+async def set_image(image_query: ImageQuery):
+    """
+    Method to set an image as the current image in the backend manager. All subsequent operations will be 
+    performed on this image until this method is called again and sets a different image.
+    Note that this method looks for features, masks and labels that are already saved in the server and returns them 
+    to the frontend
+    """
+    global manager, logging, training_data_path
+    image_loader = manager.image_loader
+
+    image_id = image_query.image_id
+    image_id = image_id % len(image_loader)
+
+    image_type = image_query.image_type
+
+    if image_id not in image_loader:
+        logging.warning(f"Image with id {image_id} not found.")
+        return {"error": "Image not found"}
+    else:
+        manager.set_amplitude_phase_images(image_id)
+
+        manager.set_image_id(image_id)
+        manager.set_image_type(image_type)
+
+        features = manager.get_saved_features(image_id, manager.get_dataset_id(), training_data_path)
+        masks, labels = manager.get_saved_masks_and_labels(image_id, manager.get_dataset_id())
+        
+        manager.set_masks(masks)
+        manager.set_shared_features(features)
+        manager.set_predictions(labels)
+        if features is not None:
+            features_records = features.to_dict('records')
+        else:
+            features_records = {}
+        logging.info (f"Image with id {image_id} from dataset {manager.dataset_id} is set as active image.") 
+
+        if masks is not None:
+            contours = [segmentation_utils.get_mask_contour(m) for m in masks]
+            contours = [segmentation_utils.normalize_contour(c) for c in contours]
+            contours = segmentation_utils.flatten_contours(contours)
+
+        amplitude_image_str, phase_image_str = manager.get_amplitude_phase_images_str()
+
+        amplitude_image_b64 = encode_b64(amplitude_image_str)
+        phase_img_b64 = encode_b64(phase_image_str)
+
+        if masks is None or features is None or labels is None:
+            return ImagesWithPredictions(
+                amplitude_img_data=amplitude_image_b64,
+                phase_img_data=phase_img_b64,
+                predictions=[]
+            )
+
+        else:
+            predictions = [
+                    PolygonWithPredictions(
+                        polygon=Polygon(points=polygon),
+                        class_id=label,
+                        features=mask_features
+                    )
+                    for polygon, label, mask_features in zip(contours, labels, features_records)
+                ]
+
+            
+            return ImagesWithPredictions(
+                amplitude_img_data=amplitude_image_b64,
+                phase_img_data=phase_img_b64,
+                predictions=predictions,
+            )
+
+
+@app.get("/segment")
+async def segment():
+    global manager, logging
+
+    image_segmentator = manager.image_segmentator
+    image_id = manager.image_id
+    image_type = manager.image_type
+
+    amplitude_image, phase_image = manager.get_amplitude_phase_images()
+    amplitude_image_str, phase_image_str = manager.get_amplitude_phase_images_str()
+
+    segmentation_method = manager.get_current_segmentation_method()
+
+    if segmentation_method in ["fastsam", "sam"]:
+        image_to_be_segmented = amplitude_image_str if image_type == 0 else phase_image_str
+    else:
+        image_to_be_segmented = amplitude_image if image_type == 0 else phase_image
+
+    try:
+        masks = image_segmentator.segment_image(image_to_be_segmented)
+        contours = [segmentation_utils.get_mask_contour(m) for m in masks]
+        contours = [segmentation_utils.normalize_contour(c) for c in contours]
+        contours = segmentation_utils.flatten_contours(contours)
+        logging.info(f"Masks of image {image_id} calculated succesfully.")
+        manager.set_masks(masks)
+
+    except Exception as e:
+        logging.error(f"Error while segmenting image with id {image_id}: {e}")
+        contours = []
+        masks = []
+        manager.set_masks([])
+
+    logging.info(f"Found {len(masks)} masks in image with id {image_id}")
+
+    polygons = [Polygon(points=polygon) for polygon in contours]
+
+    logging.info(f"Sending image with id {image_id} and {len(polygons)} masks to client.")
+
+
+    return ListOfPolygons(
+        polygons=polygons
+    )
+
+
+@app.post("/classify")
+async def classify(classify_query: ClassifyQuery): 
+    global manager, logging
+
+    polygons = classify_query.polygons
+    use_backend_masks = classify_query.use_backend_masks
+
+    if use_backend_masks:
+        try:
+            masks = manager.get_masks()
+            assert(masks is not None)
+        except Exception as e:
+            logging.error(f"No masks found in backend manager: {e}")
+            logging.info("Using provided polygon list instead.")    
+            masks = manager.get_masks_from_polygons(polygons)
+            manager.set_masks(masks)
+    else:
+        masks = manager.get_masks_from_polygons(polygons)
+        manager.set_masks(masks)
+
+    amplitude_image, phase_image = manager.get_amplitude_phase_images()
+    image_id = manager.image_id
+    classifier = manager.classifier
+
+    try:
+        features = feature_extractor.extract_features(phase_image, amplitude_image, masks)
+    except Exception as e:
+        logging.error(f"Error while extracting features from image with id {image_id}: {e}")
+        features = None
+        features_records = {}
+    if features is not None:
+        try:
+            labels, probabilities = classifier.classify(features)
+            entropies = classifier.calculate_entropy(labels, probabilities)
+            proba_per_label = classifier.calculate_probability_per_label(labels, probabilities)
+            features_records = features.to_dict('records')
+            features['LabelsEntropy'] = entropies
+            features = classifier.add_class_probabilities_columns(features, proba_per_label)
+
+            manager.set_shared_features(features)
+            manager.set_predictions(labels)
+        except Exception as e:
+            logging.error(f"Error while classifying image with id {image_id}: {e}")
+            labels = []
+            features_records = {}
+            manager.set_shared_features(None)
+            manager.set_predictions(None)
+    else:
+        labels = []
+        features_records = {}
+        manager.set_shared_features(None)
+        manager.set_predictions(None)
+
+    if (not features_records) or (not labels):
+        # if any of these is empty, then predictions is also empty
+        predictions = []
+    else:
+        predictions = [
+            Predictions(
+                class_id=label,
+                features=mask_features
+            )
+            for label, mask_features in zip(labels, features_records)]
+
+    logging.info(f"Sending {len(predictions)} predictions to client for image with id {image_id}.")
+    return predictions
+
+
+@app.post("/save_masks_and_labels")
+async def save_masks_and_labels(predictions: List[str]):
+    """
+    Method to save the masks and labels once the user has confirmed that they are correct.
+    They are saved to a h5 file found in 'user_dataset_path' (defined at the start of this file).
+    Note that the classify method must have been called before this one, in order for there to be 
+    masks saved in the manager. The classify method basically "saves" the masks to the manager.
+    i.e. if the user changes the masks after classifying, he will have to call the classify method again.
+    """
+    global manager, logging, user_dataset, training_data_path
+    masks = manager.get_masks()
+    try: 
+        assert masks is not None
+    except:
+        logging.error(f"Error: No masks found in the backend manager")
+        return {"error": "Masks not found."}
+
+    try:
+        assert len(masks) == len(predictions)
+    except:
+        logging.error(f"Error: given list of labels do not coincide in length with given masks")
+        return {"error": "Masks and labels are not equal in number"}
+
+    image_id = manager.image_id
+    manager.set_predictions(predictions)
+
+    try:
+        manager.save_masks(masks, predictions)
+        logging.info(f"Masks and labels saved as {user_dataset}")
+    except Exception as e:
+        logging.error(f"Error while saving masks and labels of image with id {image_id}: {e}")
+        return {"error": f"Masks and labels of image with id {image_id} could not be saved"}
+
+    try:
+        # the backend has the features from all the masks
+        features = manager.get_shared_features()
+
+        # for this to pass, we must have the features saved in the manager beforehand
+        # the features will be in the manager either because they were saved there
+        # during the classify method or during the set_image method
+        assert features is not None
+    
+        # we don't save the mask IDs, as they are irrelevant for the classification models
+        features = features.drop(["MaskID"], axis = 1)
+
+        dataset_id = manager.get_dataset_id()
+
+        training_df = pd.read_csv(training_data_path)
+
+        is_match_present = (training_df['DatasetID'] == dataset_id) & (training_df['ImageID'] == image_id)
+        if any(is_match_present):
+            # if we already have features by the image ID, we delete those and write the new ones
+            training_df = training_df[~is_match_present]
+
+        features['DatasetID'] = dataset_id
+        features['ImageID'] = image_id
+        features['Labels'] = predictions
+
+        new_training_df = pd.concat([training_df, features], ignore_index=True)
+
+        new_training_df.to_csv(training_data_path, index=False)
+        logging.info(f"Training data updated succesfully and saved as {training_data_path.name}")
+    except Exception as e:
+        logging.error(f"Error while saving training data of image with id {image_id}: {e}")
+    return {"message": "User data has been saved"}
+    
+
 @app.post("/images")
 async def get_images(image_query: ImageQuery):
+    global manager, logging
 
-    image_loader = pipeline_manager.image_loader
-    image_segmentator = pipeline_manager.image_segmentator
-    classifier = pipeline_manager.classifier
+    image_loader = manager.image_loader
+    image_segmentator = manager.image_segmentator
+    classifier = manager.classifier
 
     image_id = image_query.image_id
     image_type = image_query.image_type
@@ -209,6 +522,8 @@ async def get_images(image_query: ImageQuery):
     if image_id not in image_loader:
         logging.warning(f"Image with id {image_id} not found.")
         return {"message": "Image not found"}
+
+    manager.set_image_id(image_id)
 
     amplitude_image, phase_image = image_loader.get_images(image_id)
 
@@ -233,7 +548,7 @@ async def get_images(image_query: ImageQuery):
     logging.info(f"Found {len(masks)} masks in image with id {image_id}")
     try:
         features = feature_extractor.extract_features(phase_image, amplitude_image, masks)
-        pipeline_manager.set_shared_features(features)
+        manager.set_shared_features(features)
         # shared_features = features
         features_records = features.to_dict('records')
     except Exception as e:
@@ -242,8 +557,6 @@ async def get_images(image_query: ImageQuery):
         features_records = {}
     try:
         labels, probabilities = classifier.classify(features)
-        print(labels)
-        print(probabilities)
     except Exception as e:
         logging.error(f"Error while classifying image with id {image_id}: {e}")
         probabilities = []
@@ -251,7 +564,7 @@ async def get_images(image_query: ImageQuery):
 
 
     predictions = [
-        PolygonWithPredictions(
+        PolygonWithPredictions_LEGACY(
             polygon=Polygon(points=polygon),
             class_id=label,
             confidence=prob,
@@ -265,68 +578,92 @@ async def get_images(image_query: ImageQuery):
     amplitude_image_b64 = encode_b64(amplitude_image_str)
     phase_img_b64 = encode_b64(phase_image_str)
 
-    return ImagesWithPredictions(
+    manager.save_masks(masks, labels)
+
+    return ImagesWithPredictions_LEGACY(
         amplitude_img_data=amplitude_image_b64,
         phase_img_data=phase_img_b64,
         predictions=predictions,
     )
 
 
-@app.post("/process_lists")
-def get_lists(lists: List[ListOfLists]):
-    masks_pre = []
-    # Process the received arrays
-    for list in lists:
-        # Access the NumPy array using array.data
-        shape_coordinates = np.array(list.coordinates)
-        image_shape = (384, 512)
-        msk = np.zeros(image_shape, dtype=np.uint8)
-        cv2.drawContours(msk, [shape_coordinates], 0, 255, -1)
-        masks_pre.append(msk)
-
-    logging.info("Masks created successfully")
-    return {"message": "Masks created successfully"}
+@app.get('/download_masks_and_labels')
+async def download_masks_and_labels_route():
+    return FileResponse(user_dataset_path, media_type='application/octet-stream', filename=user_dataset)
 
 
-
-@app.post("/process_predictions")
-async def process_strings_endpoint(predictions: PredictionsList):
-
-    predictions = predictions.predictions
-    predictions_enc = np.array([string.encode('UTF-8') for string in predictions])
-
-    # Load saved training data and concatenate with the new data
-    file_path = os.path.join('classification/training_data', 'training_data.csv')
-    new_df = pd.read_csv(file_path)
-
-    y_saved = new_df['Labels'].str[2:-1].values
-    y_saved = np.array([item.encode() for item in y_saved])
-    X_saved = new_df.drop(['Labels'], axis=1)
-
-    pipeline_manager.set_shared_features(pipeline_manager.shared_features.drop(["MaskID"], axis = 1))
-
-    X_updated= pd.concat([X_saved, pipeline_manager.shared_features], axis=0)
-    y_updated = np.concatenate((y_saved, predictions_enc))
-
-    # Active learning
-    pipeline_manager.classifier._active_learning(X_updated, y_updated)
-    pipeline_manager.set_shared_features(None)
-
-    # Save the DataFrame to a CSV file inside the folder
-    y_updated = y_updated.tolist()
-    y_updated = [f"b'{item.decode()}'" for item in y_updated]
-    X_updated['Labels'] = y_updated
-    X_updated.to_csv(file_path, index=False)
-    logging.info("Training data updated succesfully")
-
-    logging.info("Predictions processed succesfully")
-    return {"message": "Predictions processed succesfully"}
-
-
-@app.post("/new_masks")
-async def recieve_masks(masks: List[ListOfLists]):
+@app.post("/receive_predictions")
+async def receive_predictions(predictions_list: PredictionsList):
     """
-    Method for receving the new masks
+    Method for receiving predictions from frontend and saving them in the PipelineManager
     """
-    logging.info("New_masks are sent.")
-    return {"message": "Masks processed succesfully"}
+    global manager
+    predictions = predictions_list.predictions
+    manager.set_predictions(predictions)
+    logging.info("Predictions saved succesfully")
+    return {"message": "Predictions saved succesfully"}
+
+
+@app.get("/retrain_model")
+async def retrain_model():
+    """
+    Method for performing active learning based on the user-corrected predictions
+    Training data is taken from csv in 'training_data_path'. To add new data, please
+    use method 'save_masks_and_labels'
+    """
+    global manager, training_data_path
+    try:
+        # Load saved training data and concatenate with the new data
+        training_data = pd.read_csv(training_data_path)
+        classification_method = manager.get_current_classification_method()
+        
+        y = training_data['Labels'].str.strip("b'")
+        if classification_method != 'tsc':
+            y = np.array([item.encode() for item in y])
+
+        X = training_data.drop('Labels', axis=1)
+
+        model_filename = f"{manager.get_current_classification_method()}_user_model.pkl"
+
+        cell_count = len(training_data)
+
+        # Active learning
+        manager.classifier.fit(X, y, model_filename=model_filename)
+        logging.info(f"Model retrained succesfully on {cell_count} data points and saved as {model_filename}")
+    except Exception as e:
+        logging.error(f"Error while retraining model: {e}")
+        return {"error": "Error while retraining model"}
+    return {"message": "Model retrained succesfully"}
+
+
+@app.post("/features_and_data_to_plot")
+async def get_features_and_data_to_plot(features: FeaturesList):
+    """
+    Method for saving the features that will be used for plotting
+    and sending the data that will be plotted
+    """
+    if features is not None:
+        features_to_plot = features.features
+    file_path = os.path.join('classification/data', 'training_data_base.csv')
+    training_features = pd.read_csv(file_path)
+    
+    shared_features = manager.get_shared_features()
+    corrected_predictions = manager.get_predictions()
+
+    assert shared_features is not None and corrected_predictions is not None
+
+    feature_1_values = shared_features[features_to_plot[0]].tolist()
+    feature_2_values = shared_features[features_to_plot[1]].tolist()
+    cell_types = corrected_predictions
+
+    feature_1_training_values = training_features[features_to_plot[0]].tolist()
+    feature_2_training_values = training_features[features_to_plot[1]].tolist()
+    cell_types_training = training_features['Labels'].str[2:-1].tolist()
+
+    return DataForPlotting(features_names=features_to_plot, 
+                           feature_1_values=feature_1_values,
+                           feature_2_values=feature_2_values,
+                           cell_types = cell_types,
+                           feature_1_training_values=feature_1_training_values,
+                           feature_2_training_values=feature_2_training_values,
+                           cell_types_training = cell_types_training)
