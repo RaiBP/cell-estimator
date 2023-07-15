@@ -1,0 +1,44 @@
+stages:
+- lint
+- deploy
+- build
+
+flake8:
+  image: "python:3.7"
+  stage: lint
+  script:
+    - pip install .[tests]
+    - flake8 --max-line-length=120 cellface
+  tags:
+    - lrz
+  only:
+    - master
+
+pages:
+  image: "python:3.7"
+  stage: deploy
+  script:
+    - pip install .[doc]
+    - sphinx-build -b html doc public
+  only:
+    - master
+
+build:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE/app:$CI_COMMIT_TAG .
+    - docker push $CI_REGISTRY_IMAGE/app:$CI_COMMIT_TAG
+    - docker tag $CI_REGISTRY_IMAGE/app:$CI_COMMIT_TAG $CI_REGISTRY_IMAGE/app:latest
+    - docker push $CI_REGISTRY_IMAGE/app:latest
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master" || $CI_COMMIT_TAG'
+      changes:
+      - app/Dockerfile
+  tags:
+    - lrz
+
