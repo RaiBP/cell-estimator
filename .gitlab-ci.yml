@@ -20,3 +20,4 @@ build:
   # Chose the gitlab runner tag
   tags:
     - lrz
+    - leo
