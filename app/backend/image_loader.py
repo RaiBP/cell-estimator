@@ -101,6 +101,7 @@ class ImageLoader:
         self._file = h5py.File(path, "r")
         self._amplitude_images = self._file["amplitude/images"]
         self._phase_images = self._file["phase/images"]
+        self._image_dimensions = np.shape(self._amplitude_images)
 
     def get_amplitude_image(self, index):
         return self._amplitude_images[index]
@@ -110,6 +111,9 @@ class ImageLoader:
 
     def get_images(self, index):
         return self.get_amplitude_image(index), self.get_phase_image(index)
+
+    def get_image_dimensions(self):
+        return self._image_dimensions
 
     def __contains__(self, index):
         return index < len(self._amplitude_images)
