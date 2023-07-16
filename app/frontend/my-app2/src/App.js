@@ -7,12 +7,16 @@ import { ExplainMenu } from './components/ExplainMenu/ExplainMenu'
 import { v4 as uuidv4 } from 'uuid'
 
 
+import './App.css'
+
+
 axios.defaults.baseURL = 'http://localhost:8000'
 
 const stageDimensions = {
   width: 1000,
   height: 800
 }
+
 
 const StageContainer = ({ children }) => {
   const style = {
@@ -28,21 +32,6 @@ const StageContainer = ({ children }) => {
   }
 
   return <div style={style}>{children}</div>
-}
-
-async function getImageWithPredictions(imageId, imageType, callback) {
-  // If we show the amplitude image, we want to use it for the masks
-  const response = await fetch('http://localhost:8000/images', {
-    method: 'POST',
-    headers: {
-      accept: 'application/json',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ image_id: imageId, image_type: imageType }),
-  })
-  const response_json = await response.json()
-  callback(response_json)
-  return response_json
 }
 
 async function setNewImage(imageId, imageType, callback) {
@@ -108,7 +97,13 @@ function divideElements(objectOfArrays) {
   return transformedData
 }
 
-
+function LoadingSpinner() {
+  return (
+    <div className="loading-indicator">
+      <div className="spinner"></div>
+    </div>
+  );
+}
 
 const AnnotationArea = () => {
   const style = {
@@ -137,7 +132,7 @@ const AnnotationArea = () => {
   const [nextPoint, setNextPoint] = useState(null)
   const [deletedPolygons, setDeletedPolygons] = useState([])
   const [numberOfDeletedPolygons, setNumberOfDeletedPolygons] = useState([])
-  
+  const [isLoading, setIsLoading] = useState(false);
 
   // Preview line management
   const [previewLine, setPreviewLine] = useState(null)
@@ -152,7 +147,7 @@ const AnnotationArea = () => {
 
 async function classifyCurrentImage(callback) {
     const masks = divideElements(polygons);
-
+    setIsLoading(true);
     const response = await fetch('http://localhost:8000/classify', {
       method: 'POST',
       headers: {
@@ -162,6 +157,7 @@ async function classifyCurrentImage(callback) {
       body: JSON.stringify({ polygons: masks, use_backend_masks: false }),
     })
     const predictions = await response.json()
+    setIsLoading(false);
     console.log(predictions);
     callback(predictions)
     return predictions
@@ -182,6 +178,71 @@ async function classifyCurrentImage(callback) {
         return '#ffff00'
     }
   }
+
+
+  function getClassIdByColor(color) {
+    console.log(color)
+    switch (color) {
+      case '#ff0000':
+        return 'rbc'
+      case '#ffffff':
+        return 'wbc'
+      case '#0000ff':
+        return 'plt'
+      case '#00ff00':
+        return 'agg'
+      case '#ffff00':
+        return 'oof'
+    }
+  }
+
+  function getClassIdFromPolygon(polygon) {
+    return getClassIdByColor(polygon[0].color) 
+  }
+
+async function saveCurrentMaskAndLabels(labels) {
+  console.log(labels)
+  try {
+    setIsLoading(true);
+    const response = await axios.post('/save_masks_and_labels', labels);
+    setIsLoading(false);
+    console.log(response.data);
+  } catch (error) {
+    console.error('Error saving labels:', error);
+    setIsLoading(false);
+  }
+}
+
+async function downloadMasksAndLabels() {
+  try {
+    setIsLoading(true);
+    const response = await axios.get('/download_masks_and_labels', {
+      responseType: 'blob',
+    });
+
+
+    setIsLoading(false);
+
+    // Create a timestamp
+    const timestamp = new Date().toISOString().replace(/:/g, '-');
+    const filename = `masks_and_labels_${timestamp}.pre`;
+
+    // Create a download link for the user
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Clean up the URL object
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Error downloading masks and labels:', error);
+    // Optionally handle error cases
+  }
+}
 
   function segmentCallback(receivedPolygons) {
     const transformedPolygons = []
@@ -266,7 +327,15 @@ function classifyCallback(labels) {
 
   useEffect(() => {
     const image_type = showAmplitudeImage ? 0 : 1
-     setNewImage(imageId, image_type, setImageCallback)
+
+    const setNewImageAsync = async () => {
+          setIsLoading(true);
+          await setNewImage(imageId, image_type, setImageCallback);
+          setIsLoading(false);
+        };
+
+    setNewImageAsync();
+
   }, [imageId, showAmplitudeImage, currentDataset])
 
   // Hook for keeping track of lines
@@ -354,12 +423,26 @@ function classifyCallback(labels) {
     }
   }
 
-  const segment = () => {
-    segmentCurrentImage(segmentCallback)
+  const segment = async () => {
+    setIsLoading(true)
+    await segmentCurrentImage(segmentCallback)
+    setIsLoading(false)
   }
 
   const classify = () => {
     classifyCurrentImage(classifyCallback)
+  }
+
+  const download = () => {
+    downloadMasksAndLabels()
+  }
+
+  const saveMasksAndLabels = () => {
+    const extractedLabels = polygons.map(polygon => {
+    return getClassIdFromPolygon(polygon);
+    });
+
+    saveCurrentMaskAndLabels(extractedLabels)
   }
 
   const toggleImage = () => {
@@ -518,6 +601,8 @@ function classifyCallback(labels) {
           onSegmentationMethodChange={onSegmentationMethodChange}
           onDatasetChange={onDatasetChange}
           onClassify={classify}
+          onSave={saveMasksAndLabels}
+          onDownload={download}
         />
       </MenuContainer>
       <StageContainer>
@@ -625,9 +710,9 @@ function classifyCallback(labels) {
             )}
             
           </Layer>
-        </Stage>
-        
+        </Stage> 
       </StageContainer>
+      {isLoading && (<LoadingSpinner />)}
       {contextMenu.visible && (<PopupMenu x={contextMenu.x} y={contextMenu.y} handleOptionClick={handleOptionClick}/>)}
       {explainMenu.visible && (<ExplainMenu handleOptionClick={handleExplainMenuClick}/>)}
     </div>
