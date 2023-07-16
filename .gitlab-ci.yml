@@ -32,7 +32,5 @@ deploy:
     - flux reconcile kustomization -n group06 group06 --with-source
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
-  only:
-    - main
   tags:
     - lrz
