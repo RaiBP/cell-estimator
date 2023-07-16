@@ -35,6 +35,7 @@ RUN pip install --break-system-packages -r requirements.txt
 # Installing node dependencies
 COPY ./frontend/my-app2/package.json /app/frontend/my-app2/package.json
 WORKDIR /app/frontend/my-app2
+
 RUN npm install
 
 # Copy app
