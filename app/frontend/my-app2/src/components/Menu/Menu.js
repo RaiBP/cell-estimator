@@ -61,7 +61,6 @@ const MenuContainer = ({ children }) => {
 function Menu({
   onReset,
   onUndo,
-  onSave,
   onNext,
   onPrev,
   onImageId,
@@ -72,12 +71,12 @@ function Menu({
 }) {
   return (
     <div className="menu-container">
-      <Button className="menu-button" onClick={onReset}>Delete Last Drawn Polygon</Button>
-      <Button className="menu-button" onClick={onUndo}>Delete All Polygons</Button>
-      <Button className="menu-button" onClick={onSave}>Save</Button>
       <Button className="menu-button" onClick={onNext}>Next Image</Button>
       <Button className="menu-button" onClick={onPrev}>Previous Image</Button>
       <Button className="menu-button" onClick={onToggleImage}>Toggle Image</Button>
+      <Button className="menu-button" onClick={onUndo}>Delete All Polygons</Button>
+      <Button className="menu-button" onClick={onReset}>Undo the last Delete</Button>
+      
       <form className="selector-container" onSubmit={onImageId}>
         <label className="selector-label">
           Enter a number between 1 and 1000:

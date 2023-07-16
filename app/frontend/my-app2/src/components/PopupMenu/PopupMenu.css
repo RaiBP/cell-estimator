@@ -1,22 +1,21 @@
-.menu-container {
+.popup-menu {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
   background: #3c3e45;
-  width: 23%;
+  width: 10vw;
   padding-top: 20px;
-  padding-left: 0px;
   height: 100vh;
   box-sizing: border-box;
-}
+  }
 
-.menu-button {
+.popup-menu-button {
   margin-bottom: 10px;
-  width: 250%;
-  padding: 10px 10px;
+  padding: 10px 20px;
   font-size: 14px;
   border-radius: 5px;
+  width: 100%;
   border: none;
   color: #fff;
   background-color: #3c3e45;
@@ -24,27 +23,31 @@
   transition: background-color 0.3s ease;
 }
 
-.menu-button:hover {
+.popup-menu-button:hover {
   background-color: #606268;
 }
 
-.selector-container {
-  width: 250%;
-  margin-bottom: 20px;
+.pp-menu {
+  position: absolute;
+  background-color: white;
+  border: 1px solid red
 }
 
-.selector-label {
-  display: block;
-  padding-top: 10px;
-  margin-bottom: 5px;
-  font-size: 14px;
-  color: #fff;
+ul,
+li {
+  padding: 0;
+  margin: 0;
+}
+  
+li {
+  padding: 10px;
+  list-style-type: none;
 }
 
-.selector {
-  width: 100%;
-  padding: 7px;
-  font-size: 14px;
-  border-radius: 5px;
-  border: 1px solid #ddd;
+li:hover {
+  background-color: gray;
+}
+
+.popup-menu button {
+margin-bottom: 8px;
 }
