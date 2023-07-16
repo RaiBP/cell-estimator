@@ -16,6 +16,7 @@ build:
   only:
     - tags 
     - main
+  rules:
   changes:
     - app
 
