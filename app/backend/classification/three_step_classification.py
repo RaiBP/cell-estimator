@@ -1,4 +1,8 @@
+import os
+import joblib
+
 import pandas as pd
+import numpy as np
 
 from classification.classification import Classification
 
@@ -20,10 +24,82 @@ class ThreeStepClassifier(Classification):
         else:
             self.cell_model_filename = cell_model_filename
 
-        self.oof_model = self._load_model(self.models_folder, self.oof_model_filename)
-        self.agg_model = self._load_model(self.models_folder, self.agg_model_filename)     
-        self.cell_model = self._load_model(self.models_folder, self.cell_model_filename)     
+        self.model_filename = {'oof': self.oof_model_filename, 'agg': self.agg_model_filename, 'cell': self.cell_model_filename}
 
+        self.oof_model = self.load_model(self.models_folder, self.oof_model_filename)
+        self.agg_model = self.load_model(self.models_folder, self.agg_model_filename)     
+        self.cell_model = self.load_model(self.models_folder, self.cell_model_filename)     
+
+        self.model = {'oof': self.oof_model, 'agg': self.agg_model, 'cell': self.cell_model}
+
+
+    def save_model(self, folder_path, file_name):
+        assert self.model is not None
+
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+
+        oof_file_path = os.path.join(folder_path, 'oof_' + file_name)
+        agg_file_path = os.path.join(folder_path, 'agg_' + file_name)
+        cell_file_path = os.path.join(folder_path, 'cell_' + file_name)
+
+        joblib.dump(self.oof_model, oof_file_path)
+        joblib.dump(self.agg_model, agg_file_path)
+        joblib.dump(self.cell_model, cell_file_path)
+
+
+    def calculate_entropy(self, labels, probabilities):
+        entropy = []
+        for idx, label in enumerate(labels):
+            if label == self.out_of_focus_label:
+                probas = np.array(probabilities[idx]['oof_proba'])
+            elif label == self.aggregate_label:
+                probas = np.array(probabilities[idx]['agg_proba'])
+            else:
+                probas = np.array(probabilities[idx]['cell_proba'])
+            entropy.append(-1 * np.sum(probas * np.log2(probas)))
+        return entropy
+
+    def get_classes(self):
+        oof_binary_classes = self.oof_model.classes_
+        oof_classes = ['infocus' if value == 0 else 'oof' for value in oof_binary_classes]
+
+        agg_binary_classes = self.agg_model.classes_
+        agg_classes = ['single_cell' if value == 0 else 'agg' for value in agg_binary_classes]
+        
+        return {'oof': oof_classes, 'agg': agg_classes, 'cell': self.cell_model.classes_}
+
+    def calculate_probability_per_label(self, labels, probabilities):
+        probability = []
+        classes = self.get_classes()
+        oof_classes = classes['oof']
+        agg_classes = classes['agg']
+        cell_classes = classes['cell']
+        for idx, _ in enumerate(labels):
+            proba_dict = {}
+            probas_oof = probabilities[idx]['oof_proba']
+            probas_agg = probabilities[idx]['agg_proba']
+            probas_cell = probabilities[idx]['cell_proba'] 
+
+            prob_oof = probas_oof[oof_classes.index('oof')]
+            prob_agg = probas_agg[agg_classes.index('agg')]
+            prob_wbc = probas_cell[cell_classes.index('wbc')]
+            prob_rbc = probas_cell[cell_classes.index('rbc')]
+            prob_plt = probas_cell[cell_classes.index('plt')]
+
+            total_prob_agg = (1-prob_oof) * prob_agg
+            total_prob_wbc = (1-prob_oof) * (1-prob_agg) * prob_wbc
+            total_prob_rbc = (1-prob_oof) * (1-prob_agg) * prob_rbc
+            total_prob_plt = (1-prob_oof) * (1-prob_agg) * prob_plt
+
+            proba_dict['oof'] = prob_oof 
+            proba_dict['agg'] = total_prob_agg
+            proba_dict['wbc'] = total_prob_wbc
+            proba_dict['rbc'] = total_prob_rbc
+            proba_dict['plt'] = total_prob_plt
+
+            probability.append(proba_dict)
+        return probability
 
     def _get_predictions(self, features):
         df = self._predict(features)
@@ -90,7 +166,28 @@ class ThreeStepClassifier(Classification):
     def _cell_predict(self, df): 
         return self.cell_model.predict(df)
 
-    def _prepare_data(self, X_updated, y_updated):
-        pass
+
+    def name(self):
+        return 'TSC'
 
 
+    def fit(self, X, y, model_filename=None):
+        """
+        Method for retraining the models. Note that we use a "user_models_folder" to save them so we 
+        do not overwrite our original models. 'model_filename' is an optional input for giving a 
+        desired name to the model pickle file.
+        """
+        X = self._drop_columns(X)
+
+        y_oof_binary = np.where(y == 'oof', 1, 0)
+        y_agg_binary = np.where(y == 'agg', 1, 0)
+
+        cell_mask = (y == 'plt') | (y == 'wbc') | (y == 'rbc')
+        X_cells = X[cell_mask]
+        y_cells = y[cell_mask]
+
+        self.oof_model.fit(X, y_oof_binary) 
+        self.agg_model.fit(X, y_agg_binary) 
+        self.cell_model.fit(X_cells, y_cells) 
+
+        self.save_model(self.user_models_folder, model_filename)

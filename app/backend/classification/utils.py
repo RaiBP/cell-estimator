@@ -22,3 +22,6 @@ def create_classification_model(selector):
     else:
         return OneStepClassifier(selector)
 
+
+def list_classification_methods() -> list[str]:
+    return ['svc', 'knn', 'rfc', 'tsc']
