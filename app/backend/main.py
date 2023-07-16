@@ -45,7 +45,7 @@ user_dataset_path = user_data_folder / user_dataset
 
 # Initializing image loader for dataset
 logging.info("Initializing image loader.")
-data_folder = Path(os.environ["DATA_FOLDER"])
+data_folder = Path(os.environ["DATA_DIR"])
 #data_folder = Path("/mnt/w")
 dataset = "sample01.pre"
 dataset_path = data_folder / dataset
