@@ -46,7 +46,11 @@ user_dataset_path = user_data_folder / user_dataset
 # Initializing image loader for dataset
 logging.info("Initializing image loader.")
 data_folder = Path(os.environ["DATA_DIR"])
-dataset_path = data_folder / "real_world_sample01.pre"
+#data_folder = Path("/mnt/w")
+dataset = "sample01.pre"
+dataset_path = data_folder / dataset
+image_loader = ImageLoader.from_file(dataset_path)
+logging.info(f"Image loader initialized with {len(image_loader)} images.")
 
 # Initializing image segmentator
 segmentation_method = pipeline_config["image_segmentator"]["method"]

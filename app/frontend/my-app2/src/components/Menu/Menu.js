@@ -63,6 +63,7 @@ function Menu({
   onUndo,
   onNext,
   onPrev,
+  onSegment,
   onImageId,
   onToggleImage,
   onSegmentationMethodChange,
@@ -76,6 +77,8 @@ function Menu({
       <Button className="menu-button" onClick={onToggleImage}>Toggle Image</Button>
       <Button className="menu-button" onClick={onUndo}>Delete All Polygons</Button>
       <Button className="menu-button" onClick={onReset}>Undo the last Delete</Button>
+
+      <Button className="menu-button" onClick={onSegment}>Segment</Button>
       
       <form className="selector-container" onSubmit={onImageId}>
         <label className="selector-label">

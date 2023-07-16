@@ -45,6 +45,27 @@ async function getImageWithPredictions(imageId, imageType, callback) {
   return response_json
 }
 
+async function setNewImage(imageId, imageType, callback) {
+  const response = await fetch('http://localhost:8000/set_image', {
+    method: 'POST',
+    headers: {
+      accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ image_id: imageId, image_type: imageType }),
+  })
+  const response_json = await response.json()
+  callback(response_json)
+  return response_json
+}
+
+async function segmentCurrentImage(callback) {
+  const response = await axios.get('/segment');
+  const polygons = response.data.polygons
+  callback(polygons)
+  return polygons
+}
+
 const AnnotationArea = () => {
   const style = {
     display: 'flex',
@@ -101,6 +122,28 @@ const AnnotationArea = () => {
     }
   }
 
+  function segmentCallback(polygons) {
+    const transformedPolygons = []
+
+    if (polygons.length !== 0) {
+      polygons.forEach((polygons, index) => {
+
+        const currentPolygon = []
+        for (let i = 0; i < polygons.points.length; i += 8) {
+          currentPolygon.push({
+            x: polygons.points[i] * stageDimensions.width,
+            y: polygons.points[i + 1] * stageDimensions.height,
+            color: '#ffa500',
+            id: uuidv4()
+          })
+        }
+        transformedPolygons.push(currentPolygon)
+      })
+    }
+    setPolygons(transformedPolygons)
+
+  }
+
   function setImageCallback(response_json) {
     // This is a callback function that is called when the image is fetched
     // Its only purpose is to set the image state variables
@@ -110,26 +153,24 @@ const AnnotationArea = () => {
     )
     setPhaseImage(`data:image/jpeg;base64,${response_json.phase_img_data}`)
 
-    const polygonsWithPredictions = response_json.predictions
     const transformedPolygons = []
 
-    polygonsWithPredictions.forEach((polygonWithPrediction, index) => {
+    const polygonsWithPredictions = response_json.predictions
+    if (polygonsWithPredictions.length !== 0) {
+      polygonsWithPredictions.forEach((polygonWithPrediction, index) => {
 
-      const currentPolygon = []
-      for (let i = 0; i < polygonWithPrediction.polygon.points.length; i += 8) {
-        currentPolygon.push({
-          x: polygonWithPrediction.polygon.points[i] * stageDimensions.width,
-          y: polygonWithPrediction.polygon.points[i + 1] * stageDimensions.height,
-          color: getColorByClassId(polygonWithPrediction.class_id),
-          id: uuidv4()
-        })
-      }
-      transformedPolygons.push(currentPolygon)
-      // const polygonPoints = polygonWithPrediction.polygon.points
-      // const color = getColorByClassId(polygonWithPrediction.class_id)
-      // transformedPolygons.push(polygonPoints)
-      // setPolygonCounter(index + 1)
-    })
+        const currentPolygon = []
+        for (let i = 0; i < polygonWithPrediction.polygon.points.length; i += 8) {
+          currentPolygon.push({
+            x: polygonWithPrediction.polygon.points[i] * stageDimensions.width,
+            y: polygonWithPrediction.polygon.points[i + 1] * stageDimensions.height,
+            color: getColorByClassId(polygonWithPrediction.class_id),
+            id: uuidv4()
+          })
+        }
+        transformedPolygons.push(currentPolygon)
+      })
+    }
     setPolygons(transformedPolygons)
   }
 
@@ -147,7 +188,7 @@ const AnnotationArea = () => {
 
   useEffect(() => {
     const image_type = showAmplitudeImage ? 0 : 1
-    getImageWithPredictions(imageId, image_type, setImageCallback)
+     setNewImage(imageId, image_type, setImageCallback)
   }, [imageId, showAmplitudeImage, currentDataset])
 
   // Hook for keeping track of lines
@@ -233,6 +274,10 @@ const AnnotationArea = () => {
     } else {
       console.log('Invalid number:', newImageId)
     }
+  }
+
+  const segment = () => {
+    segmentCurrentImage(segmentCallback)
   }
 
   const toggleImage = () => {
@@ -425,6 +470,7 @@ const AnnotationArea = () => {
           onUndo={deleteall}
           onNext={nextImage}
           onPrev={prevImage}
+          onSegment={segment}
           onImageId={handleButtonClick}
           onToggleImage={toggleImage}
           onSegmentationMethodChange={onSegmentationMethodChange}
