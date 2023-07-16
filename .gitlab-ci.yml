@@ -1,44 +1,22 @@
-stages:
-- lint
-- deploy
-- build
-
-flake8:
-  image: "python:3.7"
-  stage: lint
-  script:
-    - pip install .[tests]
-    - flake8 --max-line-length=120 cellface
-  tags:
-    - lrz
-  only:
-    - main
-
-pages:
-  image: "python:3.7"
-  stage: deploy
-  script:
-    - pip install .[doc]
-    - sphinx-build -b html doc public
-  only:
-    - main
-
 build:
   stage: build
-  image: docker:latest
-  services:
-    - docker:dind
-  before_script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
   script:
-    - docker build -t $CI_REGISTRY_IMAGE/app:$CI_COMMIT_TAG .
-    - docker push $CI_REGISTRY_IMAGE/app:$CI_COMMIT_TAG
-    - docker tag $CI_REGISTRY_IMAGE/app:$CI_COMMIT_TAG $CI_REGISTRY_IMAGE/app:latest
-    - docker push $CI_REGISTRY_IMAGE/app:latest
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_TAG'
-      changes:
-      - app/Dockerfile
+    # Authenticate at the registry
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
+    # Build and push the image
+    - /kaniko/executor
+      --context $CI_PROJECT_DIR/app
+      --dockerfile ./Dockerfile
+      --destination $CI_REGISTRY_IMAGE/app:$CI_COMMIT_TAG
+
+  # Only when a commit tag is set the image should be build
+  only:
+    - tags 
+    - main
+
+  # Chose the gitlab runner tag
   tags:
     - lrz
-
