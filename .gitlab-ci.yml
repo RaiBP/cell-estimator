@@ -16,6 +16,8 @@ build:
   only:
     - tags 
     - main
+  changes:
+    - app
 
   # Chose the gitlab runner tag
   tags:
