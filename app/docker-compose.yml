@@ -10,7 +10,7 @@ services:
       - "8000:8000"
       - "3000:3000"
     environment:
-      - DATA_FOLDER=/data
+      - DATA_DIR=/data
       - USER_DATA_FOLDER=/app/backend/user_data
       - TRAINING_DATA_FOLDER=/app/backend/classification/data
       - NUMBA_CACHE_DIR=/tmp 

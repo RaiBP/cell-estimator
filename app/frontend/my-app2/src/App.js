@@ -7,12 +7,16 @@ import { ExplainMenu } from './components/ExplainMenu/ExplainMenu'
 import { v4 as uuidv4 } from 'uuid'
 
 
+import './App.css'
+
+
 axios.defaults.baseURL = 'http://localhost:8000'
 
 const stageDimensions = {
   width: 1000,
   height: 800
 }
+
 
 const StageContainer = ({ children }) => {
   const style = {
@@ -28,21 +32,6 @@ const StageContainer = ({ children }) => {
   }
 
   return <div style={style}>{children}</div>
-}
-
-async function getImageWithPredictions(imageId, imageType, callback) {
-  // If we show the amplitude image, we want to use it for the masks
-  const response = await fetch('http://localhost:8000/images', {
-    method: 'POST',
-    headers: {
-      accept: 'application/json',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ image_id: imageId, image_type: imageType }),
-  })
-  const response_json = await response.json()
-  callback(response_json)
-  return response_json
 }
 
 async function setNewImage(imageId, imageType, callback) {
@@ -64,6 +53,56 @@ async function segmentCurrentImage(callback) {
   const polygons = response.data.polygons
   callback(polygons)
   return polygons
+}
+
+
+
+function divideElements(objectOfArrays) {
+  const width = stageDimensions.width
+  const height = stageDimensions.height  
+  const data = {};
+
+  for (let key in objectOfArrays) {
+    if (objectOfArrays.hasOwnProperty(key)) {
+      data[key] = objectOfArrays[key].map((element) => {
+        return {
+          x: element.x / width,
+          y: element.y / height
+        };
+      });
+    }
+  }
+
+
+  const transformedData = [];
+
+  // Iterate through the original data
+  for (const key in data) {
+    if (data.hasOwnProperty(key)) {
+      const points = data[key];
+      const transformedPoints = [];
+
+      // Extract x and y values for each point
+      for (const point of points) {
+        const { x, y } = point;
+
+        // Create a new object with the desired format
+        transformedPoints.push(x, y);
+      }
+
+      // Push the new object into the transformed data array
+      transformedData.push({ points: transformedPoints });
+    }
+  }
+  return transformedData
+}
+
+function LoadingSpinner() {
+  return (
+    <div className="loading-indicator">
+      <div className="spinner"></div>
+    </div>
+  );
 }
 
 const AnnotationArea = () => {
@@ -93,7 +132,7 @@ const AnnotationArea = () => {
   const [nextPoint, setNextPoint] = useState(null)
   const [deletedPolygons, setDeletedPolygons] = useState([])
   const [numberOfDeletedPolygons, setNumberOfDeletedPolygons] = useState([])
-  
+  const [isLoading, setIsLoading] = useState(false);
 
   // Preview line management
   const [previewLine, setPreviewLine] = useState(null)
@@ -106,6 +145,24 @@ const AnnotationArea = () => {
   // Component management
   const stageRef = React.useRef()
 
+async function classifyCurrentImage(callback) {
+    const masks = divideElements(polygons);
+    setIsLoading(true);
+    const response = await fetch('http://localhost:8000/classify', {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ polygons: masks, use_backend_masks: false }),
+    })
+    const predictions = await response.json()
+    setIsLoading(false);
+    console.log(predictions);
+    callback(predictions)
+    return predictions
+
+  }
 
   function getColorByClassId(classId) {
     switch (classId) {
@@ -122,17 +179,82 @@ const AnnotationArea = () => {
     }
   }
 
-  function segmentCallback(polygons) {
+
+  function getClassIdByColor(color) {
+    console.log(color)
+    switch (color) {
+      case '#ff0000':
+        return 'rbc'
+      case '#ffffff':
+        return 'wbc'
+      case '#0000ff':
+        return 'plt'
+      case '#00ff00':
+        return 'agg'
+      case '#ffff00':
+        return 'oof'
+    }
+  }
+
+  function getClassIdFromPolygon(polygon) {
+    return getClassIdByColor(polygon[0].color) 
+  }
+
+async function saveCurrentMaskAndLabels(labels) {
+  console.log(labels)
+  try {
+    setIsLoading(true);
+    const response = await axios.post('/save_masks_and_labels', labels);
+    setIsLoading(false);
+    console.log(response.data);
+  } catch (error) {
+    console.error('Error saving labels:', error);
+    setIsLoading(false);
+  }
+}
+
+async function downloadMasksAndLabels() {
+  try {
+    setIsLoading(true);
+    const response = await axios.get('/download_masks_and_labels', {
+      responseType: 'blob',
+    });
+
+
+    setIsLoading(false);
+
+    // Create a timestamp
+    const timestamp = new Date().toISOString().replace(/:/g, '-');
+    const filename = `masks_and_labels_${timestamp}.pre`;
+
+    // Create a download link for the user
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Clean up the URL object
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Error downloading masks and labels:', error);
+    // Optionally handle error cases
+  }
+}
+
+  function segmentCallback(receivedPolygons) {
     const transformedPolygons = []
 
-    if (polygons.length !== 0) {
-      polygons.forEach((polygons, index) => {
+    if (receivedPolygons.length !== 0) {
+      receivedPolygons.forEach((receivedPolygons, index) => {
 
         const currentPolygon = []
-        for (let i = 0; i < polygons.points.length; i += 8) {
+        for (let i = 0; i < receivedPolygons.points.length; i += 8) {
           currentPolygon.push({
-            x: polygons.points[i] * stageDimensions.width,
-            y: polygons.points[i + 1] * stageDimensions.height,
+            x: receivedPolygons.points[i] * stageDimensions.width,
+            y: receivedPolygons.points[i + 1] * stageDimensions.height,
             color: '#ffa500',
             id: uuidv4()
           })
@@ -143,6 +265,23 @@ const AnnotationArea = () => {
     setPolygons(transformedPolygons)
 
   }
+
+function classifyCallback(labels) {
+  const transformedPolygons = polygons.map((polygon, index) => {
+    const classId = labels[index]["class_id"];
+
+    console.log(`Polygon ${index + 1} - classId: ${classId}`);
+
+    const color = getColorByClassId(classId);
+
+    return polygon.map((point) => ({
+      ...point,
+      color: color,
+    }));
+  });
+
+  setPolygons(transformedPolygons);
+}
 
   function setImageCallback(response_json) {
     // This is a callback function that is called when the image is fetched
@@ -188,7 +327,15 @@ const AnnotationArea = () => {
 
   useEffect(() => {
     const image_type = showAmplitudeImage ? 0 : 1
-     setNewImage(imageId, image_type, setImageCallback)
+
+    const setNewImageAsync = async () => {
+          setIsLoading(true);
+          await setNewImage(imageId, image_type, setImageCallback);
+          setIsLoading(false);
+        };
+
+    setNewImageAsync();
+
   }, [imageId, showAmplitudeImage, currentDataset])
 
   // Hook for keeping track of lines
@@ -276,8 +423,26 @@ const AnnotationArea = () => {
     }
   }
 
-  const segment = () => {
-    segmentCurrentImage(segmentCallback)
+  const segment = async () => {
+    setIsLoading(true)
+    await segmentCurrentImage(segmentCallback)
+    setIsLoading(false)
+  }
+
+  const classify = () => {
+    classifyCurrentImage(classifyCallback)
+  }
+
+  const download = () => {
+    downloadMasksAndLabels()
+  }
+
+  const saveMasksAndLabels = () => {
+    const extractedLabels = polygons.map(polygon => {
+    return getClassIdFromPolygon(polygon);
+    });
+
+    saveCurrentMaskAndLabels(extractedLabels)
   }
 
   const toggleImage = () => {
@@ -422,46 +587,6 @@ const AnnotationArea = () => {
   }
 
 
-  function divideElements(objectOfArrays) {
-    const width = stageDimensions.width
-    const height = stageDimensions.height  
-    const result = {};
-  
-    for (let key in objectOfArrays) {
-      if (objectOfArrays.hasOwnProperty(key)) {
-        result[key] = objectOfArrays[key].map((element) => {
-          return {
-            x: element.x / width,
-            y: element.y / height
-          };
-        });
-      }
-    }
-  
-    return result;
-  }
-
-  function onClassification(e) {
-    const masks = divideElements(polygons)
-
-    console.log(polygons)
-    console.log(masks)
-    
-    console.log(`Masks: ${masks}`)
-
-    axios
-      .post('/new_masks', {
-        filename: masks,
-      })
-      .then((response) => {
-        console.log(response.data) // Output the server's response to the console.
-      })
-      .catch((error) => {
-        console.error(`Error sending masks: ${error}`)
-      })
-
-  }
-
   return (
     <div style={style}>
       <MenuContainer>
@@ -475,7 +600,9 @@ const AnnotationArea = () => {
           onToggleImage={toggleImage}
           onSegmentationMethodChange={onSegmentationMethodChange}
           onDatasetChange={onDatasetChange}
-          onClassification={onClassification}
+          onClassify={classify}
+          onSave={saveMasksAndLabels}
+          onDownload={download}
         />
       </MenuContainer>
       <StageContainer>
@@ -583,9 +710,9 @@ const AnnotationArea = () => {
             )}
             
           </Layer>
-        </Stage>
-        
+        </Stage> 
       </StageContainer>
+      {isLoading && (<LoadingSpinner />)}
       {contextMenu.visible && (<PopupMenu x={contextMenu.x} y={contextMenu.y} handleOptionClick={handleOptionClick}/>)}
       {explainMenu.visible && (<ExplainMenu handleOptionClick={handleExplainMenuClick}/>)}
     </div>
