@@ -14,7 +14,7 @@ build:
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
       changes:
-        - app/*
+        - app/**/*
   # Chose the gitlab runner tag
   tags:
     - lrz
