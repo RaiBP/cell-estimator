@@ -68,7 +68,7 @@ function Menu({
   onToggleImage,
   onSegmentationMethodChange,
   onDatasetChange,
-  onClassification
+  onClassify
 }) {
   return (
     <div className="menu-container">
@@ -89,7 +89,7 @@ function Menu({
       </form>
       <SegmentationMethodsSelector onChange={onSegmentationMethodChange} />
       <DatasetSelector onChange={onDatasetChange} />
-      <Button className="menu-button" onClick={onClassification}>Classify</Button>
+      <Button className="menu-button" onClick={onClassify}>Classify</Button>
     </div>
   )
 }

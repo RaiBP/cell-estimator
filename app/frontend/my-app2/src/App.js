@@ -66,6 +66,50 @@ async function segmentCurrentImage(callback) {
   return polygons
 }
 
+
+
+function divideElements(objectOfArrays) {
+  const width = stageDimensions.width
+  const height = stageDimensions.height  
+  const data = {};
+
+  for (let key in objectOfArrays) {
+    if (objectOfArrays.hasOwnProperty(key)) {
+      data[key] = objectOfArrays[key].map((element) => {
+        return {
+          x: element.x / width,
+          y: element.y / height
+        };
+      });
+    }
+  }
+
+
+  const transformedData = [];
+
+  // Iterate through the original data
+  for (const key in data) {
+    if (data.hasOwnProperty(key)) {
+      const points = data[key];
+      const transformedPoints = [];
+
+      // Extract x and y values for each point
+      for (const point of points) {
+        const { x, y } = point;
+
+        // Create a new object with the desired format
+        transformedPoints.push(x, y);
+      }
+
+      // Push the new object into the transformed data array
+      transformedData.push({ points: transformedPoints });
+    }
+  }
+  return transformedData
+}
+
+
+
 const AnnotationArea = () => {
   const style = {
     display: 'flex',
@@ -106,6 +150,23 @@ const AnnotationArea = () => {
   // Component management
   const stageRef = React.useRef()
 
+async function classifyCurrentImage(callback) {
+    const masks = divideElements(polygons);
+
+    const response = await fetch('http://localhost:8000/classify', {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ polygons: masks, use_backend_masks: false }),
+    })
+    const predictions = await response.json()
+    console.log(predictions);
+    callback(predictions)
+    return predictions
+
+  }
 
   function getColorByClassId(classId) {
     switch (classId) {
@@ -122,17 +183,17 @@ const AnnotationArea = () => {
     }
   }
 
-  function segmentCallback(polygons) {
+  function segmentCallback(receivedPolygons) {
     const transformedPolygons = []
 
-    if (polygons.length !== 0) {
-      polygons.forEach((polygons, index) => {
+    if (receivedPolygons.length !== 0) {
+      receivedPolygons.forEach((receivedPolygons, index) => {
 
         const currentPolygon = []
-        for (let i = 0; i < polygons.points.length; i += 8) {
+        for (let i = 0; i < receivedPolygons.points.length; i += 8) {
           currentPolygon.push({
-            x: polygons.points[i] * stageDimensions.width,
-            y: polygons.points[i + 1] * stageDimensions.height,
+            x: receivedPolygons.points[i] * stageDimensions.width,
+            y: receivedPolygons.points[i + 1] * stageDimensions.height,
             color: '#ffa500',
             id: uuidv4()
           })
@@ -143,6 +204,23 @@ const AnnotationArea = () => {
     setPolygons(transformedPolygons)
 
   }
+
+function classifyCallback(labels) {
+  const transformedPolygons = polygons.map((polygon, index) => {
+    const classId = labels[index]["class_id"];
+
+    console.log(`Polygon ${index + 1} - classId: ${classId}`);
+
+    const color = getColorByClassId(classId);
+
+    return polygon.map((point) => ({
+      ...point,
+      color: color,
+    }));
+  });
+
+  setPolygons(transformedPolygons);
+}
 
   function setImageCallback(response_json) {
     // This is a callback function that is called when the image is fetched
@@ -278,6 +356,10 @@ const AnnotationArea = () => {
 
   const segment = () => {
     segmentCurrentImage(segmentCallback)
+  }
+
+  const classify = () => {
+    classifyCurrentImage(classifyCallback)
   }
 
   const toggleImage = () => {
@@ -422,46 +504,6 @@ const AnnotationArea = () => {
   }
 
 
-  function divideElements(objectOfArrays) {
-    const width = stageDimensions.width
-    const height = stageDimensions.height  
-    const result = {};
-  
-    for (let key in objectOfArrays) {
-      if (objectOfArrays.hasOwnProperty(key)) {
-        result[key] = objectOfArrays[key].map((element) => {
-          return {
-            x: element.x / width,
-            y: element.y / height
-          };
-        });
-      }
-    }
-  
-    return result;
-  }
-
-  function onClassification(e) {
-    const masks = divideElements(polygons)
-
-    console.log(polygons)
-    console.log(masks)
-    
-    console.log(`Masks: ${masks}`)
-
-    axios
-      .post('/new_masks', {
-        filename: masks,
-      })
-      .then((response) => {
-        console.log(response.data) // Output the server's response to the console.
-      })
-      .catch((error) => {
-        console.error(`Error sending masks: ${error}`)
-      })
-
-  }
-
   return (
     <div style={style}>
       <MenuContainer>
@@ -475,7 +517,7 @@ const AnnotationArea = () => {
           onToggleImage={toggleImage}
           onSegmentationMethodChange={onSegmentationMethodChange}
           onDatasetChange={onDatasetChange}
-          onClassification={onClassification}
+          onClassify={classify}
         />
       </MenuContainer>
       <StageContainer>
