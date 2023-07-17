@@ -562,11 +562,13 @@ function classifyCallback(labels) {
   function onSegmentationMethodChange(e) {
     const selectedMethod = e.target.value
 
+    setIsLoading(true);
     axios
       .post('/select_segmentator', {
         method: selectedMethod,
       })
       .then((response) => {
+        setIsLoading(false);
         console.log(response.data) // Output the server's response to the console.
       })
       .catch((error) => {
@@ -579,6 +581,7 @@ function classifyCallback(labels) {
 
     console.log(`Selected dataset: ${selectedDataset}`)
 
+    setIsLoading(true);
     axios
       .post('/select_dataset', {
         filename: selectedDataset,
@@ -591,6 +594,7 @@ function classifyCallback(labels) {
       })
 
     setCurrentDataset(selectedDataset)
+    setIsLoading(false);
   }
 
 
