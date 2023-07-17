@@ -24,11 +24,12 @@ build:
   # Chose the gitlab runner tag
   tags:
     - lrz
-    
+
 deploy:
   stage: deploy
   image: fluxcd/flux-cli:v0.21.1
   script:
+    - export KUBECONFIG=kubeconfig_group06.yaml
     - flux reconcile kustomization -n group06 group06 --with-source
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'

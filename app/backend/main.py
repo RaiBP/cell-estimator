@@ -34,7 +34,7 @@ logging.basicConfig(level=logging.INFO)
 user_models_folder = Path(os.path.join("classification", "user_models"))
 user_models_folder.mkdir(parents=True, exist_ok=True)
 
-training_data_folder = Path(os.environ["TRAINING_DATA_FOLDER"])
+training_data_folder = Path("./classification/data/").absolute()
 training_data_filename = "training_data_user.csv"
 training_data_filename_base = "training_data_base.csv"
 training_data_folder.mkdir(parents=True, exist_ok=True)
