@@ -133,6 +133,7 @@ const AnnotationArea = () => {
   const [deletedPolygons, setDeletedPolygons] = useState([])
   const [numberOfDeletedPolygons, setNumberOfDeletedPolygons] = useState([])
   const [isLoading, setIsLoading] = useState(false);
+  const [isSegmented, setIsSegmented] = useState(false);
 
   // Preview line management
   const [previewLine, setPreviewLine] = useState(null)
@@ -319,6 +320,11 @@ function classifyCallback(labels) {
     }
     setPolygons(transformedPolygons)
   }
+
+// Hook for checking if there are any drawn polygons
+useEffect(() => {
+  setIsSegmented(polygons.length !== 0);
+}, [polygons]);
 
   // Hook for showing amplitude or phase image
   useEffect(() => {
@@ -634,6 +640,7 @@ function classifyCallback(labels) {
           onSave={saveMasksAndLabels}
           onDownload={download}
           isClassified={isClassified}
+          isSegmented={isSegmented}
         />
       </MenuContainer>
       <StageContainer>
