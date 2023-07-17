@@ -54,6 +54,32 @@ function SegmentationMethodsSelector({ onChange }) {
   )
 }
 
+
+function ClassificationMethodsSelector({ onChange }) {
+  const [classificationMethods, setClassificationMethods] = useState([])
+
+  useEffect(() => {
+    async function fetchData() {
+      const response = await axios.get('/get_classification_methods')
+      setClassificationMethods(response.data.classification_methods)
+    }
+    fetchData()
+  }, [])
+
+  return (
+    <div className="selector-container">
+      <label htmlFor='classification' className="selector-label">Choose a classification method:</label>
+      <select id='classification' className="selector" onChange={onChange}>
+        {classificationMethods.map((method, index) => (
+          <option key={index} value={method}>
+            {method}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
 const MenuContainer = ({ children }) => {
   return <div className="menu-container">{children}</div>
 }
@@ -67,6 +93,7 @@ function Menu({
   onImageId,
   onToggleImage,
   onSegmentationMethodChange,
+  onClassificationMethodChange,
   onDatasetChange,
   onClassify,
   onSave,
@@ -91,6 +118,7 @@ function Menu({
         <input type='submit' value='Submit' />
       </form>
       <SegmentationMethodsSelector onChange={onSegmentationMethodChange} />
+      <ClassificationMethodsSelector onChange={onClassificationMethodChange} />
       <DatasetSelector onChange={onDatasetChange} />
       <Button className="menu-button" onClick={onClassify}>Classify</Button>
 {isClassified ? (

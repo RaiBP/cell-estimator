@@ -576,6 +576,24 @@ function classifyCallback(labels) {
       })
   }
 
+  function onClassificationMethodChange(e) {
+    const selectedMethod = e.target.value
+
+
+    setIsLoading(true);
+    axios
+      .post('/select_classifier', {
+        method: selectedMethod,
+      })
+      .then((response) => {
+        setIsLoading(false);
+        console.log(response.data) // Output the server's response to the console.
+      })
+      .catch((error) => {
+        console.error(`Error selecting classification method: ${error}`)
+      })
+  }
+
   function onDatasetChange(e) {
     const selectedDataset = e.target.value
 
@@ -610,6 +628,7 @@ function classifyCallback(labels) {
           onImageId={handleButtonClick}
           onToggleImage={toggleImage}
           onSegmentationMethodChange={onSegmentationMethodChange}
+          onClassificationMethodChange={onClassificationMethodChange}
           onDatasetChange={onDatasetChange}
           onClassify={classify}
           onSave={saveMasksAndLabels}

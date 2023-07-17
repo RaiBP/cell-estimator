@@ -36,9 +36,6 @@ class Classification(ABC):
         probabilities = self._get_probabilities(features)
         return predictions, probabilities
 
-    @abstractmethod 
-    def add_class_probabilities_columns(features):
-        pass
 
     @abstractmethod
     def get_classes(self):
@@ -111,12 +108,12 @@ class Classification(ABC):
         pass
 
     @abstractmethod
-    def save_model(self, folder_path, file_name):
+    def save_model(self, folder_path, file_name, overwrite=False):
         pass
         
 
     @abstractmethod 
-    def fit(self, X, y, model_filename=None):
+    def fit(self, X, y):
         pass
 
 

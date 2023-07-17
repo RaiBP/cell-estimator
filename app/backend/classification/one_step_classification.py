@@ -1,4 +1,5 @@
 import os
+import glob
 import joblib 
 import numpy as np
 
@@ -6,8 +7,8 @@ from classification.classification import Classification
 
 
 class OneStepClassifier(Classification):
-    def __init__(self, model_type="SVC", model_filename=None):
-        super().__init__()  
+    def __init__(self, model_type="SVC", model_filename=None, use_user_models=False):
+        super().__init__(use_user_models=use_user_models)  
         self.model_type = model_type
 
         self.model_filename = self._get_model_filename() if model_filename is None else model_filename
@@ -15,12 +16,23 @@ class OneStepClassifier(Classification):
         self.model = self.load_model(self.models_folder, self.model_filename)
         
 
-    def save_model(self, folder_path, file_name):
+    def save_model(self, folder_path, file_name, overwrite=False):
         assert self.model is not None
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
         file_path = os.path.join(folder_path, file_name)
+        model_method = file_name.split("_")[1]
+        if overwrite:
+            self.delete_model(folder_path, model_method)
         joblib.dump(self.model, file_path)
+
+
+    @staticmethod
+    def delete_model(folder_path, model_method):
+        files_to_delete = glob.glob(os.path.join(folder_path, f'*{model_method}*'))
+        # Delete the files
+        for file_path in files_to_delete:
+            os.remove(file_path)
 
 
     def calculate_entropy(self, labels, probabilities):
@@ -70,10 +82,6 @@ class OneStepClassifier(Classification):
         return self.model_type
  
     
-    def fit(self, X, y, model_filename=None):
+    def fit(self, X, y):
         X = self._drop_columns(X)
         self.model.fit(X, y) 
-
-        model_filename = self.model_filename if model_filename is None else model_filename
-
-        self.save_model(self.user_models_folder, model_filename)

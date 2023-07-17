@@ -60,9 +60,17 @@ class PipelineManager:
         self.logging.info(f"New segmentator of type {segmentation_method} initialized.")
 
     def set_classification_method(self, classification_method: str):
-        self.logging.info(f"Initializing new classifier of type {classification_method}.")
-        self.classifier = create_classification_model(classification_method)
-        self.logging.info(f"New classifier of type {classification_method} initialized.")
+        use_user_models = False
+        if 'Three Step Classification' in classification_method:
+            method = 'TSC'
+        else:
+            method = classification_method.split(" ")[0]
+        self.logging.info(f"Initializing new classifier of type {method}.")
+        if 'retrained' in classification_method:
+            use_user_models=True
+
+        self.classifier = create_classification_model(method, use_user_trained_models=use_user_models)
+        self.logging.info(f"New classifier of type {method} initialized.")
 
     def set_feature_extractor(self, feature_extractor: FeatureExtractor):
         self.logging.info(f"Initializing new feature extractor of type {feature_extractor}.")
@@ -125,6 +133,9 @@ class PipelineManager:
                 dataset_group.create_dataset('image_ids', shape=(0,), maxshape=(None,), dtype=np.uint32)
 
     def get_saved_features(self, image_id, dataset_id, features_path):
+        if not features_path.exists():
+            return None
+
         features = pd.read_csv(features_path)
 
         is_match_present = (features['DatasetID'] == dataset_id) & (features['ImageID'] == image_id)

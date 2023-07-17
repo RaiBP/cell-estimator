@@ -16,10 +16,9 @@ import cv2
 
 from segmentation import utils as segmentation_utils
 from pipeline import config as pipeline_config 
-from classification.utils import create_classification_model
 from backend import PipelineManager
 
-from segmentation.utils import create_segmentation_model, list_segmentation_methods
+from segmentation.utils import list_segmentation_methods
 from classification.utils import list_classification_methods
 
 from image_loader import (
@@ -32,10 +31,15 @@ from image_loader import (
 # Setting up logger
 logging.basicConfig(level=logging.INFO)
 
+user_models_folder = Path(os.path.join("classification", "user_models"))
+user_models_folder.mkdir(parents=True, exist_ok=True)
+
 training_data_folder = Path(os.environ["TRAINING_DATA_FOLDER"])
 training_data_filename = "training_data_user.csv"
+training_data_filename_base = "training_data_base.csv"
 training_data_folder.mkdir(parents=True, exist_ok=True)
 training_data_path = training_data_folder / training_data_filename
+training_data_path_base = training_data_folder / training_data_filename_base
 
 # Initialization values. All of these can be latter changed via POST methods
 user_data_folder = Path(os.environ["USER_DATA_FOLDER"])
@@ -70,12 +74,6 @@ class ImageSegmentationMethod(str, Enum):
     fastsam = "fastsam"
     sam = "sam"
 
-class CellClassificationMethod(str, Enum):
-    svc = "svc"
-    rfc = "rfc"
-    knn = "knn"
-    tsc = "tsc"
-
 class Dataset(BaseModel):
     filename: str
 
@@ -83,7 +81,7 @@ class SegmentationMethod(BaseModel):
     method: ImageSegmentationMethod
 
 class ClassificationMethod(BaseModel):
-    method: CellClassificationMethod
+    method: str
 
 class Polygon(BaseModel):
     points: List[float] | None
@@ -252,7 +250,8 @@ async def get_segmentation_methods():
 
 @app.get("/get_classification_methods")
 async def get_classification_methods():
-    return {"classification_methods": list_classification_methods()}
+    global user_models_folder
+    return {"classification_methods": list_classification_methods(user_models_folder)}
 
 
 @app.post("/set_image")
@@ -282,27 +281,30 @@ async def set_image(image_query: ImageQuery):
 
         features = manager.get_saved_features(image_id, manager.get_dataset_id(), training_data_path)
         masks, labels = manager.get_saved_masks_and_labels(image_id, manager.get_dataset_id())
-        
+ 
         manager.set_masks(masks)
         manager.set_shared_features(features)
         manager.set_predictions(labels)
         if features is not None:
+            features = features.dropna(axis=1)
             features_records = features.to_dict('records')
         else:
             features_records = {}
-        logging.info (f"Image with id {image_id} from dataset {manager.dataset_id} is set as active image.") 
+        logging.info(f"Image with id {image_id} from dataset {manager.dataset_id} is set as active image.") 
 
         if masks is not None:
             contours = [segmentation_utils.get_mask_contour(m) for m in masks]
             contours = [segmentation_utils.normalize_contour(c) for c in contours]
             contours = segmentation_utils.flatten_contours(contours)
+        else:
+            contours = None
 
         amplitude_image_str, phase_image_str = manager.get_amplitude_phase_images_str()
 
         amplitude_image_b64 = encode_b64(amplitude_image_str)
         phase_img_b64 = encode_b64(phase_image_str)
 
-        if masks is None or features is None or labels is None:
+        if contours is None or features is None or labels is None:
             return ImagesWithPredictions(
                 amplitude_img_data=amplitude_image_b64,
                 phase_img_data=phase_img_b64,
@@ -403,10 +405,12 @@ async def classify(classify_query: ClassifyQuery):
         features_records = {}
     if features is not None:
         try:
+            features_records = features.to_dict('records')
+            logging.info(features_records)
             labels, probabilities = classifier.classify(features)
+            logging.info(f'Labels: {labels}')
             entropies = classifier.calculate_entropy(labels, probabilities)
             proba_per_label = classifier.calculate_probability_per_label(labels, probabilities)
-            features_records = features.to_dict('records')
             features['LabelsEntropy'] = entropies
             features = classifier.add_class_probabilities_columns(features, proba_per_label)
 
@@ -485,8 +489,10 @@ async def save_masks_and_labels(predictions: List[str]):
         features = features.drop(["MaskID"], axis = 1)
 
         dataset_id = manager.get_dataset_id()
-
-        training_df = pd.read_csv(training_data_path)
+        if training_data_path.exists():
+            training_df = pd.read_csv(training_data_path)
+        else:
+            training_df = pd.read_csv(training_data_path_base)
 
         is_match_present = (training_df['DatasetID'] == dataset_id) & (training_df['ImageID'] == image_id)
         if any(is_match_present):
@@ -611,11 +617,14 @@ async def retrain_model():
     Training data is taken from csv in 'training_data_path'. To add new data, please
     use method 'save_masks_and_labels'
     """
-    global manager, training_data_path
+    global manager, training_data_path, user_models_folder
+    if not training_data_path.exists():
+        return {"error": "No user data to retrain the model with"}
     try:
-        # Load saved training data and concatenate with the new data
+
         training_data = pd.read_csv(training_data_path)
-        classification_method = manager.get_current_classification_method()
+        # Load saved training data and concatenate with the new data
+        classification_method = manager.get_current_classification_method().lower()
         
         y = training_data['Labels'].str.strip("b'")
         if classification_method != 'tsc':
@@ -623,13 +632,23 @@ async def retrain_model():
 
         X = training_data.drop('Labels', axis=1)
 
-        model_filename = f"{manager.get_current_classification_method()}_user_model.pkl"
 
         cell_count = len(training_data)
 
         # Active learning
-        manager.classifier.fit(X, y, model_filename=model_filename)
-        logging.info(f"Model retrained succesfully on {cell_count} data points and saved as {model_filename}")
+        manager.classifier.fit(X, y)
+
+
+        if classification_method == 'tsc':
+            model_filename = f"{cell_count}_model.pkl"
+            final_filename = "tsc_{oof/agg/cell}_" + model_filename
+        else:
+            model_filename = f"osc_{classification_method}_{cell_count}_model.pkl"
+            final_filename = model_filename
+
+        manager.classifier.save_model(user_models_folder, model_filename, overwrite=True)
+
+        logging.info(f"Model retrained succesfully on {cell_count} data points and saved as {final_filename}")
     except Exception as e:
         logging.error(f"Error while retraining model: {e}")
         return {"error": "Error while retraining model"}
