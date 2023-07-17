@@ -32,7 +32,7 @@ from image_loader import (
 # Setting up logger
 logging.basicConfig(level=logging.INFO)
 
-training_data_folder = Path(os.environ["TRAINING_DATA_FOLDER"])
+training_data_folder = Path("./classification/data/")
 training_data_filename = "training_data_user.csv"
 training_data_folder.mkdir(parents=True, exist_ok=True)
 training_data_path = training_data_folder / training_data_filename
