@@ -6,17 +6,14 @@ import { PopupMenu } from './components/PopupMenu/PopupMenu'
 import { ExplainMenu } from './components/ExplainMenu/ExplainMenu'
 import { v4 as uuidv4 } from 'uuid'
 
-
 import './App.css'
-
 
 axios.defaults.baseURL = 'http://localhost:8000'
 
 const stageDimensions = {
   width: 1000,
-  height: 800
+  height: 800,
 }
-
 
 const StageContainer = ({ children }) => {
   const style = {
@@ -49,49 +46,46 @@ async function setNewImage(imageId, imageType, callback) {
 }
 
 async function segmentCurrentImage(callback) {
-  const response = await axios.get('/segment');
+  const response = await axios.get('/segment')
   const polygons = response.data.polygons
   callback(polygons)
   return polygons
 }
 
-
-
 function divideElements(objectOfArrays) {
   const width = stageDimensions.width
-  const height = stageDimensions.height  
-  const data = {};
+  const height = stageDimensions.height
+  const data = {}
 
   for (let key in objectOfArrays) {
     if (objectOfArrays.hasOwnProperty(key)) {
       data[key] = objectOfArrays[key].map((element) => {
         return {
           x: element.x / width,
-          y: element.y / height
-        };
-      });
+          y: element.y / height,
+        }
+      })
     }
   }
 
-
-  const transformedData = [];
+  const transformedData = []
 
   // Iterate through the original data
   for (const key in data) {
     if (data.hasOwnProperty(key)) {
-      const points = data[key];
-      const transformedPoints = [];
+      const points = data[key]
+      const transformedPoints = []
 
       // Extract x and y values for each point
       for (const point of points) {
-        const { x, y } = point;
+        const { x, y } = point
 
         // Create a new object with the desired format
-        transformedPoints.push(x, y);
+        transformedPoints.push(x, y)
       }
 
       // Push the new object into the transformed data array
-      transformedData.push({ points: transformedPoints });
+      transformedData.push({ points: transformedPoints })
     }
   }
   return transformedData
@@ -99,10 +93,10 @@ function divideElements(objectOfArrays) {
 
 function LoadingSpinner() {
   return (
-    <div className="loading-indicator">
-      <div className="spinner"></div>
+    <div className='loading-indicator'>
+      <div className='spinner'></div>
     </div>
-  );
+  )
 }
 
 const AnnotationArea = () => {
@@ -112,7 +106,7 @@ const AnnotationArea = () => {
     justifyContent: 'flex-start', // align items horizontally
     height: '100%', // 100% of the viewport height
     width: '100%', // 100% of the viewport height
-    backgroundColor: '#F5F5F5'
+    backgroundColor: '#F5F5F5',
   }
 
   // Image management
@@ -141,15 +135,24 @@ const AnnotationArea = () => {
   const [isClassified, setIsClassified] = useState(false)
 
   // Context Menu for Polygon-editing
-  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, polygonID: -1 });
-  const [explainMenu, setExplainMenu] = useState({ visible: false, polygonID: -1 });
+  const [contextMenu, setContextMenu] = useState({
+    visible: false,
+    x: 0,
+    y: 0,
+    polygonID: -1,
+  })
+  const [explainMenu, setExplainMenu] = useState({
+    visible: false,
+    polygonID: -1,
+  })
+  const [availableFeaturesNames, setAvailableFeaturesNames] = useState([])
 
   // Component management
   const stageRef = React.useRef()
 
-async function classifyCurrentImage(callback) {
-    const masks = divideElements(polygons);
-    setIsLoading(true);
+  async function classifyCurrentImage(callback) {
+    const masks = divideElements(polygons)
+    setIsLoading(true)
     const response = await fetch('http://localhost:8000/classify', {
       method: 'POST',
       headers: {
@@ -159,11 +162,10 @@ async function classifyCurrentImage(callback) {
       body: JSON.stringify({ polygons: masks, use_backend_masks: false }),
     })
     const predictions = await response.json()
-    setIsLoading(false);
-    console.log(predictions);
+    setIsLoading(false)
+    console.log(predictions)
     callback(predictions)
     return predictions
-
   }
 
   function getColorByClassId(classId) {
@@ -180,7 +182,6 @@ async function classifyCurrentImage(callback) {
         return '#ffff00'
     }
   }
-
 
   function getClassIdByColor(color) {
     console.log(color)
@@ -199,66 +200,64 @@ async function classifyCurrentImage(callback) {
   }
 
   function getClassIdFromPolygon(polygon) {
-    return getClassIdByColor(polygon[0].color) 
+    return getClassIdByColor(polygon[0].color)
   }
 
-async function saveCurrentMaskAndLabels(labels) {
-  console.log(labels)
-  try {
-    setIsLoading(true);
-    const response = await axios.post('/save_masks_and_labels', labels);
-    setIsLoading(false);
-    console.log(response.data);
-  } catch (error) {
-    console.error('Error saving labels:', error);
-    setIsLoading(false);
+  async function saveCurrentMaskAndLabels(labels) {
+    console.log(labels)
+    try {
+      setIsLoading(true)
+      const response = await axios.post('/save_masks_and_labels', labels)
+      setIsLoading(false)
+      console.log(response.data)
+    } catch (error) {
+      console.error('Error saving labels:', error)
+      setIsLoading(false)
+    }
   }
-}
 
-async function downloadMasksAndLabels() {
-  try {
-    setIsLoading(true);
-    const response = await axios.get('/download_masks_and_labels', {
-      responseType: 'blob',
-    });
+  async function downloadMasksAndLabels() {
+    try {
+      setIsLoading(true)
+      const response = await axios.get('/download_masks_and_labels', {
+        responseType: 'blob',
+      })
 
+      setIsLoading(false)
 
-    setIsLoading(false);
+      // Create a timestamp
+      const timestamp = new Date().toISOString().replace(/:/g, '-')
+      const filename = `masks_and_labels_${timestamp}.pre`
 
-    // Create a timestamp
-    const timestamp = new Date().toISOString().replace(/:/g, '-');
-    const filename = `masks_and_labels_${timestamp}.pre`;
+      // Create a download link for the user
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', filename)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
 
-    // Create a download link for the user
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    // Clean up the URL object
-    window.URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error('Error downloading masks and labels:', error);
-    // Optionally handle error cases
+      // Clean up the URL object
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error downloading masks and labels:', error)
+      // Optionally handle error cases
+    }
   }
-}
 
   function segmentCallback(receivedPolygons) {
     const transformedPolygons = []
 
     if (receivedPolygons.length !== 0) {
       receivedPolygons.forEach((receivedPolygons, index) => {
-
         const currentPolygon = []
         for (let i = 0; i < receivedPolygons.points.length; i += 8) {
           currentPolygon.push({
             x: receivedPolygons.points[i] * stageDimensions.width,
             y: receivedPolygons.points[i + 1] * stageDimensions.height,
             color: '#ffa500',
-            id: uuidv4()
+            id: uuidv4(),
           })
         }
         transformedPolygons.push(currentPolygon)
@@ -266,26 +265,31 @@ async function downloadMasksAndLabels() {
     }
     setPolygons(transformedPolygons)
     setIsClassified(false)
-
   }
 
-function classifyCallback(labels) {
-  const transformedPolygons = polygons.map((polygon, index) => {
-    const classId = labels[index]["class_id"];
+  function classifyCallback(labels) {
+    const transformedPolygons = polygons.map((polygon, index) => {
+      const classId = labels[index]['class_id']
 
-    console.log(`Polygon ${index + 1} - classId: ${classId}`);
+      console.log(`Polygon ${index + 1} - classId: ${classId}`)
 
-    const color = getColorByClassId(classId);
+      const color = getColorByClassId(classId)
 
-    return polygon.map((point) => ({
-      ...point,
-      color: color,
-    }));
-  });
+      return polygon.map((point) => ({
+        ...point,
+        color: color,
+      }))
+    })
 
-  setPolygons(transformedPolygons);
-  setIsClassified(true)
-}
+    setPolygons(transformedPolygons)
+    setIsClassified(true)
+
+    if (availableFeaturesNames.length == 0) {
+      fetchAvailableFeaturesNames()
+    }
+
+
+  }
 
   function setImageCallback(response_json) {
     // This is a callback function that is called when the image is fetched
@@ -301,21 +305,25 @@ function classifyCallback(labels) {
     const polygonsWithPredictions = response_json.predictions
     if (polygonsWithPredictions.length !== 0) {
       polygonsWithPredictions.forEach((polygonWithPrediction, index) => {
-
         const currentPolygon = []
-        for (let i = 0; i < polygonWithPrediction.polygon.points.length; i += 8) {
+        for (
+          let i = 0;
+          i < polygonWithPrediction.polygon.points.length;
+          i += 8
+        ) {
           currentPolygon.push({
             x: polygonWithPrediction.polygon.points[i] * stageDimensions.width,
-            y: polygonWithPrediction.polygon.points[i + 1] * stageDimensions.height,
+            y:
+              polygonWithPrediction.polygon.points[i + 1] *
+              stageDimensions.height,
             color: getColorByClassId(polygonWithPrediction.class_id),
-            id: uuidv4()
+            id: uuidv4(),
           })
         }
         transformedPolygons.push(currentPolygon)
       })
       setIsClassified(true)
-    }
-    else {
+    } else {
       setIsClassified(false)
     }
     setPolygons(transformedPolygons)
@@ -342,13 +350,12 @@ useEffect(() => {
     const image_type = showAmplitudeImage ? 0 : 1
 
     const setNewImageAsync = async () => {
-          setIsLoading(true);
-          await setNewImage(imageId, image_type, setImageCallback);
-          setIsLoading(false);
-        };
+      setIsLoading(true)
+      await setNewImage(imageId, image_type, setImageCallback)
+      setIsLoading(false)
+    }
 
-    setNewImageAsync();
-
+    setNewImageAsync()
   }, [imageId, showAmplitudeImage, currentDataset])
 
   // Hook for keeping track of lines
@@ -363,7 +370,6 @@ useEffect(() => {
       if (event.key === 'r') {
         deleteall()
       } else if (event.key === 'z' && event.ctrlKey) {
-        
       } else if (event.key === 'Escape') {
         finishPolygon()
       } else if (event.key === 's') {
@@ -374,7 +380,7 @@ useEffect(() => {
         prevImage()
       } else if (event.key === 't') {
         toggleImage()
-      } 
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
@@ -404,7 +410,10 @@ useEffect(() => {
   const finishPolygon = () => {
     if (currentPolygonRef.current.length > 1) {
       console.log(polygons)
-      setPolygons((prevPolygons) => [...prevPolygons, currentPolygonRef.current])
+      setPolygons((prevPolygons) => [
+        ...prevPolygons,
+        currentPolygonRef.current,
+      ])
     }
     setCurrentPolygon([])
     setNextPoint(null)
@@ -451,9 +460,9 @@ useEffect(() => {
   }
 
   const saveMasksAndLabels = () => {
-    const extractedLabels = polygons.map(polygon => {
-    return getClassIdFromPolygon(polygon);
-    });
+    const extractedLabels = polygons.map((polygon) => {
+      return getClassIdFromPolygon(polygon)
+    })
 
     saveCurrentMaskAndLabels(extractedLabels)
   }
@@ -494,17 +503,17 @@ useEffect(() => {
     setPreviewLine(null)
   }
 
-  function undoLast() {    
-    let lastNumber = numberOfDeletedPolygons.splice(-1,1)
+  function undoLast() {
+    let lastNumber = numberOfDeletedPolygons.splice(-1, 1)
     lastNumber = lastNumber[0]
     let recoveredPolygon = []
 
-    if ( lastNumber === 1) {
-      recoveredPolygon = deletedPolygons.splice(-1,1)            
-    } else if ( lastNumber > 1) {
-        recoveredPolygon = deletedPolygons.splice(-lastNumber, lastNumber)
+    if (lastNumber === 1) {
+      recoveredPolygon = deletedPolygons.splice(-1, 1)
+    } else if (lastNumber > 1) {
+      recoveredPolygon = deletedPolygons.splice(-lastNumber, lastNumber)
     }
-    
+
     polygons.push(...recoveredPolygon)
   }
 
@@ -518,7 +527,7 @@ useEffect(() => {
     let chosenColor = polygons[contextMenu.polygonID][0].color
     let deletePolygon = false
     let noAction = false
-    
+
     switch (option) {
       case 'rbc':
         chosenColor = '#ff0000'
@@ -543,7 +552,7 @@ useEffect(() => {
         setNumberOfDeletedPolygons([...numberOfDeletedPolygons, 1])
         break
       case 'explain':
-        setExplainMenu({ visible:true, polygonID: contextMenu.polygonID})
+        setExplainMenu({ visible: true, polygonID: contextMenu.polygonID })
         break
       case 'noAction':
         noAction = true
@@ -559,10 +568,32 @@ useEffect(() => {
     console.log('Selected', option)
   }
 
+  // Get features names which were used in classification
+  function fetchAvailableFeaturesNames() {
+    axios
+      .get('/available_features_names')
+      .then((response) => {
+        setAvailableFeaturesNames(response.data.features) // Output the server's response to the console.
+      })
+      .catch((error) => {
+        console.error(`Error while getting available features: ${error}`)
+      })
+  }
+
   function handleExplainMenuClick(option) {
+
+    // Explain menu handlers
     if (option === 'close') {
       setExplainMenu({ visible: false })
     }
+  }
+
+  function handleExplainMenuXAxisSelectorChange(e) {
+    console.log(e)
+  }
+
+  function handleExplainMenuYAxisSelectorChange(e) {
+    console.log(e)
   }
 
   function onSegmentationMethodChange(e) {
@@ -621,7 +652,6 @@ useEffect(() => {
     setIsLoading(false);
   }
 
-
   return (
     <div style={style}>
       <MenuContainer>
@@ -644,22 +674,22 @@ useEffect(() => {
         />
       </MenuContainer>
       <StageContainer>
-        <Stage 
-          ref={stageRef} 
-          key='main-stage' 
+        <Stage
+          ref={stageRef}
+          key='main-stage'
           width={stageDimensions.width}
           height={stageDimensions.height}
-          onClick={handleClick} 
+          onClick={handleClick}
           onMouseMove={handleMouseMove}
         >
           <Layer key='0'>
             {image && (
-              <Image 
+              <Image
                 width={stageDimensions.width}
-                height={stageDimensions.height} 
-                image={image} 
-                x={0} 
-                y={0} 
+                height={stageDimensions.height}
+                image={image}
+                x={0}
+                y={0}
               />
             )}
           </Layer>
@@ -675,9 +705,16 @@ useEffect(() => {
                   }
                 }}
                 onContextMenu={(e) => {
-                  e.evt.preventDefault();
-                  const mousePos = stageRef.current.getStage().getPointerPosition()                  
-                  setContextMenu({ visible: true, x:mousePos.x, y:mousePos.y, polygonID: i })
+                  e.evt.preventDefault()
+                  const mousePos = stageRef.current
+                    .getStage()
+                    .getPointerPosition()
+                  setContextMenu({
+                    visible: true,
+                    x: mousePos.x,
+                    y: mousePos.y,
+                    polygonID: i,
+                  })
                 }}
                 onDragEnd={(e) => {
                   const newPolygon = polygon.map((p) => ({
@@ -691,8 +728,8 @@ useEffect(() => {
                   setPolygons(newPolygons)
                   e.target.position({ x: 0, y: 0 }) // Reset group's position
                 }}
-                onMouseOver={(e) =>{
-                  console.log("Mouse over polygon", i)               
+                onMouseOver={(e) => {
+                  console.log('Mouse over polygon', i)
                 }}
               >
                 <Line
@@ -703,7 +740,7 @@ useEffect(() => {
                   strokeWidth={4}
                   closed
                 />
-                
+
                 {polygon.map((point, j) => (
                   <Circle
                     key={`circle-${j}-${point.id}`}
@@ -728,7 +765,6 @@ useEffect(() => {
                   />
                 ))}
               </Group>
-
             ))}
             {currentPolygon.length > 0 && (
               <Line
@@ -746,13 +782,25 @@ useEffect(() => {
                 strokeWidth={4}
               />
             )}
-            
           </Layer>
-        </Stage> 
+        </Stage>
       </StageContainer>
-      {isLoading && (<LoadingSpinner />)}
-      {contextMenu.visible && (<PopupMenu x={contextMenu.x} y={contextMenu.y} handleOptionClick={handleOptionClick}/>)}
-      {explainMenu.visible && (<ExplainMenu handleOptionClick={handleExplainMenuClick}/>)}
+      {isLoading && <LoadingSpinner />}
+      {contextMenu.visible && (
+        <PopupMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          handleOptionClick={handleOptionClick}
+        />
+      )}
+      {explainMenu.visible && (
+        <ExplainMenu
+          handleOptionClick={handleExplainMenuClick}
+          selectorOptions={availableFeaturesNames}
+          handleXAxisFeatureChange={handleExplainMenuXAxisSelectorChange}
+          handleYAxisFeatureChange={handleExplainMenuYAxisSelectorChange}
+        />
+      )}
     </div>
   )
 }
