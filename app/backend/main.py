@@ -644,8 +644,10 @@ async def get_features_and_data_to_plot(features: FeaturesList):
     """
     if features is not None:
         features_to_plot = features.features
-    file_path = os.path.join('classification/data', 'training_data_base.csv')
+    file_path = os.path.join('classification/data', 'training_data_user.csv')
     training_features = pd.read_csv(file_path)
+
+    print(training_features)
     
     shared_features = manager.get_shared_features()
     corrected_predictions = manager.get_predictions()
@@ -667,3 +669,12 @@ async def get_features_and_data_to_plot(features: FeaturesList):
                            feature_1_training_values=feature_1_training_values,
                            feature_2_training_values=feature_2_training_values,
                            cell_types_training = cell_types_training)
+
+@app.get("/available_features_names")
+async def get_available_features_names():
+    """
+    Method for listing available features that the frontend
+    can access for the current image.
+    """
+    return FeaturesList(features=manager.get_features_names())
+

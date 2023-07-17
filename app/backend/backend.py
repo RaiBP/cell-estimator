@@ -75,6 +75,9 @@ class PipelineManager:
     def get_shared_features(self):
         return self.shared_features
 
+    def get_features_names(self):
+        return list(self.shared_features.columns)
+
     def set_predictions(self, predictions):
         self.predictions = predictions
 
