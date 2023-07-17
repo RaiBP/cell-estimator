@@ -126,7 +126,8 @@ const AnnotationArea = () => {
   const [nextPoint, setNextPoint] = useState(null)
   const [deletedPolygons, setDeletedPolygons] = useState([])
   const [numberOfDeletedPolygons, setNumberOfDeletedPolygons] = useState([])
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSegmented, setIsSegmented] = useState(false);
 
   // Preview line management
   const [previewLine, setPreviewLine] = useState(null)
@@ -327,6 +328,11 @@ const AnnotationArea = () => {
     }
     setPolygons(transformedPolygons)
   }
+
+// Hook for checking if there are any drawn polygons
+useEffect(() => {
+  setIsSegmented(polygons.length !== 0);
+}, [polygons]);
 
   // Hook for showing amplitude or phase image
   useEffect(() => {
@@ -593,15 +599,35 @@ const AnnotationArea = () => {
   function onSegmentationMethodChange(e) {
     const selectedMethod = e.target.value
 
+    setIsLoading(true);
     axios
       .post('/select_segmentator', {
         method: selectedMethod,
       })
       .then((response) => {
+        setIsLoading(false);
         console.log(response.data) // Output the server's response to the console.
       })
       .catch((error) => {
         console.error(`Error selecting segmentation method: ${error}`)
+      })
+  }
+
+  function onClassificationMethodChange(e) {
+    const selectedMethod = e.target.value
+
+
+    setIsLoading(true);
+    axios
+      .post('/select_classifier', {
+        method: selectedMethod,
+      })
+      .then((response) => {
+        setIsLoading(false);
+        console.log(response.data) // Output the server's response to the console.
+      })
+      .catch((error) => {
+        console.error(`Error selecting classification method: ${error}`)
       })
   }
 
@@ -610,6 +636,7 @@ const AnnotationArea = () => {
 
     console.log(`Selected dataset: ${selectedDataset}`)
 
+    setIsLoading(true);
     axios
       .post('/select_dataset', {
         filename: selectedDataset,
@@ -622,6 +649,7 @@ const AnnotationArea = () => {
       })
 
     setCurrentDataset(selectedDataset)
+    setIsLoading(false);
   }
 
   return (
@@ -636,11 +664,13 @@ const AnnotationArea = () => {
           onImageId={handleButtonClick}
           onToggleImage={toggleImage}
           onSegmentationMethodChange={onSegmentationMethodChange}
+          onClassificationMethodChange={onClassificationMethodChange}
           onDatasetChange={onDatasetChange}
           onClassify={classify}
           onSave={saveMasksAndLabels}
           onDownload={download}
           isClassified={isClassified}
+          isSegmented={isSegmented}
         />
       </MenuContainer>
       <StageContainer>

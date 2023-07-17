@@ -1,4 +1,5 @@
 import os
+import glob
 import joblib
 
 import pandas as pd
@@ -8,8 +9,8 @@ from classification.classification import Classification
 
 
 class ThreeStepClassifier(Classification):
-    def __init__(self, oof_model_filename=None, agg_model_filename=None, cell_model_filename=None):
-        super().__init__()
+    def __init__(self, oof_model_filename=None, agg_model_filename=None, cell_model_filename=None, use_user_models=False):
+        super().__init__(use_user_models=use_user_models)
         
         if oof_model_filename is None:
             self.oof_model_filename = "tsc_oof_model.pkl"
@@ -33,19 +34,33 @@ class ThreeStepClassifier(Classification):
         self.model = {'oof': self.oof_model, 'agg': self.agg_model, 'cell': self.cell_model}
 
 
-    def save_model(self, folder_path, file_name):
+    def save_model(self, folder_path, file_name, overwrite=False):
         assert self.model is not None
 
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
 
-        oof_file_path = os.path.join(folder_path, 'oof_' + file_name)
-        agg_file_path = os.path.join(folder_path, 'agg_' + file_name)
-        cell_file_path = os.path.join(folder_path, 'cell_' + file_name)
+        oof_file_path = os.path.join(folder_path, 'tsc_oof_' + file_name)
+        agg_file_path = os.path.join(folder_path, 'tsc_agg_' + file_name)
+        cell_file_path = os.path.join(folder_path, 'tsc_cell_' + file_name)
+
+        if overwrite:
+            self.delete_model(folder_path)
 
         joblib.dump(self.oof_model, oof_file_path)
         joblib.dump(self.agg_model, agg_file_path)
         joblib.dump(self.cell_model, cell_file_path)
+    
+
+    @staticmethod
+    def delete_model(folder_path):
+        labels = ['oof', 'agg', 'cell']
+        # Find all files in the folder that match the string
+        for label in labels:
+            files_to_delete = glob.glob(os.path.join(folder_path, f'*{label}*'))
+            # Delete the files
+            for file_path in files_to_delete:
+                os.remove(file_path)
 
 
     def calculate_entropy(self, labels, probabilities):
@@ -72,9 +87,9 @@ class ThreeStepClassifier(Classification):
     def calculate_probability_per_label(self, labels, probabilities):
         probability = []
         classes = self.get_classes()
-        oof_classes = classes['oof']
-        agg_classes = classes['agg']
-        cell_classes = classes['cell']
+        oof_classes = list(classes['oof'])
+        agg_classes = list(classes['agg'])
+        cell_classes = list(classes['cell'])
         for idx, _ in enumerate(labels):
             proba_dict = {}
             probas_oof = probabilities[idx]['oof_proba']
@@ -132,6 +147,9 @@ class ThreeStepClassifier(Classification):
 
 
     def _predict(self, df):
+        if df.empty:
+            return pd.DataFrame(columns=df.columns)
+
         df_list = []
 
         oof_labels = self._oof_predict(df)
@@ -140,6 +158,9 @@ class ThreeStepClassifier(Classification):
         df_oof[self.labels_column_name] = self.out_of_focus_label
 
         df_list.append(df_oof)
+
+        if df_in_focus.empty:
+            return df_oof.reindex(df.index)
         
         agg_labels = self._agg_predict(df_in_focus)
         df_single_cell = df_in_focus[agg_labels == 0].copy()
@@ -147,10 +168,11 @@ class ThreeStepClassifier(Classification):
         df_agg[self.labels_column_name] = self.aggregate_label
         df_list.append(df_agg)
 
-        cell_labels = self._cell_predict(df_single_cell)
+        if not df_single_cell.empty:
+            cell_labels = self._cell_predict(df_single_cell)
 
-        df_single_cell.loc[:, self.labels_column_name] = cell_labels
-        df_list.append(df_single_cell)
+            df_single_cell.loc[:, self.labels_column_name] = cell_labels
+            df_list.append(df_single_cell)
 
         return pd.concat(df_list).reindex(df.index)
 
@@ -171,11 +193,9 @@ class ThreeStepClassifier(Classification):
         return 'TSC'
 
 
-    def fit(self, X, y, model_filename=None):
+    def fit(self, X, y):
         """
-        Method for retraining the models. Note that we use a "user_models_folder" to save them so we 
-        do not overwrite our original models. 'model_filename' is an optional input for giving a 
-        desired name to the model pickle file.
+        Method for retraining the models.
         """
         X = self._drop_columns(X)
 
@@ -190,4 +210,3 @@ class ThreeStepClassifier(Classification):
         self.agg_model.fit(X, y_agg_binary) 
         self.cell_model.fit(X_cells, y_cells) 
 
-        self.save_model(self.user_models_folder, model_filename)
