@@ -71,6 +71,7 @@ function Menu({
   onClassify,
   onSave,
   onDownload,
+  isClassified
 }) {
   return (
     <div className="menu-container">
@@ -92,7 +93,15 @@ function Menu({
       <SegmentationMethodsSelector onChange={onSegmentationMethodChange} />
       <DatasetSelector onChange={onDatasetChange} />
       <Button className="menu-button" onClick={onClassify}>Classify</Button>
-      <Button className="menu-button" onClick={onSave}>Save Masks and Labels</Button>
+{isClassified ? (
+  <Button className="menu-button" onClick={onSave}>
+    Save Masks and Labels
+  </Button>
+) : (
+  <Button className="menu-button-disabled" disabled>
+    Save Masks and Labels
+  </Button>
+)}
       <Button className="menu-button" onClick={onDownload}>Download Masks and Labels</Button>
     </div>
   )

@@ -137,6 +137,7 @@ const AnnotationArea = () => {
   // Preview line management
   const [previewLine, setPreviewLine] = useState(null)
   const isDrawing = React.useRef(false)
+  const [isClassified, setIsClassified] = useState(false)
 
   // Context Menu for Polygon-editing
   const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, polygonID: -1 });
@@ -263,6 +264,7 @@ async function downloadMasksAndLabels() {
       })
     }
     setPolygons(transformedPolygons)
+    setIsClassified(false)
 
   }
 
@@ -281,6 +283,7 @@ function classifyCallback(labels) {
   });
 
   setPolygons(transformedPolygons);
+  setIsClassified(true)
 }
 
   function setImageCallback(response_json) {
@@ -309,6 +312,10 @@ function classifyCallback(labels) {
         }
         transformedPolygons.push(currentPolygon)
       })
+      setIsClassified(true)
+    }
+    else {
+      setIsClassified(false)
     }
     setPolygons(transformedPolygons)
   }
@@ -603,6 +610,7 @@ function classifyCallback(labels) {
           onClassify={classify}
           onSave={saveMasksAndLabels}
           onDownload={download}
+          isClassified={isClassified}
         />
       </MenuContainer>
       <StageContainer>
