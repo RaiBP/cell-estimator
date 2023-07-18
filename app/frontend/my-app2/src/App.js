@@ -120,7 +120,6 @@ const AnnotationArea = () => {
 
   // Polygon management
   const [polygons, setPolygons] = useState([])
-  const [polygonCounter, setPolygonCounter] = useState(0)
   const [currentPolygon, setCurrentPolygon] = useState([])
   const currentPolygonRef = React.useRef(currentPolygon)
   const [nextPoint, setNextPoint] = useState(null)
@@ -131,7 +130,6 @@ const AnnotationArea = () => {
 
   // Preview line management
   const [previewLine, setPreviewLine] = useState(null)
-  const isDrawing = React.useRef(false)
   const [isClassified, setIsClassified] = useState(false)
  const [classificationMethods, setClassificationMethods] = useState([])
 
@@ -148,9 +146,9 @@ const AnnotationArea = () => {
   })
   const [availableFeaturesNames, setAvailableFeaturesNames] = useState([])
 
+  const [imageUrl, setImageUrl] = useState('');
   // Component management
   const stageRef = React.useRef()
-
 
   async function retrainModel() {
     setIsLoading(true)
@@ -383,8 +381,6 @@ useEffect(() => {
       } else if (event.key === 'z' && event.ctrlKey) {
       } else if (event.key === 'Escape') {
         finishPolygon()
-      } else if (event.key === 's') {
-        saveMask()
       } else if (event.key === 'ArrowRight') {
         nextImage()
       } else if (event.key === 'ArrowLeft') {
@@ -486,33 +482,6 @@ useEffect(() => {
     setShowAmplitudeImage((prev) => !prev)
   }
 
-  function stopDrawing() {
-    saveMask()
-    isDrawing.current = false
-    setPreviewLine(null)
-  }
-
-  function saveMask() {
-    console.log('Saving masks...')
-    const currentPolygonPoints = currentPolygonRef.current[0].points
-
-    if (currentPolygonPoints.length <= 4) {
-      resetCurrentPolygon()
-      return
-    }
-
-    setPolygonCounter((prevCount) => {
-      setPolygons((prevPolygons) => {
-        return {
-          ...prevPolygons,
-          [prevCount]: currentPolygonRef.current.slice(0),
-        }
-      })
-      return prevCount + 1
-    })
-    setCurrentPolygon([])
-  }
-
   function resetCurrentPolygon() {
     setCurrentPolygon([])
     setPreviewLine(null)
@@ -600,6 +569,13 @@ useEffect(() => {
     // Explain menu handlers
     if (option === 'close') {
       setExplainMenu({ visible: false })
+    }
+    if (option === 'plot') {
+      const randomImageUrl = 'https://www.istockphoto.com/de/foto/wandern-in-den-allg%C3%A4uer-alpen-gm1141196125-305637944';
+      setImageUrl(randomImageUrl);
+
+    // Open the image in a new window
+      window.open(randomImageUrl, '_blank');
     }
   }
 
