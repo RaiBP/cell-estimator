@@ -3,6 +3,8 @@ import glob
 import joblib 
 import numpy as np
 
+from pathlib import Path
+
 from classification.classification import Classification
 
 
@@ -11,7 +13,7 @@ class OneStepClassifier(Classification):
         super().__init__(use_user_models=use_user_models)  
         self.model_type = model_type
 
-        self.model_filename = self._get_model_filename() if model_filename is None else model_filename
+        self.model_filename = self._get_model_filename(use_user_models) if model_filename is None else model_filename
 
         self.model = self.load_model(self.models_folder, self.model_filename)
         
@@ -75,7 +77,12 @@ class OneStepClassifier(Classification):
         return [item.decode('utf-8') for item in binary_list]
 
     
-    def _get_model_filename(self):
+    def _get_model_filename(self, use_user_models):
+        model_method = self.model_type.lower()
+        if use_user_models:
+            model_filename = Path(glob.glob(os.path.join(self.models_folder, f'*{model_method}*'))[0]).name
+            number = model_filename.split("_")[2]
+            return "osc_" + model_method + "_" + number + "_model.pkl"
         return "osc_" + self.model_type.lower() + "_model.pkl"
 
     def name(self):

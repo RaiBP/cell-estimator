@@ -133,6 +133,7 @@ const AnnotationArea = () => {
   const [previewLine, setPreviewLine] = useState(null)
   const isDrawing = React.useRef(false)
   const [isClassified, setIsClassified] = useState(false)
+ const [classificationMethods, setClassificationMethods] = useState([])
 
   // Context Menu for Polygon-editing
   const [contextMenu, setContextMenu] = useState({
@@ -149,6 +150,17 @@ const AnnotationArea = () => {
 
   // Component management
   const stageRef = React.useRef()
+
+
+  async function retrainModel() {
+    setIsLoading(true)
+    const response = await axios.get('/retrain_model')
+    console.log(response)
+    const methods = await axios.get('/get_classification_methods')
+    setIsLoading(false)
+    console.log(methods.data)
+    setClassificationMethods(methods.data.classification_methods)
+  }
 
   async function classifyCurrentImage(callback) {
     const masks = divideElements(polygons)
@@ -287,9 +299,8 @@ const AnnotationArea = () => {
     if (availableFeaturesNames.length == 0) {
       fetchAvailableFeaturesNames()
     }
-
-
   }
+
 
   function setImageCallback(response_json) {
     // This is a callback function that is called when the image is fetched
@@ -453,6 +464,10 @@ useEffect(() => {
 
   const classify = () => {
     classifyCurrentImage(classifyCallback)
+  }
+
+  const retrain = () => {
+    retrainModel()
   }
 
   const download = () => {
@@ -631,6 +646,7 @@ useEffect(() => {
       })
   }
 
+
   function onDatasetChange(e) {
     const selectedDataset = e.target.value
 
@@ -671,6 +687,9 @@ useEffect(() => {
           onDownload={download}
           isClassified={isClassified}
           isSegmented={isSegmented}
+          onRetrain={retrain}
+          classificationMethods={classificationMethods}
+          setClassificationMethods={setClassificationMethods}
         />
       </MenuContainer>
       <StageContainer>

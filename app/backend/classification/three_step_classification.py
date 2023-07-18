@@ -5,33 +5,48 @@ import joblib
 import pandas as pd
 import numpy as np
 
+from pathlib import Path
+from sklearn.metrics import precision_recall_curve
+from sklearn.model_selection import RepeatedStratifiedKFold
+
 from classification.classification import Classification
 
 
 class ThreeStepClassifier(Classification):
     def __init__(self, oof_model_filename=None, agg_model_filename=None, cell_model_filename=None, use_user_models=False):
         super().__init__(use_user_models=use_user_models)
-        
-        if oof_model_filename is None:
-            self.oof_model_filename = "tsc_oof_model.pkl"
-        else:
-            self.oof_model_filename = oof_model_filename
-        if agg_model_filename is None:
-            self.agg_model_filename = "tsc_agg_model.pkl"
-        else:
-            self.agg_model_filename = agg_model_filename
-        if cell_model_filename is None:
-            self.cell_model_filename = "tsc_cell_model.pkl"
-        else:
-            self.cell_model_filename = cell_model_filename
+
+        self.oof_model_filename = self._get_model_filename("oof", use_user_models, oof_model_filename)
+        self.agg_model_filename = self._get_model_filename("agg", use_user_models, agg_model_filename)
+        self.cell_model_filename = self._get_model_filename("cell", use_user_models, cell_model_filename)
 
         self.model_filename = {'oof': self.oof_model_filename, 'agg': self.agg_model_filename, 'cell': self.cell_model_filename}
 
-        self.oof_model = self.load_model(self.models_folder, self.oof_model_filename)
-        self.agg_model = self.load_model(self.models_folder, self.agg_model_filename)     
+        oof_model = self.load_model(self.models_folder, self.oof_model_filename)
+        self.oof_model = oof_model[0]
+        self.oof_threshold = oof_model[1]
+        agg_model = self.load_model(self.models_folder, self.agg_model_filename)
+        self.agg_model = agg_model[0]
+        self.agg_threshold = agg_model[1]
         self.cell_model = self.load_model(self.models_folder, self.cell_model_filename)     
 
         self.model = {'oof': self.oof_model, 'agg': self.agg_model, 'cell': self.cell_model}
+
+
+    def _get_model_filename(self, step, use_user_models, given_filename):
+        if given_filename is not None:
+            return given_filename 
+        if use_user_models: 
+            model_filename = Path(glob.glob(os.path.join(self.models_folder, f'*{step}*'))[0]).name
+            number = model_filename.split("_")[2]
+            return "tsc_" + step + "_" + number + "_model.pkl"
+        return "tsc_" + step + "_model.pkl"
+
+
+    def set_model_filename(self, oof_model_filename, agg_model_filename, cell_model_filename):
+        self.oof_model_filename = oof_model_filename
+        self.agg_model_filename = agg_model_filename
+        self.cell_model_filename = cell_model_filename
 
 
     def save_model(self, folder_path, file_name, overwrite=False):
@@ -40,16 +55,22 @@ class ThreeStepClassifier(Classification):
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
 
-        oof_file_path = os.path.join(folder_path, 'tsc_oof_' + file_name)
-        agg_file_path = os.path.join(folder_path, 'tsc_agg_' + file_name)
-        cell_file_path = os.path.join(folder_path, 'tsc_cell_' + file_name)
+        oof_filename = 'tsc_oof_' + file_name
+        agg_filename = 'tsc_agg_' + file_name
+        cell_filename = 'tsc_cell_' + file_name
+
+        oof_file_path = os.path.join(folder_path, oof_filename)
+        agg_file_path = os.path.join(folder_path, agg_filename)
+        cell_file_path = os.path.join(folder_path, cell_filename)
 
         if overwrite:
             self.delete_model(folder_path)
 
-        joblib.dump(self.oof_model, oof_file_path)
-        joblib.dump(self.agg_model, agg_file_path)
+        joblib.dump((self.oof_model, self.oof_threshold), oof_file_path)
+        joblib.dump((self.agg_model, self.agg_threshold), agg_file_path)
         joblib.dump(self.cell_model, cell_file_path)
+
+        self.set_model_filename(oof_filename, agg_filename, cell_filename)
     
 
     @staticmethod
@@ -178,11 +199,19 @@ class ThreeStepClassifier(Classification):
 
 
     def _oof_predict(self, df):
-        return self.oof_model.predict(df)
+        y_pred_proba = self.oof_model.predict_proba(df)
+        y_pred_mask = y_pred_proba[:, 1] > self.oof_threshold
+        y_pred = np.zeros(len(y_pred_proba))
+        y_pred[y_pred_mask] = 1
+        return y_pred
 
 
     def _agg_predict(self, df):
-        return self.agg_model.predict(df)
+        y_pred_proba = self.agg_model.predict_proba(df)
+        y_pred_mask = y_pred_proba[:, 1] > self.agg_threshold
+        y_pred = np.zeros(len(y_pred_proba))
+        y_pred[y_pred_mask] = 1
+        return y_pred
 
 
     def _cell_predict(self, df): 
@@ -192,6 +221,31 @@ class ThreeStepClassifier(Classification):
     def name(self):
         return 'TSC'
 
+    @staticmethod
+    def calculate_optimal_threshold(model, X_df, y, n_splits=5, n_repeats=10, random_state=43):
+        X = X_df.values
+        rsfkf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats, random_state=random_state)
+
+        optimal_thresholds = []
+        for train_index, test_index in rsfkf.split(X, y):
+            X_train, X_test = X[train_index], X[test_index]
+            y_train, y_test = y[train_index], y[test_index]
+
+            model.fit(X_train, y_train)
+            yhat = model.predict_proba(X_test)[:, 1]
+
+            precision, recall, thresholds = precision_recall_curve(y_test, yhat)
+            sum_pr = precision + recall
+            if np.any(np.array(sum_pr) == 0):
+                continue
+            f1score = (2 * precision * recall) / sum_pr
+
+            # locate the index of the largest f score
+            ix = np.argmax(f1score) 
+                        
+            optimal_thresholds.append(thresholds[ix]) 
+
+        return np.median(optimal_thresholds)
 
     def fit(self, X, y):
         """
@@ -206,7 +260,12 @@ class ThreeStepClassifier(Classification):
         X_cells = X[cell_mask]
         y_cells = y[cell_mask]
 
+
+        self.oof_threshold = self.calculate_optimal_threshold(self.oof_model, X, y_oof_binary, n_splits=2, n_repeats=20)
+        self.agg_threshold = self.calculate_optimal_threshold(self.agg_model, X, y_agg_binary, n_splits=2, n_repeats=20)
+
         self.oof_model.fit(X, y_oof_binary) 
         self.agg_model.fit(X, y_agg_binary) 
+        
         self.cell_model.fit(X_cells, y_cells) 
 

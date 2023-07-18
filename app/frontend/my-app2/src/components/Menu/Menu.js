@@ -54,31 +54,30 @@ function SegmentationMethodsSelector({ onChange }) {
   )
 }
 
+function ClassificationMethodsSelector({ onChange, classificationMethods, setClassificationMethods }) {
 
-function ClassificationMethodsSelector({ onChange }) {
-  const [classificationMethods, setClassificationMethods] = useState([])
+ useEffect(() => {
+   async function fetchData() {
+     const response = await axios.get('/get_classification_methods')
+     setClassificationMethods(response.data.classification_methods)
+   }
+   fetchData()
+ }, [])
 
-  useEffect(() => {
-    async function fetchData() {
-      const response = await axios.get('/get_classification_methods')
-      setClassificationMethods(response.data.classification_methods)
-    }
-    fetchData()
-  }, [])
-
-  return (
-    <div className="selector-container">
-      <label htmlFor='classification' className="selector-label">Choose a classification method:</label>
-      <select id='classification' className="selector" onChange={onChange}>
-        {classificationMethods.map((method, index) => (
-          <option key={index} value={method}>
-            {method}
-          </option>
-        ))}
-      </select>
-    </div>
-  )
+ return (
+   <div className="selector-container">
+     <label htmlFor='classification' className="selector-label">Choose a classification method:</label>
+     <select id='classification' className="selector" onChange={onChange} >
+       {classificationMethods.map((method, index) => (
+         <option key={index} value={method}>
+           {method}
+         </option>
+       ))}
+     </select>
+   </div>
+ )
 }
+
 
 const MenuContainer = ({ children }) => {
   return <div className="menu-container">{children}</div>
@@ -99,7 +98,10 @@ function Menu({
   onSave,
   onDownload,
   isClassified,
-  isSegmented
+  isSegmented,
+  onRetrain,
+  classificationMethods,
+  setClassificationMethods
 }) {
   return (
     <div className="menu-container">
@@ -118,8 +120,8 @@ function Menu({
         </label>
         <input type='submit' value='Submit' />
       </form>
-      <SegmentationMethodsSelector onChange={onSegmentationMethodChange} />
-      <ClassificationMethodsSelector onChange={onClassificationMethodChange} />
+      <SegmentationMethodsSelector onChange={onSegmentationMethodChange}/>
+      <ClassificationMethodsSelector onChange={onClassificationMethodChange} classificationMethods={classificationMethods} setClassificationMethods={setClassificationMethods}/>
       <DatasetSelector onChange={onDatasetChange} />
 {isSegmented ? (
   <Button className="menu-button" onClick={onClassify}>
@@ -140,6 +142,8 @@ function Menu({
   </Button>
 )}
       <Button className="menu-button" onClick={onDownload}>Download Masks and Labels</Button>
+
+      <Button className="menu-button" onClick={onRetrain}>Retrain Classification Model</Button>
     </div>
   )
 }

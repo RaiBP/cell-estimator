@@ -417,7 +417,7 @@ async def classify(classify_query: ClassifyQuery):
             manager.set_shared_features(features)
             manager.set_predictions(labels)
         except Exception as e:
-            logging.error(f"Error while classifying image with id {image_id}: {e}")
+            logging.error(f"Error while classifying image with id {image_id}: {e}", exc_info=True)
             labels = []
             features_records = {}
             manager.set_shared_features(None)

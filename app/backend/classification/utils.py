@@ -37,6 +37,7 @@ def list_classification_methods(user_models_folder) -> list[str]:
     model_list =  ['SVC', 'KNN', 'RFC', 'Three Step Classification']
 
     if len(user_models) != 0:
+        tsc_is_included = False
         for model in user_models:
             separated_name = model.split("_")
             model_type = separated_name[0] # either osc or tsc
@@ -45,8 +46,9 @@ def list_classification_methods(user_models_folder) -> list[str]:
 
             if model_type == 'osc':
                 model_list.append(f"{model_method.upper()} (retrained with {model_examples} examples)")
-            elif model_type == 'tsc':
+            elif model_type == 'tsc' and not tsc_is_included:
                 model_list.append(f"Three Step Classification (retrained with {model_examples} examples)")
+                tsc_is_included = True
             else:
                 continue
     return model_list
