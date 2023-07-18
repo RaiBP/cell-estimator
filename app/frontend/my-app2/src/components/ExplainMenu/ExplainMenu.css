@@ -4,7 +4,7 @@
     justify-content: flex-start;
     align-items: center;
     background: #3c3e45;
-    width: 30vw;
+    width: 20vw;
     padding-top: 20px;
     height: 100vh;
     box-sizing: border-box;
@@ -28,5 +28,9 @@
 }
 
 .explain-menu-selector-container {
-  max-width: 300px; /* Adjust the value as needed */
+  margin-bottom: 10px;
+  padding: 10px 20px;
+  font-size: 14px;
+  border-radius: 5px;
+  width: 80%;
 }

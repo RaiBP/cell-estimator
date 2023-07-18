@@ -10,6 +10,7 @@ function ExplainMenu({ handleOptionClick, selectorOptions, handleXAxisFeatureCha
             <Button className="explain-menu-button" onClick={() => handleOptionClick('close')}>Close</Button>
             <FeatureSelector className="explain-menu-selector-container" handleChange={handleXAxisFeatureChange} caption="Choose a feature for the X-axis" options={selectorOptions} />
             <FeatureSelector className="explain-menu-selector-container" handleChange={handleYAxisFeatureChange} caption="Choose a feature for the Y-axis" options={selectorOptions} />
+            <Button className="explain-menu-button" onClick={() => handleOptionClick('plot')}>Plot</Button>
         </div>) 
 }
 
