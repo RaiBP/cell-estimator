@@ -10,19 +10,23 @@
     box-sizing: border-box;
     }
   
-  .explain-menu-button {
-    margin-bottom: 10px;
-    padding: 10px 20px;
-    font-size: 14px;
-    border-radius: 5px;
-    width: 100%;
-    border: none;
-    color: #fff;
-    background-color: #3c3e45;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-  }
-  
-  .explain-menu-button:hover {
-    background-color: #606268;
-  }
+.explain-menu-button {
+  margin-bottom: 10px;
+  padding: 10px 20px;
+  font-size: 14px;
+  border-radius: 5px;
+  width: 100%;
+  border: none;
+  color: #fff;
+  background-color: #3c3e45;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.explain-menu-button:hover {
+  background-color: #606268;
+}
+
+.explain-menu-selector-container {
+  max-width: 300px; /* Adjust the value as needed */
+}
