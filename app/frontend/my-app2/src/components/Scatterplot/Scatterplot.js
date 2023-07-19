@@ -28,10 +28,10 @@ const ScatterplotComponent = ({ scatterplotDataX, scatterplotDataY, scatterplotD
   return (
     <div className="scatter-component">
       {/* Render your scatterplot using the retrieved data */}
-      <ScatterChart width={1000} height={500}>
+      <ScatterChart width={600} height={300}  margin={{ top: 20, right: 0, bottom: 20, left: 30 }}>
         <CartesianGrid />
-        <XAxis dataKey="x" type="number" name={featureX} label={{ value: featureX, position: 'insideBottom', offset: -5 }}/>
-        <YAxis dataKey="y" type="number" name={featureY} label={{ value: featureY, angle: -90, position: 'insideLeft', offset: 5 }}/>
+        <XAxis tick={{fontSize: 20}} dataKey="x" type="number" name={featureX} label={{ value: featureX, position: 'insideBottom', offset: -20, fontSize:20 }}/>
+        <YAxis tick={{fontSize: 20}} dataKey="y" type="number" name={featureY} label={{ value: featureY, angle: -90, position: 'insideLeft', offset: -20, dy:30 , fontSize:20}}/>
         <Tooltip />
         <Scatter
           data={data}
