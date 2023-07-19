@@ -143,7 +143,7 @@ class PipelineManager:
 
         is_match_present = (features['DatasetID'] == dataset_id) & (features['ImageID'] == image_id)
         if any(is_match_present):
-            # if we already have features by the image ID, we delete those
+            # if we already have features by the image ID, we get those
             return features[is_match_present]
         else:
             return None
@@ -295,3 +295,11 @@ class PipelineManager:
             masks.append(mask)
         self.logging.info(f"{len(masks)} masks created successfully from received polygons")
         return masks
+
+    @staticmethod
+    def remove_shared_rows(image_id, dataset_id, df):
+        """
+        Removes all the rows with 'image_id' and 'dataset_id' from DataFrame 'df'
+        """
+        mask = (df['DatasetID'] == dataset_id) & (df['ImageID'] == image_id)
+        return df[~mask], df[mask]

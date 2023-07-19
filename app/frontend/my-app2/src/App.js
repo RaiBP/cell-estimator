@@ -4,6 +4,7 @@ import axios from 'axios'
 import { Menu, MenuContainer } from './components/Menu/Menu'
 import { PopupMenu } from './components/PopupMenu/PopupMenu'
 import { ExplainMenu } from './components/ExplainMenu/ExplainMenu'
+import { Scatterplot, ScatterplotContainer } from './components/Scatterplot/Scatterplot';
 import { v4 as uuidv4 } from 'uuid'
 
 import './App.css'
@@ -132,6 +133,12 @@ const AnnotationArea = () => {
   const [previewLine, setPreviewLine] = useState(null)
   const [isClassified, setIsClassified] = useState(false)
  const [classificationMethods, setClassificationMethods] = useState([])
+  const [scatterplotDataX, setScatterplotDataX] = useState(null);
+  const [scatterplotDataY, setScatterplotDataY] = useState(null);
+  const [scatterplotDataColor, setScatterplotDataColor] = useState(null);
+  const [featureXAxis, setFeatureXAxis] = useState("Volume");
+  const [featureYAxis, setFeatureYAxis] = useState("Volume");
+const [activePoint, setActivePoint] = useState(null);
 
   // Context Menu for Polygon-editing
   const [contextMenu, setContextMenu] = useState({
@@ -277,7 +284,11 @@ const AnnotationArea = () => {
     setIsClassified(false)
   }
 
-  function classifyCallback(labels) {
+  async function classifyCallback(labels) {
+    const newFeaturesScatterDataX = []
+    const newFeaturesScatterDataY = []
+    const newFeaturesColor = []
+      
     const transformedPolygons = polygons.map((polygon, index) => {
       const classId = labels[index]['class_id']
 
@@ -285,11 +296,19 @@ const AnnotationArea = () => {
 
       const color = getColorByClassId(classId)
 
+      newFeaturesScatterDataX.push(labels[index]['features'][featureXAxis])
+      newFeaturesScatterDataY.push(labels[index]['features'][featureYAxis])
+      newFeaturesColor.push(color)
+
       return polygon.map((point) => ({
         ...point,
         color: color,
       }))
     })
+
+    setScatterplotDataX(newFeaturesScatterDataX)
+    setScatterplotDataY(newFeaturesScatterDataY)
+    setScatterplotDataColor(newFeaturesColor)
 
     setPolygons(transformedPolygons)
     setIsClassified(true)
@@ -300,7 +319,7 @@ const AnnotationArea = () => {
   }
 
 
-  function setImageCallback(response_json) {
+  async function setImageCallback(response_json) {
     // This is a callback function that is called when the image is fetched
     // Its only purpose is to set the image state variables
 
@@ -310,6 +329,9 @@ const AnnotationArea = () => {
     setPhaseImage(`data:image/jpeg;base64,${response_json.phase_img_data}`)
 
     const transformedPolygons = []
+    const newDataX = []
+    const newDataY = []
+    const newDataColor = []
 
     const polygonsWithPredictions = response_json.predictions
     if (polygonsWithPredictions.length !== 0) {
@@ -330,13 +352,36 @@ const AnnotationArea = () => {
           })
         }
         transformedPolygons.push(currentPolygon)
-      })
+
+        newDataX.push(polygonWithPrediction.features[featureXAxis])
+        newDataY.push(polygonWithPrediction.features[featureYAxis])
+        newDataColor.push(getColorByClassId(polygonWithPrediction.class_id))
+        
+      })      
+
+      setScatterplotDataX(newDataX)
+      setScatterplotDataY(newDataY)
+      setScatterplotDataColor(newDataColor)
       setIsClassified(true)
     } else {
       setIsClassified(false)
+
+      setScatterplotDataX(null)
+      setScatterplotDataY(null)
+      setScatterplotDataColor(null)
     }
     setPolygons(transformedPolygons)
+
+
+    if (availableFeaturesNames.length == 0) {
+      fetchAvailableFeaturesNames()
+    }
+    
   }
+
+ const onPointHover = (index) => {
+    setActivePoint(index);
+  };
 
 // Hook for checking if there are any drawn polygons
 useEffect(() => {
@@ -510,14 +555,14 @@ useEffect(() => {
   function handleOptionClick(option) {
     let chosenColor = polygons[contextMenu.polygonID][0].color
     let deletePolygon = false
-    let noAction = false
+    let noAction = false  
 
     switch (option) {
       case 'rbc':
         chosenColor = '#ff0000'
         break
       case 'wbc':
-        chosenColor = '#ffffff'
+        chosenColor = '#ffffff'   
         break
       case 'plt':
         chosenColor = '#0000ff'
@@ -587,6 +632,64 @@ useEffect(() => {
     console.log(e)
   }
 
+  async function FetchScatterplotData() {
+    const response = await fetch('http://localhost:8000/features_and_data_to_plot', {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ x_feature: featureXAxis, y_feature: featureYAxis }),
+    })
+    const response_json = await response.json()
+    return response_json
+  }
+
+  async function onScatterplotFeatureChangeX(e) {
+    const selectedFeature = e.target.value
+    console.log(`Selected Feature: ${selectedFeature}`)
+    setFeatureXAxis(selectedFeature)
+
+    setIsLoading(true);
+    axios
+      .post('/features_and_data_to_plot', {
+        x_feature: selectedFeature, y_feature: featureYAxis
+      })
+      .then((response) => {
+        setScatterplotDataX(response.data.feature_x_values)
+        setIsLoading(false);
+        console.log(response.data) // Output the server's response to the console.
+
+        console.log(`X-axis data for Scatterplot: ${scatterplotDataX}`)
+        console.log(`X-axis feature: ${featureXAxis}`)
+      })
+      .catch((error) => {
+        console.error(`Error selecting segmentation method: ${error}`)
+      })
+  }
+
+  function onScatterplotFeatureChangeY(e) {
+    const selectedFeature = e.target.value
+    setFeatureYAxis(selectedFeature)
+
+    setIsLoading(true);
+    axios
+      .post('/features_and_data_to_plot', {
+        x_feature: featureXAxis, y_feature: selectedFeature
+      })
+      .then((response) => {
+        setScatterplotDataY(response.data.feature_y_values)
+        setIsLoading(false);
+        console.log(response.data) // Output the server's response to the console.
+
+        console.log(`Y-axis data for Scatterplot: ${scatterplotDataY}`)
+        console.log(`Y-axis feature: ${featureYAxis}`)
+      })
+      .catch((error) => {
+        console.error(`Error selecting segmentation method: ${error}`)
+      })
+  }
+
   function onSegmentationMethodChange(e) {
     const selectedMethod = e.target.value
 
@@ -622,7 +725,6 @@ useEffect(() => {
       })
   }
 
-
   function onDatasetChange(e) {
     const selectedDataset = e.target.value
 
@@ -643,6 +745,9 @@ useEffect(() => {
     setCurrentDataset(selectedDataset)
     setIsLoading(false);
   }
+
+  console.log(`Selected feature X  ${featureXAxis}`)
+  console.log(`Selected feature Y  ${featureYAxis}`)
 
   return (
     <div style={style}>
@@ -742,7 +847,13 @@ useEffect(() => {
                     x={point.x}
                     y={point.y}
                     radius={3}
-                    fill='#ffff00'
+                    fill={(() => {
+                    // Define your condition here
+                    const isHighlighted = i == activePoint; // Replace with your actual condition
+
+                    // Return the appropriate fill color based on the condition
+                      return isHighlighted ? 'red' : '#ffff00';
+                    })()}
                     draggable
                     onDragEnd={(e) => {
                       e.cancelBubble = true // stop event propagation
@@ -780,6 +891,18 @@ useEffect(() => {
           </Layer>
         </Stage>
       </StageContainer>
+      <ScatterplotContainer>
+      <Scatterplot 
+        featureX={featureXAxis} 
+        featureY = {featureYAxis}
+        scatterDataX = {scatterplotDataX}
+        scatterDataY = {scatterplotDataY}
+        scatterDataColor = {scatterplotDataColor}
+        onFeatureChangeX={onScatterplotFeatureChangeX}
+        onFeatureChangeY={onScatterplotFeatureChangeY} 
+        onPointHover={onPointHover}
+      />
+      </ScatterplotContainer>
       {isLoading && <LoadingSpinner />}
       {contextMenu.visible && (
         <PopupMenu
