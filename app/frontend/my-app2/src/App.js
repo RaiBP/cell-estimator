@@ -187,7 +187,7 @@ const AnnotationArea = () => {
   function find_max_entropy(objects){
     // Key to compare values against
     const keyToCompare = 'LabelsEntropy';
-    let threshold = 1.3;
+    let threshold = 1.7;
     let maxObject = [];
 
     // Iterate through each object
@@ -743,6 +743,9 @@ useEffect(() => {
                     y: mousePos.y,
                     polygonID: i,
                   })
+                  if(mostUncertain.includes(i)){
+                    const index=mostUncertain.indexOf(i)
+                    mostUncertain.splice(index,1)}
                 }}
                 onDragEnd={(e) => {
                   const newPolygon = polygon.map((p) => ({
