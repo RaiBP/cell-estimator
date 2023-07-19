@@ -1,0 +1,42 @@
+.scatter-container {
+  /* Define styles for the container div of the Scatterplot component */
+  /* For example: */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  height: 100vh;
+  width: 20%;
+    position: fixed;
+  left: 900px;
+  top: 900px;
+  transform: translateX(-50%);
+}
+
+.scatter-component {
+  width: 100%;
+  height: 100%;
+}
+
+.selector-container-scatter {
+  /* Define styles for the feature selector container */
+  /* For example: */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 10px;
+  background-color: #3c3e45;
+  width: 100%;
+}
+
+.selector-label {
+  /* Define styles for the feature selector label */
+  /* For example: */
+  margin-right: 10px;
+}
+
+.selector {
+  /* Define styles for the feature selector */
+  /* For example: */
+  padding: 5px;
+}

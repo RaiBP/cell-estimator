@@ -4,7 +4,7 @@ import axios from 'axios'
 import { Menu, MenuContainer } from './components/Menu/Menu'
 import { PopupMenu } from './components/PopupMenu/PopupMenu'
 import { ExplainMenu } from './components/ExplainMenu/ExplainMenu'
-import { Scatterplot, ScatterplotContainer } from './components/Scatterplot/Scatterplot';
+import { Scatterplot } from './components/Scatterplot/Scatterplot';
 import { v4 as uuidv4 } from 'uuid'
 
 import './App.css'
@@ -891,7 +891,6 @@ useEffect(() => {
           </Layer>
         </Stage>
       </StageContainer>
-      <ScatterplotContainer>
       <Scatterplot 
         featureX={featureXAxis} 
         featureY = {featureYAxis}
@@ -902,7 +901,6 @@ useEffect(() => {
         onFeatureChangeY={onScatterplotFeatureChangeY} 
         onPointHover={onPointHover}
       />
-      </ScatterplotContainer>
       {isLoading && <LoadingSpinner />}
       {contextMenu.visible && (
         <PopupMenu
