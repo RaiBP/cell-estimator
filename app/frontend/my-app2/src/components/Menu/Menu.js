@@ -112,18 +112,7 @@ function Menu({
       <Button className="menu-button" onClick={onReset}>Undo the last Delete</Button>
 
       <Button className="menu-button" onClick={onSegment}>Segment</Button>
-      
-      <form className="selector-container" onSubmit={onImageId}>
-        <label className="selector-label">
-          Enter a number between 1 and 1000:
-          <input className="selector" name='image_id' type='number' />
-        </label>
-        <input type='submit' value='Submit' />
-      </form>
-      <SegmentationMethodsSelector onChange={onSegmentationMethodChange}/>
-      <ClassificationMethodsSelector onChange={onClassificationMethodChange} classificationMethods={classificationMethods} setClassificationMethods={setClassificationMethods}/>
-      <DatasetSelector onChange={onDatasetChange} />
-{isSegmented ? (
+      {isSegmented ? (
   <Button className="menu-button" onClick={onClassify}>
           Classify
   </Button>
@@ -131,7 +120,17 @@ function Menu({
   <Button className="menu-button-disabled" disabled>
             Classify
   </Button>
-)}
+)} 
+      <form className="selector-container" onSubmit={onImageId}>
+        <label className="selector-label">
+          Enter a image number:
+          <input className="selector" name='image_id' type='number' />
+        </label>
+        <input type='submit' value='Submit' />
+      </form>
+      <SegmentationMethodsSelector onChange={onSegmentationMethodChange}/>
+      <ClassificationMethodsSelector onChange={onClassificationMethodChange} classificationMethods={classificationMethods} setClassificationMethods={setClassificationMethods}/>
+      <DatasetSelector onChange={onDatasetChange} />
 {isClassified ? (
   <Button className="menu-button" onClick={onSave}>
     Save Masks and Labels

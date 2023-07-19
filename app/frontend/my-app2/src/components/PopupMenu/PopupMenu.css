@@ -3,7 +3,7 @@
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
-  background: #3c3e45;
+  background: #27173a;
   width: 15vw;
   padding-top: 20px;
   height: 100vh;
@@ -15,7 +15,7 @@
   padding: 10px 20px;
   font-size: 14px;
   border-radius: 5px;
-  width: 100%;
+  width: 75%;
   border: none;
   color: #fff;
   background-color: #3c3e45;

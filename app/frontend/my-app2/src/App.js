@@ -27,6 +27,7 @@ const StageContainer = ({ children }) => {
     paddingLeft: '1px',
     paddingTop: '50px',
     overflow: 'auto',
+    backgroundColor: "#351C75",
   }
 
   return <div style={style}>{children}</div>
@@ -107,7 +108,7 @@ const AnnotationArea = () => {
     justifyContent: 'flex-start', // align items horizontally
     height: '100%', // 100% of the viewport height
     width: '100%', // 100% of the viewport height
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#351C75',
   }
 
   // Image management
@@ -187,7 +188,7 @@ const AnnotationArea = () => {
   function find_max_entropy(objects){
     // Key to compare values against
     const keyToCompare = 'LabelsEntropy';
-    let threshold = 1.7;
+    let threshold = 2;
     let maxObject = [];
 
     // Iterate through each object
