@@ -151,6 +151,9 @@ const AnnotationArea = () => {
   // Component management
   const stageRef = React.useRef()
 
+  // Most uncertain
+  const [mostUncertain,setMostUncertain]= useState(null)
+
   async function retrainModel() {
     setIsLoading(true)
     const response = await axios.get('/retrain_model')
@@ -174,10 +177,36 @@ const AnnotationArea = () => {
     })
     const predictions = await response.json()
     setIsLoading(false)
-    console.log(predictions)
     callback(predictions)
+    console.log(predictions)
+    const mu=find_max_entropy(predictions)
+    setMostUncertain(mu)
     return predictions
   }
+
+  function find_max_entropy(objects){
+    // Key to compare values against
+    const keyToCompare = 'LabelsEntropy';
+
+
+    let maxValue = Number.NEGATIVE_INFINITY;
+    let maxObject = null;
+
+    // Iterate through each object
+    for (const obj of objects) {
+    // Access the value of the specified key
+    const value = obj.features[keyToCompare];
+
+    // Compare the value with the current maximum value
+    if (value > maxValue) {
+    // Update the maximum value and corresponding object
+    maxValue = value;
+    maxObject = obj;
+    }}
+
+    // maxObject now holds the object with the largest value for the specified key
+    return maxObject.features.MaskID
+}
 
   function getColorByClassId(classId) {
     switch (classId) {
@@ -344,58 +373,62 @@ useEffect(() => {
   setIsSegmented(polygons.length !== 0);
 }, [polygons]);
 
-  // Hook for showing amplitude or phase image
-  useEffect(() => {
-    if (showAmplitudeImage) {
-      img.src = amplitudeImage
-    } else {
-      img.src = phaseImage
+useEffect(() => {
+  console.log(mostUncertain);
+}, [mostUncertain]);
+
+// Hook for showing amplitude or phase image
+useEffect(() => {
+  if (showAmplitudeImage) {
+    img.src = amplitudeImage
+  } else {
+    img.src = phaseImage
+  }
+  img.onload = () => {
+    setImage(img)
+  }
+}, [showAmplitudeImage, amplitudeImage, phaseImage])
+
+useEffect(() => {
+  const image_type = showAmplitudeImage ? 0 : 1
+
+  const setNewImageAsync = async () => {
+    setIsLoading(true)
+    await setNewImage(imageId, image_type, setImageCallback)
+    setIsLoading(false)
+  }
+
+  setNewImageAsync()
+}, [imageId, showAmplitudeImage, currentDataset])
+
+// Hook for keeping track of lines
+useEffect(() => {
+  currentPolygonRef.current = currentPolygon
+}, [currentPolygon])
+
+// Hook for registering keydown events -- happens only when component is mounted
+useEffect(() => {
+  // Handling keydown events -- registering callback
+  const handleKeyDown = (event) => {
+    if (event.key === 'r') {
+      deleteall()
+    } else if (event.key === 'z' && event.ctrlKey) {
+    } else if (event.key === 'Escape') {
+      finishPolygon()
+    } else if (event.key === 'ArrowRight') {
+      nextImage()
+    } else if (event.key === 'ArrowLeft') {
+      prevImage()
+    } else if (event.key === 't') {
+      toggleImage()
     }
-    img.onload = () => {
-      setImage(img)
-    }
-  }, [showAmplitudeImage, amplitudeImage, phaseImage])
+  }
 
-  useEffect(() => {
-    const image_type = showAmplitudeImage ? 0 : 1
-
-    const setNewImageAsync = async () => {
-      setIsLoading(true)
-      await setNewImage(imageId, image_type, setImageCallback)
-      setIsLoading(false)
-    }
-
-    setNewImageAsync()
-  }, [imageId, showAmplitudeImage, currentDataset])
-
-  // Hook for keeping track of lines
-  useEffect(() => {
-    currentPolygonRef.current = currentPolygon
-  }, [currentPolygon])
-
-  // Hook for registering keydown events -- happens only when component is mounted
-  useEffect(() => {
-    // Handling keydown events -- registering callback
-    const handleKeyDown = (event) => {
-      if (event.key === 'r') {
-        deleteall()
-      } else if (event.key === 'z' && event.ctrlKey) {
-      } else if (event.key === 'Escape') {
-        finishPolygon()
-      } else if (event.key === 'ArrowRight') {
-        nextImage()
-      } else if (event.key === 'ArrowLeft') {
-        prevImage()
-      } else if (event.key === 't') {
-        toggleImage()
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [])
+  window.addEventListener('keydown', handleKeyDown)
+  return () => {
+    window.removeEventListener('keydown', handleKeyDown)
+  }
+}, [])
 
   const handleClick = (e) => {
     if (e.evt.button === 0) {
@@ -431,12 +464,14 @@ useEffect(() => {
     setImageId((prevId) => prevId + 1)
     setDeletedPolygons([])
     setNumberOfDeletedPolygons([])
+    setMostUncertain(null)
   }
 
   const prevImage = () => {
     setImageId((prevId) => prevId - 1)
     setDeletedPolygons([])
     setNumberOfDeletedPolygons([])
+    setMostUncertain(null)
   }
 
   const handleButtonClick = (e) => {
@@ -743,7 +778,7 @@ useEffect(() => {
                     x={point.x}
                     y={point.y}
                     radius={3}
-                    fill='#ffff00'
+                    fill={i === mostUncertain ? '#ffffff' : '#ffff00'}
                     draggable
                     onDragEnd={(e) => {
                       e.cancelBubble = true // stop event propagation

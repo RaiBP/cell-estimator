@@ -405,15 +405,14 @@ async def classify(classify_query: ClassifyQuery):
         features_records = {}
     if features is not None:
         try:
-            features_records = features.to_dict('records')
-            logging.info(features_records)
             labels, probabilities = classifier.classify(features)
             logging.info(f'Labels: {labels}')
             entropies = classifier.calculate_entropy(labels, probabilities)
             proba_per_label = classifier.calculate_probability_per_label(labels, probabilities)
             features['LabelsEntropy'] = entropies
             features = classifier.add_class_probabilities_columns(features, proba_per_label)
-
+            features_records = features.to_dict('records')
+            logging.info(features_records)
             manager.set_shared_features(features)
             manager.set_predictions(labels)
         except Exception as e:
