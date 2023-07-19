@@ -763,7 +763,7 @@ useEffect(() => {
                 <Line
                   points={polygon.flatMap((p) => [p.x, p.y])}
                   fill={polygon[0].color}
-                  opacity={0.25}
+                  opacity={showAmplitudeImage ?0.25 :1}
                   stroke={polygon[0].color}
                   strokeWidth={4}
                   closed
