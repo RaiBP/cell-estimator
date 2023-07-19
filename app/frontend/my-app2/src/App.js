@@ -4,6 +4,7 @@ import axios from 'axios'
 import { Menu, MenuContainer } from './components/Menu/Menu'
 import { PopupMenu } from './components/PopupMenu/PopupMenu'
 import { ExplainMenu } from './components/ExplainMenu/ExplainMenu'
+import { Legend } from './components/Legend/Legend'
 import { v4 as uuidv4 } from 'uuid'
 
 import './App.css'
@@ -779,6 +780,8 @@ useEffect(() => {
             )}
           </Layer>
         </Stage>
+        <Legend>
+        </Legend>
       </StageContainer>
       {isLoading && <LoadingSpinner />}
       {contextMenu.visible && (

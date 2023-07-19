@@ -18,7 +18,7 @@ function FeatureSelector({ handleChange, caption, options }) {
   return (
     <div className="explain-menu-selector-container">
       <label htmlFor='feature-selector' className="selector-label"> {caption} </label>
-      <select id='dataset-selector' className="selector" onChange={handleChange}>
+      <select id='feature-selector' className="selector" onChange={handleChange}>
         {options.map((option, index) => (
           <option key={index} value={option}>
             {option}
