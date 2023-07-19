@@ -519,11 +519,6 @@ useEffect(() => {
     setMostUncertain(null)
   }
 
-  function resetCurrentPolygon() {
-    setCurrentPolygon([])
-    setPreviewLine(null)
-  }
-
   function undoLast() {
     let lastNumber = numberOfDeletedPolygons.splice(-1, 1)
     lastNumber = lastNumber[0]
@@ -810,7 +805,7 @@ useEffect(() => {
                     ? nextPoint.y
                     : currentPolygon[currentPolygon.length - 1].y,
                 ]}
-                stroke='#000'
+                stroke='purple'
                 strokeWidth={4}
               />
             )}
