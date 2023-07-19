@@ -152,7 +152,7 @@ const AnnotationArea = () => {
   const stageRef = React.useRef()
 
   // Most uncertain
-  const [mostUncertain,setMostUncertain]= useState(null)
+  const [mostUncertain,setMostUncertain]= useState([])
 
   async function retrainModel() {
     setIsLoading(true)
@@ -187,10 +187,8 @@ const AnnotationArea = () => {
   function find_max_entropy(objects){
     // Key to compare values against
     const keyToCompare = 'LabelsEntropy';
-
-
-    let maxValue = Number.NEGATIVE_INFINITY;
-    let maxObject = null;
+    let threshold = 1.3;
+    let maxObject = [];
 
     // Iterate through each object
     for (const obj of objects) {
@@ -198,14 +196,14 @@ const AnnotationArea = () => {
     const value = obj.features[keyToCompare];
 
     // Compare the value with the current maximum value
-    if (value > maxValue) {
+    if (value > threshold) {
     // Update the maximum value and corresponding object
-    maxValue = value;
-    maxObject = obj;
+    maxObject.push(obj);
     }}
 
     // maxObject now holds the object with the largest value for the specified key
-    return maxObject.features.MaskID
+    const maskIDs = maxObject.map(obj => obj.features.MaskID);
+    return maskIDs;
 }
 
   function getColorByClassId(classId) {
@@ -777,7 +775,7 @@ useEffect(() => {
                     x={point.x}
                     y={point.y}
                     radius={3}
-                    fill={i === mostUncertain ? '#ffffff' : '#ffff00'}
+                    fill={mostUncertain && mostUncertain.includes(i) ? '#800080' : '#ffff00'}
                     draggable
                     onDragEnd={(e) => {
                       e.cancelBubble = true // stop event propagation
