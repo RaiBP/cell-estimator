@@ -414,11 +414,8 @@ async def classify(classify_query: ClassifyQuery):
             proba_per_label = classifier.calculate_probability_per_label(labels, probabilities)
             features['LabelsEntropy'] = entropies
             features = classifier.add_class_probabilities_columns(features, proba_per_label)
-
-
             features_records = features.to_dict('records')
             logging.info(features_records)
-
             manager.set_shared_features(features)
             manager.set_predictions(labels)
         except Exception as e:

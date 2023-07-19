@@ -5,6 +5,7 @@ import { Menu, MenuContainer } from './components/Menu/Menu'
 import { PopupMenu } from './components/PopupMenu/PopupMenu'
 import { ExplainMenu } from './components/ExplainMenu/ExplainMenu'
 import { Scatterplot } from './components/Scatterplot/Scatterplot';
+import { Legend } from './components/Legend/Legend'
 import { v4 as uuidv4 } from 'uuid'
 
 import './App.css'
@@ -27,6 +28,7 @@ const StageContainer = ({ children }) => {
     paddingLeft: '1px',
     paddingTop: '50px',
     overflow: 'auto',
+    backgroundColor: "#351C75",
   }
 
   return <div style={style}>{children}</div>
@@ -107,7 +109,7 @@ const AnnotationArea = () => {
     justifyContent: 'flex-start', // align items horizontally
     height: '100%', // 100% of the viewport height
     width: '100%', // 100% of the viewport height
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#351C75',
   }
 
   // Image management
@@ -157,6 +159,9 @@ const [activePoint, setActivePoint] = useState(null);
   // Component management
   const stageRef = React.useRef()
 
+  // Most uncertain
+  const [mostUncertain,setMostUncertain]= useState([])
+
   async function retrainModel() {
     setIsLoading(true)
     const response = await axios.get('/retrain_model')
@@ -180,10 +185,34 @@ const [activePoint, setActivePoint] = useState(null);
     })
     const predictions = await response.json()
     setIsLoading(false)
-    console.log(predictions)
     callback(predictions)
+    console.log(predictions)
+    const mu=find_max_entropy(predictions)
+    setMostUncertain(mu)
     return predictions
   }
+
+  function find_max_entropy(objects){
+    // Key to compare values against
+    const keyToCompare = 'LabelsEntropy';
+    let threshold = 2;
+    let maxObject = [];
+
+    // Iterate through each object
+    for (const obj of objects) {
+    // Access the value of the specified key
+    const value = obj.features[keyToCompare];
+
+    // Compare the value with the current maximum value
+    if (value > threshold) {
+    // Update the maximum value and corresponding object
+    maxObject.push(obj);
+    }}
+
+    // maxObject now holds the object with the largest value for the specified key
+    const maskIDs = maxObject.map(obj => obj.features.MaskID);
+    return maskIDs;
+}
 
   function getColorByClassId(classId) {
     switch (classId) {
@@ -388,65 +417,73 @@ useEffect(() => {
   setIsSegmented(polygons.length !== 0);
 }, [polygons]);
 
-  // Hook for showing amplitude or phase image
-  useEffect(() => {
-    if (showAmplitudeImage) {
-      img.src = amplitudeImage
-    } else {
-      img.src = phaseImage
+useEffect(() => {
+  console.log(polygons);
+}, [polygons]);
+
+useEffect(() => {
+  console.log(mostUncertain);
+}, [mostUncertain]);
+
+// Hook for showing amplitude or phase image
+useEffect(() => {
+  if (showAmplitudeImage) {
+    img.src = amplitudeImage
+  } else {
+    img.src = phaseImage
+  }
+  img.onload = () => {
+    setImage(img)
+  }
+}, [showAmplitudeImage, amplitudeImage, phaseImage])
+
+useEffect(() => {
+  const image_type = showAmplitudeImage ? 0 : 1
+
+  const setNewImageAsync = async () => {
+    setIsLoading(true)
+    await setNewImage(imageId, image_type, setImageCallback)
+    setIsLoading(false)
+  }
+
+  setNewImageAsync()
+}, [imageId, showAmplitudeImage, currentDataset])
+
+// Hook for keeping track of lines
+useEffect(() => {
+  currentPolygonRef.current = currentPolygon
+}, [currentPolygon])
+
+// Hook for registering keydown events -- happens only when component is mounted
+useEffect(() => {
+  // Handling keydown events -- registering callback
+  const handleKeyDown = (event) => {
+    if (event.key === 'r') {
+      deleteall()
+    } else if (event.key === 'z' && event.ctrlKey) {
+    } else if (event.key === 'Escape') {
+      finishPolygon()
+    } else if (event.key === 'ArrowRight') {
+      nextImage()
+    } else if (event.key === 'ArrowLeft') {
+      prevImage()
+    } else if (event.key === 't') {
+      toggleImage()
     }
-    img.onload = () => {
-      setImage(img)
-    }
-  }, [showAmplitudeImage, amplitudeImage, phaseImage])
+  }
 
-  useEffect(() => {
-    const image_type = showAmplitudeImage ? 0 : 1
-
-    const setNewImageAsync = async () => {
-      setIsLoading(true)
-      await setNewImage(imageId, image_type, setImageCallback)
-      setIsLoading(false)
-    }
-
-    setNewImageAsync()
-  }, [imageId, showAmplitudeImage, currentDataset])
-
-  // Hook for keeping track of lines
-  useEffect(() => {
-    currentPolygonRef.current = currentPolygon
-  }, [currentPolygon])
-
-  // Hook for registering keydown events -- happens only when component is mounted
-  useEffect(() => {
-    // Handling keydown events -- registering callback
-    const handleKeyDown = (event) => {
-      if (event.key === 'r') {
-        deleteall()
-      } else if (event.key === 'z' && event.ctrlKey) {
-      } else if (event.key === 'Escape') {
-        finishPolygon()
-      } else if (event.key === 'ArrowRight') {
-        nextImage()
-      } else if (event.key === 'ArrowLeft') {
-        prevImage()
-      } else if (event.key === 't') {
-        toggleImage()
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [])
+  window.addEventListener('keydown', handleKeyDown)
+  return () => {
+    window.removeEventListener('keydown', handleKeyDown)
+  }
+}, [])
 
   const handleClick = (e) => {
     if (e.evt.button === 0) {
       const mousePos = stageRef.current.getStage().getPointerPosition()
       setCurrentPolygon([
         ...currentPolygon,
-        { x: mousePos.x, y: mousePos.y, id: uuidv4() },
+        { x: mousePos.x, y: mousePos.y, color:'#ffa500', id: uuidv4() },
       ])
       console.log(currentPolygon)
     } else if (e.evt.button === 2) {
@@ -461,7 +498,6 @@ useEffect(() => {
 
   const finishPolygon = () => {
     if (currentPolygonRef.current.length > 1) {
-      console.log(polygons)
       setPolygons((prevPolygons) => [
         ...prevPolygons,
         currentPolygonRef.current,
@@ -475,12 +511,14 @@ useEffect(() => {
     setImageId((prevId) => prevId + 1)
     setDeletedPolygons([])
     setNumberOfDeletedPolygons([])
+    setMostUncertain(null)
   }
 
   const prevImage = () => {
     setImageId((prevId) => prevId - 1)
     setDeletedPolygons([])
     setNumberOfDeletedPolygons([])
+    setMostUncertain(null)
   }
 
   const handleButtonClick = (e) => {
@@ -525,11 +563,7 @@ useEffect(() => {
 
   const toggleImage = () => {
     setShowAmplitudeImage((prev) => !prev)
-  }
-
-  function resetCurrentPolygon() {
-    setCurrentPolygon([])
-    setPreviewLine(null)
+    setMostUncertain(null)
   }
 
   function undoLast() {
@@ -815,6 +849,9 @@ useEffect(() => {
                     y: mousePos.y,
                     polygonID: i,
                   })
+                  if(mostUncertain.includes(i)){
+                    const index=mostUncertain.indexOf(i)
+                    mostUncertain.splice(index,1)}
                 }}
                 onDragEnd={(e) => {
                   const newPolygon = polygon.map((p) => ({
@@ -835,7 +872,7 @@ useEffect(() => {
                 <Line
                   points={polygon.flatMap((p) => [p.x, p.y])}
                   fill={polygon[0].color}
-                  opacity={0.25}
+                  opacity={showAmplitudeImage ?0.25 :1}
                   stroke={polygon[0].color}
                   strokeWidth={4}
                   closed
@@ -850,9 +887,16 @@ useEffect(() => {
                     fill={(() => {
                     // Define your condition here
                     const isHighlighted = i == activePoint; // Replace with your actual condition
+                    const isUncertain = mostUncertain && mostUncertain.includes(i);
 
-                    // Return the appropriate fill color based on the condition
-                      return isHighlighted ? 'red' : '#ffff00';
+                    if (isHighlighted) {
+                      return 'red'
+                    }
+                    if (isUncertain) {
+                      return '#800080'
+                    } else {
+                      return '#ffff00'
+                    }
                     })()}
                     draggable
                     onDragEnd={(e) => {
@@ -884,12 +928,14 @@ useEffect(() => {
                     ? nextPoint.y
                     : currentPolygon[currentPolygon.length - 1].y,
                 ]}
-                stroke='#000'
+                stroke='purple'
                 strokeWidth={4}
               />
             )}
           </Layer>
         </Stage>
+        <Legend>
+        </Legend>
       </StageContainer>
       <Scatterplot 
         featureX={featureXAxis} 

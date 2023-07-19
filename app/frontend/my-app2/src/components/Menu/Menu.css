@@ -3,7 +3,7 @@
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
-  background: #3c3e45;
+  background: #261738;
   width: 23%;
   padding-top: 20px;
   padding-left: 0px;
@@ -19,7 +19,7 @@
   border-radius: 5px;
   border: none;
   color: #fff;
-  background-color: #3c3e45;
+  background-color: #453c42;
   cursor: pointer;
   transition: background-color 0.3s ease;
 }
@@ -44,7 +44,7 @@
 }
 
 .selector-container {
-  width: 250%;
+  width: 200%;
   margin-bottom: 20px;
 }
 
