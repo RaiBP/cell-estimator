@@ -374,6 +374,10 @@ useEffect(() => {
 }, [polygons]);
 
 useEffect(() => {
+  console.log(polygons);
+}, [polygons]);
+
+useEffect(() => {
   console.log(mostUncertain);
 }, [mostUncertain]);
 
@@ -435,7 +439,7 @@ useEffect(() => {
       const mousePos = stageRef.current.getStage().getPointerPosition()
       setCurrentPolygon([
         ...currentPolygon,
-        { x: mousePos.x, y: mousePos.y, id: uuidv4() },
+        { x: mousePos.x, y: mousePos.y, color:'#ffa500', id: uuidv4() },
       ])
       console.log(currentPolygon)
     } else if (e.evt.button === 2) {
@@ -450,7 +454,6 @@ useEffect(() => {
 
   const finishPolygon = () => {
     if (currentPolygonRef.current.length > 1) {
-      console.log(polygons)
       setPolygons((prevPolygons) => [
         ...prevPolygons,
         currentPolygonRef.current,
