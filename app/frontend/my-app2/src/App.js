@@ -516,6 +516,7 @@ useEffect(() => {
 
   const toggleImage = () => {
     setShowAmplitudeImage((prev) => !prev)
+    setMostUncertain(null)
   }
 
   function resetCurrentPolygon() {
