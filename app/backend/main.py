@@ -28,8 +28,10 @@ from image_loader import (
     encode_b64,
 )
 
+import torch 
 # Setting up logger
 logging.basicConfig(level=logging.INFO)
+logging.info(f"Is GPU available: {torch.cuda.is_available()}")
 
 user_models_folder = Path(os.path.join("classification", "user_models"))
 user_models_folder.mkdir(parents=True, exist_ok=True)
