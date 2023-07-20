@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     lsb-release \
     tzdata \
+    libgl1-mesa-glx \
     git
 
 # Install Node.js

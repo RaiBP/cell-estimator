@@ -5,7 +5,8 @@ services:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - /home/rai/Documents/MSCE/Sem2/ami/project_datashare:/data
+      - ami_share:/data
+    stop_signal: SIGINT
     ports:
       - "8000:8000"
       - "3000:3000"
@@ -15,3 +16,9 @@ services:
       - TRAINING_DATA_FOLDER=/app/backend/classification/data
       - NUMBA_CACHE_DIR=/tmp 
     command: supervisord
+volumes:
+  ami_share:
+    driver_opts:
+      type: cifs
+      o: username=ami,password=***REMOVED***,vers=3.0
+      device: //10.195.6.13/ami
