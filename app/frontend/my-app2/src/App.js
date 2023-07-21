@@ -332,6 +332,7 @@ const [activePoint, setActivePoint] = useState(null);
     setDeletedXData([])
     setDeletedYData([])
     setDeletedColorData([])
+    setActivePoint(null)
   }
 
   async function classifyCallback(labels) {
@@ -377,6 +378,7 @@ const [activePoint, setActivePoint] = useState(null);
     }
 
     console.log(`Available feature names: ${availableFeaturesNames.length}`)
+    setActivePoint(null)
   }
 
 
@@ -437,6 +439,7 @@ const [activePoint, setActivePoint] = useState(null);
       setScatterplotDataColor(null)
     }
     setPolygons(transformedPolygons) 
+    setActivePoint(null)
   }
 
  const onPointHover = (index) => {
@@ -722,6 +725,11 @@ useEffect(() => {
     if (!deletePolygon && !noAction) {
       for (let i = 0; i < polygons[contextMenu.polygonID].length; i += 1) {
         polygons[contextMenu.polygonID][i].color = chosenColor
+      }
+      if (scatterplotDataColor !== null) {
+      const newColors = [...scatterplotDataColor];
+      newColors[contextMenu.polygonID] = chosenColor; 
+      setScatterplotDataColor(newColors)
       }
     }
 
