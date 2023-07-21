@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List
+from typing import List, Union
 from pathlib import Path
 from enum import Enum
 import numpy as np
@@ -28,8 +28,12 @@ from image_loader import (
     encode_b64,
 )
 
+import torch
+
 # Setting up logger
 logging.basicConfig(level=logging.INFO)
+
+logging.info(f"Is GPU available: {torch.cuda.is_available()}")
 
 user_models_folder = Path(os.path.join("classification", "user_models"))
 user_models_folder.mkdir(parents=True, exist_ok=True)
@@ -74,6 +78,9 @@ class ImageSegmentationMethod(str, Enum):
     fastsam = "fastsam"
     sam = "sam"
 
+class BoolObject(BaseModel):
+    value: bool
+
 class Dataset(BaseModel):
     filename: str
 
@@ -84,7 +91,7 @@ class ClassificationMethod(BaseModel):
     method: str
 
 class Polygon(BaseModel):
-    points: List[float] | None
+    points: Union[List[float], None]
 
 class ClassifyQuery(BaseModel):
     use_backend_masks: bool
@@ -442,6 +449,7 @@ async def classify(classify_query: ClassifyQuery):
             for label, mask_features in zip(labels, features_records)]
 
     logging.info(f"Sending {len(predictions)} predictions to client for image with id {image_id}.")
+    logging.info(f"Predictions: {predictions}")
     return predictions
 
 
@@ -724,5 +732,15 @@ async def get_available_features_names():
     Method for listing available features that the frontend
     can access for the current image.
     """
-    return FeaturesList(features=manager.get_features_names())
+    features = manager.get_features_names()
+    features_to_remove = ['Labels', 'LabelsEntropy', 'ImageID', 'DatasetID', 'oofProbability', 'aggProbability', 'wbcProbability', 'rbcProbability', 'pltProbability']
 
+    result_list = [x for x in features if x not in features_to_remove]
+
+    return FeaturesList(features=result_list)
+
+@app.get("/user_data_exists")
+async def user_data_exists():
+    global user_dataset_path 
+    value = user_dataset_path.exists()
+    return BoolObject(value=value)

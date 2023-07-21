@@ -28,7 +28,7 @@ const ScatterplotComponent = ({ scatterplotDataX, scatterplotDataY, scatterplotD
   return (
     <div className="scatter-component">
       {/* Render your scatterplot using the retrieved data */}
-      <ScatterChart width={600} height={300}  margin={{ top: 20, right: 0, bottom: 20, left: 30 }}>
+      <ScatterChart width={900} height={400}  margin={{ top: 20, right: 0, bottom: 20, left: 30 }}>
         <CartesianGrid />
         <XAxis tick={{fontSize: 20}} dataKey="x" type="number" name={featureX} label={{ value: featureX, position: 'insideBottom', offset: -20, fontSize:20 }}/>
         <YAxis tick={{fontSize: 20}} dataKey="y" type="number" name={featureY} label={{ value: featureY, angle: -90, position: 'insideLeft', offset: -20, dy:30 , fontSize:20}}/>
@@ -49,20 +49,11 @@ const ScatterplotComponent = ({ scatterplotDataX, scatterplotDataY, scatterplotD
 };
 
 
-function ScatterplotFeatureSelector({ onChangeX, onChangeY }) {
-  const [featuresList, setFeaturesList] = useState([])
-
-  useEffect(() => {
-    async function fetchFeaturesList() {
-      const response = await axios.get('/available_features_names')
-      setFeaturesList(response.data.features)
-    }
-    fetchFeaturesList()
-  }, [])
+function ScatterplotFeatureSelector({ onChangeX, onChangeY, featuresList }) {
 
  return (
    <div className="selector-container-scatter">
-     <label htmlFor='scatter' className="selector-label">Choose feature for x-axis:</label>
+     <label htmlFor='scatter' className="selector-label">X-Axis:</label>
      <select id='scatter-x-feature' className="selector" onChange={onChangeX} >
        {featuresList.map((feature, index) => (
          <option key={index} value={feature}>
@@ -70,7 +61,7 @@ function ScatterplotFeatureSelector({ onChangeX, onChangeY }) {
          </option>
        ))}
      </select>
-     <label htmlFor='scatter' className="selector-label">Choose feature for y-axis:</label>
+     <label htmlFor='scatter' className="selector-label">Y-Axis:</label>
      <select id='scatter-y-feature' className="selector" onChange={onChangeY} >
        {featuresList.map((feature, index) => (
          <option key={index} value={feature}>
@@ -83,11 +74,8 @@ function ScatterplotFeatureSelector({ onChangeX, onChangeY }) {
 }
 
 
-const ScatterplotContainer = ({ children }) => {
-  return <div className="scatter-container" key="Scatterplot wrapper">{children}</div>
-}
-
 function Scatterplot({
+  featuresList,
   featureX,
   featureY,
   scatterDataX,
@@ -99,7 +87,7 @@ function Scatterplot({
 }) {
   return (
     <div className="scatter-container">
-      <ScatterplotFeatureSelector onChangeX={onFeatureChangeX} onChangeY={onFeatureChangeY}/>
+      <ScatterplotFeatureSelector featuresList={featuresList} onChangeX={onFeatureChangeX} onChangeY={onFeatureChangeY}/>
       <ScatterplotComponent scatterplotDataX={scatterDataX} scatterplotDataY={scatterDataY} scatterplotDataColor={scatterDataColor} featureX={featureX} featureY={featureY} onPointHover={onPointHover} key="Scatterplot Plot"/>
     </div>
   )

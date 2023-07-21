@@ -4,7 +4,7 @@
   justify-content: flex-start;
   align-items: center;
   background: #261738;
-  width: 23%;
+  width: 30%;
   padding-top: 20px;
   padding-left: 0px;
   height: 100vh;
@@ -15,7 +15,7 @@
   margin-bottom: 10px;
   width: 250%;
   padding: 10px 10px;
-  font-size: 14px;
+  font-size: 25px;
   border-radius: 5px;
   border: none;
   color: #fff;
@@ -28,12 +28,19 @@
   background-color: #606268;
 }
 
+.submit-button {
+  font-size: 25px;
+}
+
+.error-message {
+  font-size: 18px;
+}
 
 .menu-button-disabled {
   margin-bottom: 10px;
   width: 250%;
   padding: 10px 10px;
-  font-size: 14px;
+  font-size: 25px;
   border-radius: 5px;
   border: none;
   color: #fff;
@@ -52,14 +59,14 @@
   display: block;
   padding-top: 10px;
   margin-bottom: 5px;
-  font-size: 14px;
+  font-size: 25px;
   color: #fff;
 }
 
 .selector {
   width: 100%;
   padding: 7px;
-  font-size: 14px;
+  font-size: 25px;
   border-radius: 5px;
   border: 1px solid #ddd;
 }

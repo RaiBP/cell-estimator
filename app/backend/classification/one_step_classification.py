@@ -41,7 +41,10 @@ class OneStepClassifier(Classification):
         entropy = []
         for idx, _ in enumerate(labels):
             probas = np.array(probabilities[idx]['proba'])
-            entropy.append(-1 * np.sum(probas * np.log2(probas)))
+            
+            non_zero_probas = probas[probas != 0]
+
+            entropy.append(-1 * np.sum(non_zero_probas * np.log2(non_zero_probas)))
         return entropy
 
     def calculate_probability_per_label(self, labels, probabilities):

@@ -84,7 +84,10 @@ class PipelineManager:
         return self.shared_features
 
     def get_features_names(self):
-        return list(self.shared_features.columns)
+        features = self.shared_features
+        if features is None:
+            return []
+        return list(features.columns)
 
     def set_predictions(self, predictions):
         self.predictions = predictions

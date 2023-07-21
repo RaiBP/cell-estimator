@@ -1,6 +1,8 @@
 import os
 from pathlib import Path 
 import pandas as pd
+
+from typing import List
 from classification.one_step_classification import OneStepClassifier
 from classification.three_step_classification import ThreeStepClassifier
 
@@ -32,9 +34,9 @@ def list_files(path):
             files.append(file_name)
     return files
 
-def list_classification_methods(user_models_folder) -> list[str]:    
+def list_classification_methods(user_models_folder) -> List[str]:    
     user_models = list_files(user_models_folder)
-    model_list =  ['SVC', 'KNN', 'RFC', 'Three Step Classification']
+    model_list =  ['SVC', 'KNN' , 'Three Step Classification']
 
     if len(user_models) != 0:
         tsc_is_included = False

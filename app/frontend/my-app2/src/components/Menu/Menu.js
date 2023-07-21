@@ -101,7 +101,9 @@ function Menu({
   isSegmented,
   onRetrain,
   classificationMethods,
-  setClassificationMethods
+  setClassificationMethods,
+  classificationError,
+  userDataExists
 }) {
   return (
     <div className="menu-container">
@@ -121,12 +123,13 @@ function Menu({
             Classify
   </Button>
 )} 
+      {classificationError && <p className="error-message">Error: Classification failed. Please make sure masks are correct and try again.</p>}
       <form className="selector-container" onSubmit={onImageId}>
         <label className="selector-label">
           Enter a image number:
           <input className="selector" name='image_id' type='number' />
         </label>
-        <input type='submit' value='Submit' />
+        <input className='submit-button' type='submit' value='Submit' />
       </form>
       <SegmentationMethodsSelector onChange={onSegmentationMethodChange}/>
       <ClassificationMethodsSelector onChange={onClassificationMethodChange} classificationMethods={classificationMethods} setClassificationMethods={setClassificationMethods}/>
@@ -140,9 +143,26 @@ function Menu({
     Save Masks and Labels
   </Button>
 )}
-      <Button className="menu-button" onClick={onDownload}>Download Masks and Labels</Button>
 
-      <Button className="menu-button" onClick={onRetrain}>Retrain Classification Model</Button>
+{userDataExists ? (
+  <Button className="menu-button" onClick={onDownload}>
+    Download Masks and Labels
+  </Button>
+) : (
+  <Button className="menu-button-disabled" disabled>
+    Download Masks and Labels
+  </Button>
+)}
+{userDataExists ? (
+  <Button className="menu-button" onClick={onRetrain}>
+    Retrain Classification Model
+  </Button>
+) : (
+  <Button className="menu-button-disabled" disabled>
+    Retrain Classification Model
+  </Button>
+)}
+
     </div>
   )
 }

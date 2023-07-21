@@ -20,8 +20,8 @@ RUN apt-get update && apt-get install -y \
     curl \
     lsb-release \
     tzdata \
-    libgl1-mesa-glx \
-    git
+    git \
+    libgl1-mesa-glx 
 
 # Install Node.js
 RUN curl -sL https://deb.nodesource.com/setup_19.x | bash -
@@ -37,17 +37,22 @@ RUN apt-get update && apt-get install -y software-properties-common
 RUN add-apt-repository ppa:deadsnakes/ppa
 
 # Install Python 3.10 and pip
-RUN apt-get update && apt-get install -y python3.10 python3-pip
+RUN apt-get update && apt-get install -y python3.10 python3.10-distutils python3.10-dev
 
 # Set Python 3.10 as the default Python version
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.10 1
 
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1
+
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
+
 # Confirm Python installation
-RUN python --version && pip --version
+#RUN python --version && pip --version
+RUN python3 --version && pip3 --version
 
 # Install Python dependencies
 COPY ./requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip3 install --no-cache-dir -r requirements.txt
 
 # Installing node dependencies
 COPY ./frontend/my-app2/package.json /app/frontend/my-app2/package.json

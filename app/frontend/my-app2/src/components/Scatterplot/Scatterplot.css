@@ -25,14 +25,15 @@
   justify-content: center;
   align-items: center;
   margin-bottom: 10px;
-  background-color: #3c3e45;
+  background-color: #351C75;
   width: 100%;
 }
 
 .selector-label {
   /* Define styles for the feature selector label */
   /* For example: */
-  margin-right: 10px;
+  margin-right: 20px;
+  margin-left: 20px;
 }
 
 .selector {
