@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List
+from typing import List, Union
 from pathlib import Path
 from enum import Enum
 import numpy as np
@@ -28,7 +28,8 @@ from image_loader import (
     encode_b64,
 )
 
-import torch 
+import torch
+
 # Setting up logger
 logging.basicConfig(level=logging.INFO)
 logging.info(f"Is GPU available: {torch.cuda.is_available()}")
@@ -76,6 +77,9 @@ class ImageSegmentationMethod(str, Enum):
     fastsam = "fastsam"
     sam = "sam"
 
+class BoolObject(BaseModel):
+    value: bool
+
 class Dataset(BaseModel):
     filename: str
 
@@ -86,7 +90,7 @@ class ClassificationMethod(BaseModel):
     method: str
 
 class Polygon(BaseModel):
-    points: List[float] | None
+    points: Union[List[float], None]
 
 class ClassifyQuery(BaseModel):
     use_backend_masks: bool
@@ -149,16 +153,19 @@ class DatasetInfo(BaseModel):
     num_images: int
 
 class DataForPlotting(BaseModel):
-    features_names: List[str]
-    feature_1_values: List[float]
-    feature_2_values: List[float]
-    cell_types: List[str]
-    feature_1_training_values: List[float]
-    feature_2_training_values: List[float]
-    cell_types_training: List[str]
+    feature_x_values: List[float]
+    feature_y_values: List[float]
+    labels: List[str]
+    feature_x_training_values: List[float]
+    feature_y_training_values: List[float]
+    labels_training: List[str]
 
 class PredictionsList(BaseModel):
     predictions: List[str]
+
+class FeaturesForScatterplot(BaseModel):
+    x_feature: str
+    y_feature: str
 
 class FeaturesList(BaseModel):
     features: List[str]
@@ -441,6 +448,7 @@ async def classify(classify_query: ClassifyQuery):
             for label, mask_features in zip(labels, features_records)]
 
     logging.info(f"Sending {len(predictions)} predictions to client for image with id {image_id}.")
+    logging.info(f"Predictions: {predictions}")
     return predictions
 
 
@@ -657,38 +665,65 @@ async def retrain_model():
 
 
 @app.post("/features_and_data_to_plot")
-async def get_features_and_data_to_plot(features: FeaturesList):
+async def get_features_and_data_to_plot(features: FeaturesForScatterplot):
     """
     Method for saving the features that will be used for plotting
     and sending the data that will be plotted
     """
+    global logging, training_data_path
     if features is not None:
-        features_to_plot = features.features
-    file_path = os.path.join('classification/data', 'training_data_user.csv')
-    training_features = pd.read_csv(file_path)
+        feature_x = features.x_feature
+        feature_y = features.y_feature
+    else:
+        return {"error": "No features selected for scatterplot"}
 
-    print(training_features)
+    if training_data_path.exists():
+        training_features = pd.read_csv(training_data_path)
+    else: 
+        training_features = pd.read_csv(training_data_path_base)
+
+    logging.info(training_features)
     
     shared_features = manager.get_shared_features()
-    corrected_predictions = manager.get_predictions()
+    predictions = manager.get_predictions()
 
-    assert shared_features is not None and corrected_predictions is not None
+    image_id = manager.image_id
+    dataset_id = manager.get_dataset_id()
 
-    feature_1_values = shared_features[features_to_plot[0]].tolist()
-    feature_2_values = shared_features[features_to_plot[1]].tolist()
-    cell_types = corrected_predictions
+    saved_features = manager.get_saved_features(image_id, dataset_id, training_data_path)
+    if saved_features is not None:
+        # this means that 'shared_features' and 'training_features' share some rows!
+        # we must remove the shared rows from 'training_features'
+        training_features, shared_rows = manager.remove_shared_rows(image_id, dataset_id, training_features)
 
-    feature_1_training_values = training_features[features_to_plot[0]].tolist()
-    feature_2_training_values = training_features[features_to_plot[1]].tolist()
-    cell_types_training = training_features['Labels'].str[2:-1].tolist()
+        if shared_features is None or predictions is None:
+            # we give priority to the 'shared_features' found in the manager
+            # however, if there are none, we use the ones saved in the csv file
+            shared_features = shared_rows
+            predictions = shared_features['Labels'].str.strip("'b").tolist()    
 
-    return DataForPlotting(features_names=features_to_plot, 
-                           feature_1_values=feature_1_values,
-                           feature_2_values=feature_2_values,
-                           cell_types = cell_types,
-                           feature_1_training_values=feature_1_training_values,
-                           feature_2_training_values=feature_2_training_values,
-                           cell_types_training = cell_types_training)
+    try:
+        assert shared_features is not None and predictions is not None
+    except Exception:
+        logging.error(f"Either features or labels not found for image with image ID '{image_id}' and dataset ID '{dataset_id}'")
+        return {"error": "Either labels or features not found"}
+
+    feature_x_values = shared_features[feature_x].tolist()
+    feature_y_values = shared_features[feature_y].tolist()
+    labels = [label.decode().strip("'b") if isinstance(label, bytes) else label.strip("'b") for label in predictions]
+
+    feature_x_training_values = training_features[feature_x].tolist()
+    feature_y_training_values = training_features[feature_y].tolist()
+    labels_training = training_features['Labels'].str.strip("'b").tolist()
+
+    logging.info(f"Labels for plotting: {labels}, dtype: {type(labels)}")
+
+    return DataForPlotting(feature_x_values=feature_x_values,
+                           feature_y_values=feature_y_values,
+                           labels = labels,
+                           feature_x_training_values=feature_x_training_values,
+                           feature_y_training_values=feature_y_training_values,
+                           labels_training = labels_training)
 
 @app.get("/available_features_names")
 async def get_available_features_names():
@@ -696,5 +731,15 @@ async def get_available_features_names():
     Method for listing available features that the frontend
     can access for the current image.
     """
-    return FeaturesList(features=manager.get_features_names())
+    features = manager.get_features_names()
+    features_to_remove = ['Labels', 'LabelsEntropy', 'ImageID', 'DatasetID', 'oofProbability', 'aggProbability', 'wbcProbability', 'rbcProbability', 'pltProbability']
 
+    result_list = [x for x in features if x not in features_to_remove]
+
+    return FeaturesList(features=result_list)
+
+@app.get("/user_data_exists")
+async def user_data_exists():
+    global user_dataset_path 
+    value = user_dataset_path.exists()
+    return BoolObject(value=value)

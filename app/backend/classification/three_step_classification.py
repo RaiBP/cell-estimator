@@ -93,7 +93,9 @@ class ThreeStepClassifier(Classification):
                 probas = np.array(probabilities[idx]['agg_proba'])
             else:
                 probas = np.array(probabilities[idx]['cell_proba'])
-            entropy.append(-1 * np.sum(probas * np.log2(probas)))
+
+            non_zero_probas = probas[probas != 0]
+            entropy.append(-1 * np.sum(non_zero_probas * np.log2(non_zero_probas)))
         return entropy
 
     def get_classes(self):

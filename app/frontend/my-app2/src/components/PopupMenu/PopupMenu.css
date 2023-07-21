@@ -4,7 +4,7 @@
   justify-content: flex-start;
   align-items: center;
   background: #27173a;
-  width: 15vw;
+  width: 25vw;
   padding-top: 20px;
   height: 100vh;
   box-sizing: border-box;
@@ -13,7 +13,7 @@
 .popup-menu-button {
   margin-bottom: 10px;
   padding: 10px 20px;
-  font-size: 14px;
+  font-size: 25px;
   border-radius: 5px;
   width: 75%;
   border: none;

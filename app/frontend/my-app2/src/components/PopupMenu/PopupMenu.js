@@ -12,7 +12,6 @@ function PopupMenu({handleOptionClick, x, y}){
             <Button className="popup-menu-button" onClick={() => handleOptionClick('agg')}>Aggregation</Button>
             <Button className="popup-menu-button" onClick={() => handleOptionClick('plt')}>Platelet</Button>
             <Button className="popup-menu-button" onClick={() => handleOptionClick('delete')}>Delete Mask</Button>
-            <Button className="popup-menu-button" onClick={() => handleOptionClick('explain')}>Explain</Button>
             <Button className="popup-menu-button" onClick={() => handleOptionClick('noAction')}>Close</Button>
         </div>) 
 }

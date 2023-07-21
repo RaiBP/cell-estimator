@@ -4,17 +4,21 @@
     justify-content: flex-start;
     align-items: center;
     background: #3c3e45;
-    width: 10%;
+    width: 7%;
     padding-top: 20px;
     padding-left: 10px;
-    height: 10%;
+    height: 40%;
     box-sizing: border-box;
+    position: fixed;
+    left: 2000px;
+    top: 250px;
+    transform: translateX(-50%);
 }
 
 .legend-item {
     margin-bottom: 10px;
     padding: 10px 20px;
-    font-size: 14px;
+    font-size: 25px;
     border-radius: 5px;
     width: 50%;
     border: none;

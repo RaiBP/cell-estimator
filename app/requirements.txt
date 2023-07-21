@@ -13,6 +13,7 @@ clip @ git+https://github.com/openai/CLIP.git@a9b1bf5920416aaeaec965c25dd9e8f98c
 cmake==3.26.4
 coloredlogs==15.0.1
 contourpy==1.1.0
+cuda-python
 cycler==0.11.0
 dnspython==2.3.0
 email-validator==2.0.0.post2

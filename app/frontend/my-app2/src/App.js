@@ -4,6 +4,7 @@ import axios from 'axios'
 import { Menu, MenuContainer } from './components/Menu/Menu'
 import { PopupMenu } from './components/PopupMenu/PopupMenu'
 import { ExplainMenu } from './components/ExplainMenu/ExplainMenu'
+import { Scatterplot } from './components/Scatterplot/Scatterplot';
 import { Legend } from './components/Legend/Legend'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -134,6 +135,17 @@ const AnnotationArea = () => {
   const [previewLine, setPreviewLine] = useState(null)
   const [isClassified, setIsClassified] = useState(false)
  const [classificationMethods, setClassificationMethods] = useState([])
+  const [scatterplotDataX, setScatterplotDataX] = useState(null);
+  const [scatterplotDataY, setScatterplotDataY] = useState(null);
+  const [deletedXData, setDeletedXData] = useState([]);
+  const [deletedYData, setDeletedYData] = useState([]);
+  const [deletedColorData, setDeletedColorData] = useState([]);
+  const [scatterplotDataColor, setScatterplotDataColor] = useState(null);
+  const [featureXAxis, setFeatureXAxis] = useState("Volume");
+  const [featureYAxis, setFeatureYAxis] = useState("Volume");
+const [activePoint, setActivePoint] = useState(null);
+  const [classificationError, setClassificationError] = useState(false);
+  const [userDataExists, setUserDataExists] = useState(false);
 
   // Context Menu for Polygon-editing
   const [contextMenu, setContextMenu] = useState({
@@ -185,10 +197,17 @@ const AnnotationArea = () => {
     return predictions
   }
 
+  async function checkUserData() {
+    setIsLoading(true)
+    const response = await axios.get('/user_data_exists')
+    setUserDataExists(response.data.value)
+    setIsLoading(false)
+  }
+
   function find_max_entropy(objects){
     // Key to compare values against
     const keyToCompare = 'LabelsEntropy';
-    let threshold = 2;
+    let threshold = 1.3;
     let maxObject = [];
 
     // Iterate through each object
@@ -286,6 +305,7 @@ const AnnotationArea = () => {
   }
 
   function segmentCallback(receivedPolygons) {
+    setClassificationError(false);
     const transformedPolygons = []
 
     if (receivedPolygons.length !== 0) {
@@ -304,34 +324,66 @@ const AnnotationArea = () => {
     }
     setPolygons(transformedPolygons)
     setIsClassified(false)
+    setScatterplotDataX(null)
+    setScatterplotDataY(null)
+    setScatterplotDataColor(null)
+    setDeletedPolygons([])
+    setNumberOfDeletedPolygons([])
+    setDeletedXData([])
+    setDeletedYData([])
+    setDeletedColorData([])
   }
 
-  function classifyCallback(labels) {
-    const transformedPolygons = polygons.map((polygon, index) => {
-      const classId = labels[index]['class_id']
+  async function classifyCallback(labels) {
+    setClassificationError(false);
+    const newFeaturesScatterDataX = []
+    const newFeaturesScatterDataY = []
+    const newFeaturesColor = []
 
-      console.log(`Polygon ${index + 1} - classId: ${classId}`)
+    if (labels.length !== 0) { 
+      const transformedPolygons = polygons.map((polygon, index) => {
+        const classId = labels[index]['class_id']
 
-      const color = getColorByClassId(classId)
+        console.log(`Polygon ${index + 1} - classId: ${classId}`)
 
-      return polygon.map((point) => ({
-        ...point,
-        color: color,
-      }))
-    })
+        const color = getColorByClassId(classId)
 
-    setPolygons(transformedPolygons)
-    setIsClassified(true)
+        newFeaturesScatterDataX.push(labels[index]['features'][featureXAxis])
+        newFeaturesScatterDataY.push(labels[index]['features'][featureYAxis])
+        newFeaturesColor.push(color)
 
-    if (availableFeaturesNames.length == 0) {
-      fetchAvailableFeaturesNames()
+        return polygon.map((point) => ({
+          ...point,
+          color: color,
+        }))
+      })
+
+      setScatterplotDataX(newFeaturesScatterDataX)
+      setScatterplotDataY(newFeaturesScatterDataY)
+      setScatterplotDataColor(newFeaturesColor)
+
+      setPolygons(transformedPolygons)
+      setIsClassified(true)
+
+      if (availableFeaturesNames.length == 0) {
+        fetchAvailableFeaturesNames()
+      }
+  }
+  else {
+      if (polygons.length !== 0) {
+        // if this is the case, there has been an error with the classification
+        setClassificationError(true)
+      }
     }
+
+    console.log(`Available feature names: ${availableFeaturesNames.length}`)
   }
 
 
-  function setImageCallback(response_json) {
+  async function setImageCallback(response_json) {
     // This is a callback function that is called when the image is fetched
-    // Its only purpose is to set the image state variables
+    // Its only purpose is to set the image state variables 
+    setClassificationError(false);
 
     setAmplitudeImage(
       `data:image/jpeg;base64,${response_json.amplitude_img_data}`
@@ -339,6 +391,9 @@ const AnnotationArea = () => {
     setPhaseImage(`data:image/jpeg;base64,${response_json.phase_img_data}`)
 
     const transformedPolygons = []
+    const newDataX = []
+    const newDataY = []
+    const newDataColor = []
 
     const polygonsWithPredictions = response_json.predictions
     if (polygonsWithPredictions.length !== 0) {
@@ -359,26 +414,48 @@ const AnnotationArea = () => {
           })
         }
         transformedPolygons.push(currentPolygon)
-      })
+
+        newDataX.push(polygonWithPrediction.features[featureXAxis])
+        newDataY.push(polygonWithPrediction.features[featureYAxis])
+        newDataColor.push(getColorByClassId(polygonWithPrediction.class_id))
+        
+      })      
+
+      setScatterplotDataX(newDataX)
+      setScatterplotDataY(newDataY)
+      setScatterplotDataColor(newDataColor)
       setIsClassified(true)
+
+      if (availableFeaturesNames.length == 0) {
+        fetchAvailableFeaturesNames()
+      }
     } else {
       setIsClassified(false)
+
+      setScatterplotDataX(null)
+      setScatterplotDataY(null)
+      setScatterplotDataColor(null)
     }
-    setPolygons(transformedPolygons)
+    setPolygons(transformedPolygons) 
   }
+
+ const onPointHover = (index) => {
+    setActivePoint(index);
+  };
 
 // Hook for checking if there are any drawn polygons
 useEffect(() => {
   setIsSegmented(polygons.length !== 0);
 }, [polygons]);
 
-useEffect(() => {
-  console.log(polygons);
-}, [polygons]);
+  useEffect(() => {
+    // Call the function when the app opens
+    checkUserData();
+  }, []);
 
 useEffect(() => {
-  console.log(mostUncertain);
-}, [mostUncertain]);
+    console.log(`Current Image ID: ${imageId}`);
+}, [imageId]);
 
 // Hook for showing amplitude or phase image
 useEffect(() => {
@@ -457,6 +534,15 @@ useEffect(() => {
         ...prevPolygons,
         currentPolygonRef.current,
       ])
+
+      setDeletedXData([])
+      setDeletedYData([])
+      setDeletedColorData([])
+
+      setScatterplotDataX(null)
+      setScatterplotDataY(null)
+      setScatterplotDataColor(null)
+
     }
     setCurrentPolygon([])
     setNextPoint(null)
@@ -481,7 +567,7 @@ useEffect(() => {
 
     const newImageId = e.target.image_id.value
     // Validate the number
-    if (newImageId >= 1 && newImageId <= 1000) {
+    if (newImageId >= 0 && newImageId <= 9999) {
       setImageId(newImageId)
       // Perform your desired action with the valid number
       console.log('Valid number:', newImageId)
@@ -518,40 +604,73 @@ useEffect(() => {
 
   const toggleImage = () => {
     setShowAmplitudeImage((prev) => !prev)
-    setMostUncertain(null)
   }
 
   function undoLast() {
     let lastNumber = numberOfDeletedPolygons.splice(-1, 1)
     lastNumber = lastNumber[0]
     let recoveredPolygon = []
+    let recoveredDataX = [];
+    let recoveredDataY = [];
+    let recoveredDataColor = [];
 
     if (lastNumber === 1) {
       recoveredPolygon = deletedPolygons.splice(-1, 1)
+      recoveredDataX = deletedXData.splice(-1, 1) 
+      recoveredDataY = deletedYData.splice(-1, 1)
+      recoveredDataColor = deletedColorData.splice(-1, 1)
     } else if (lastNumber > 1) {
       recoveredPolygon = deletedPolygons.splice(-lastNumber, lastNumber)
+      recoveredDataX = deletedXData.splice(-lastNumber, lastNumber) 
+      recoveredDataY = deletedYData.splice(-lastNumber, lastNumber)
+      recoveredDataColor = deletedColorData.splice(-lastNumber, lastNumber)
     }
 
     polygons.push(...recoveredPolygon)
+    if (scatterplotDataX === null) {
+      setScatterplotDataX(recoveredDataX)
+    } else {
+      scatterplotDataX.push(...recoveredDataX)
+    }
+
+    if (scatterplotDataY === null) {
+      setScatterplotDataY(recoveredDataY)
+    } else {
+      scatterplotDataY.push(...recoveredDataY)
+    }
+
+    if (scatterplotDataColor === null) {
+      setScatterplotDataColor(recoveredDataColor)
+    } else {
+      scatterplotDataColor.push(...recoveredDataColor)
+    }
   }
 
   function deleteall() {
     setNumberOfDeletedPolygons([...numberOfDeletedPolygons, polygons.length])
     setDeletedPolygons([...deletedPolygons, ...polygons])
     setPolygons([])
+
+    setDeletedXData([...deletedXData, ...scatterplotDataX])
+    setDeletedYData([...deletedYData, ...scatterplotDataY])
+    setDeletedColorData([...deletedColorData, ...scatterplotDataColor])
+
+    setScatterplotDataX(null)
+    setScatterplotDataY(null)
+    setScatterplotDataColor(null)
   }
 
   function handleOptionClick(option) {
     let chosenColor = polygons[contextMenu.polygonID][0].color
     let deletePolygon = false
-    let noAction = false
+    let noAction = false  
 
     switch (option) {
       case 'rbc':
         chosenColor = '#ff0000'
         break
       case 'wbc':
-        chosenColor = '#ffffff'
+        chosenColor = '#ffffff'   
         break
       case 'plt':
         chosenColor = '#0000ff'
@@ -564,10 +683,34 @@ useEffect(() => {
         break
       case 'delete':
         deletePolygon = true
-        let polygonToDelete = []
+        let polygonToDelete = [];
         polygonToDelete = polygons.splice(contextMenu.polygonID, 1)
+
+
         setDeletedPolygons([...deletedPolygons, ...polygonToDelete])
         setNumberOfDeletedPolygons([...numberOfDeletedPolygons, 1])
+
+        if (scatterplotDataX !== null && scatterplotDataY !== null && scatterplotDataColor !== null) {
+          let dataXToDelete = [];
+          let dataYToDelete = [];
+          let dataColorToDelete = [];
+
+
+          dataXToDelete = scatterplotDataX.splice(contextMenu.polygonID, 1)
+          dataYToDelete = scatterplotDataY.splice(contextMenu.polygonID, 1)
+          dataColorToDelete = scatterplotDataColor.splice(contextMenu.polygonID, 1)
+
+
+          setDeletedXData([...deletedXData, ...dataXToDelete])
+          setDeletedYData([...deletedYData, ...dataYToDelete])
+          setDeletedColorData([...deletedColorData, ...dataColorToDelete])
+
+          if ((scatterplotDataX.length == 0) || (scatterplotDataY.length === 0) || (scatterplotDataColor.length === 0)) {
+              setScatterplotDataX(null)
+              setScatterplotDataY(null)
+              setScatterplotDataColor(null)
+            }
+        }
         break
       case 'explain':
         setExplainMenu({ visible: true, polygonID: contextMenu.polygonID })
@@ -621,6 +764,42 @@ useEffect(() => {
     console.log(e)
   }
 
+  async function onScatterplotFeatureChangeX(e) {
+    const selectedFeature = e.target.value
+    setFeatureXAxis(selectedFeature)
+
+    setIsLoading(true);
+    axios
+      .post('/features_and_data_to_plot', {
+        x_feature: selectedFeature, y_feature: featureYAxis
+      })
+      .then((response) => {
+        setScatterplotDataX(response.data.feature_x_values)
+        setIsLoading(false);
+      })
+      .catch((error) => {
+        console.error(`Error selecting segmentation method: ${error}`)
+      })
+  }
+
+  function onScatterplotFeatureChangeY(e) {
+    const selectedFeature = e.target.value
+    setFeatureYAxis(selectedFeature)
+
+    setIsLoading(true);
+    axios
+      .post('/features_and_data_to_plot', {
+        x_feature: featureXAxis, y_feature: selectedFeature
+      })
+      .then((response) => {
+        setScatterplotDataY(response.data.feature_y_values)
+        setIsLoading(false);
+      })
+      .catch((error) => {
+        console.error(`Error selecting segmentation method: ${error}`)
+      })
+  }
+
   function onSegmentationMethodChange(e) {
     const selectedMethod = e.target.value
 
@@ -656,7 +835,6 @@ useEffect(() => {
       })
   }
 
-
   function onDatasetChange(e) {
     const selectedDataset = e.target.value
 
@@ -677,6 +855,7 @@ useEffect(() => {
     setCurrentDataset(selectedDataset)
     setIsLoading(false);
   }
+
 
   return (
     <div style={style}>
@@ -700,6 +879,8 @@ useEffect(() => {
           onRetrain={retrain}
           classificationMethods={classificationMethods}
           setClassificationMethods={setClassificationMethods}
+          classificationError={classificationError}
+          userDataExists={userDataExists}
         />
       </MenuContainer>
       <StageContainer>
@@ -744,7 +925,7 @@ useEffect(() => {
                     y: mousePos.y,
                     polygonID: i,
                   })
-                  if(mostUncertain.includes(i)){
+                  if(mostUncertain && mostUncertain.includes(i)){
                     const index=mostUncertain.indexOf(i)
                     mostUncertain.splice(index,1)}
                 }}
@@ -779,7 +960,20 @@ useEffect(() => {
                     x={point.x}
                     y={point.y}
                     radius={3}
-                    fill={mostUncertain && mostUncertain.includes(i) ? '#800080' : '#ffff00'}
+                    fill={(() => {
+                    // Define your condition here
+                    const isHighlighted = i == activePoint; // Replace with your actual condition
+                    const isUncertain = mostUncertain && mostUncertain.includes(i);
+
+                    if (isHighlighted) {
+                      return 'red'
+                    }
+                    if (isUncertain) {
+                      return '#800080'
+                    } else {
+                      return '#ffff00'
+                    }
+                    })()}
                     draggable
                     onDragEnd={(e) => {
                       e.cancelBubble = true // stop event propagation
@@ -816,9 +1010,20 @@ useEffect(() => {
             )}
           </Layer>
         </Stage>
+      </StageContainer>
         <Legend>
         </Legend>
-      </StageContainer>
+      {(availableFeaturesNames.length !== 0) && <Scatterplot 
+        featuresList = {availableFeaturesNames}
+        featureX={featureXAxis} 
+        featureY = {featureYAxis}
+        scatterDataX = {scatterplotDataX}
+        scatterDataY = {scatterplotDataY}
+        scatterDataColor = {scatterplotDataColor}
+        onFeatureChangeX={onScatterplotFeatureChangeX}
+        onFeatureChangeY={onScatterplotFeatureChangeY} 
+        onPointHover={onPointHover}
+      />}
       {isLoading && <LoadingSpinner />}
       {contextMenu.visible && (
         <PopupMenu
