@@ -181,12 +181,9 @@ shared_features = None
 features_to_plot = None
 corrected_predictions = None
 
-origins = ["http://localhost:3000", "https://localhost:3000", "https://group06.ami.dedyn.io/", "http://group06.ami.dedyn.io"]
-
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
