@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from 'uuid'
 
 import './App.css'
 
-axios.defaults.baseURL = 'https://localhost:8000'
+axios.defaults.baseURL = 'https://api.group06.ami.dedyn.io/'
 
 const stageDimensions = {
   width: 1000,
@@ -35,7 +35,7 @@ const StageContainer = ({ children }) => {
 }
 
 async function setNewImage(imageId, imageType, callback) {
-  const response = await fetch('https://localhost:8000/set_image', {
+  const response = await fetch('https://api.group06.ami.dedyn.io/set_image', {
     method: 'POST',
     headers: {
       accept: 'application/json',
@@ -180,7 +180,7 @@ const [activePoint, setActivePoint] = useState(null);
   async function classifyCurrentImage(callback) {
     const masks = divideElements(polygons)
     setIsLoading(true)
-    const response = await fetch('https://localhost:8000/classify', {
+    const response = await fetch('https://api.group06.ami.dedyn.io/classify', {
       method: 'POST',
       headers: {
         accept: 'application/json',
