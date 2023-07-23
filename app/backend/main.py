@@ -3,8 +3,8 @@ import os
 from re import A
 from shutil import which
 from feature_extraction.feature_extractor import FeatureExtractor
-from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Union
@@ -13,6 +13,7 @@ from enum import Enum
 import numpy as np
 import pandas as pd
 import cv2
+
 
 from segmentation import utils as segmentation_utils
 from pipeline import config as pipeline_config 
@@ -188,6 +189,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Handle preflight requests (OPTIONS) by explicitly allowing the necessary headers
+@app.options("/{path:path}", include_in_schema=False)
+async def preflight_handler(request: Request, path: str):
+    response = Response()
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "POST, PUT, DELETE"
+    response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type"
+    return response
+
 
 @app.get("/datasets")
 async def get_datasets():
