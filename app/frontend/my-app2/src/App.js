@@ -14,7 +14,7 @@ import './App.css'
 const username = 'ami';
 const password = '***REMOVED***';
 
-const token = Buffer.from(`${username}:${password}`, 'utf8').toString('base64');
+const token = btoa(`${username}:${password}`);
 
 axios.defaults.baseURL = 'https://api.group06.ami.dedyn.io/'
 axios.defaults.headers.common['Authorization'] = `Basic ${token}`;
