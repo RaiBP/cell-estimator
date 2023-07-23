@@ -4,6 +4,15 @@ import axios from 'axios'
 
 import './Menu.css'
 
+
+const username = 'ami';
+const password = '***REMOVED***';
+
+const token = Buffer.from(`${username}:${password}`, 'utf8').toString('base64');
+
+axios.defaults.baseURL = 'https://api.group06.ami.dedyn.io/'
+axios.defaults.headers.common['Authorization'] = `Basic ${token}`;
+
 function DatasetSelector({ onChange }) {
   const [datasets, setDatasets] = useState([])
 

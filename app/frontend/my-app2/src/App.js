@@ -10,7 +10,14 @@ import { v4 as uuidv4 } from 'uuid'
 
 import './App.css'
 
+
+const username = 'ami';
+const password = '***REMOVED***';
+
+const token = Buffer.from(`${username}:${password}`, 'utf8').toString('base64');
+
 axios.defaults.baseURL = 'https://api.group06.ami.dedyn.io/'
+axios.defaults.headers.common['Authorization'] = `Basic ${token}`;
 
 const stageDimensions = {
   width: 1000,
@@ -38,6 +45,7 @@ async function setNewImage(imageId, imageType, callback) {
   const response = await fetch('https://api.group06.ami.dedyn.io/set_image', {
     method: 'POST',
     headers: {
+      'Authorization': `Basic ${token}`,
       accept: 'application/json',
       'Content-Type': 'application/json',
     },
@@ -183,6 +191,7 @@ const [activePoint, setActivePoint] = useState(null);
     const response = await fetch('https://api.group06.ami.dedyn.io/classify', {
       method: 'POST',
       headers: {
+        'Authorization': `Basic ${token}`,
         accept: 'application/json',
         'Content-Type': 'application/json',
       },
