@@ -124,7 +124,7 @@ const trainingData = scatterTrainingDataX && scatterTrainingDataY && scatterTrai
   return (
     <div className="scatter-component">
       {/* Render your scatterplot using the retrieved data */}
-      <ScatterChart width={1000} height={500}  margin={{ top: 20, right: 0, bottom: 25, left: 45 }}>
+      <ScatterChart width={1600} height={800}  margin={{ top: 20, right: 0, bottom: 25, left: 145 }}>
         <CartesianGrid />
         <XAxis tick={{fontSize: 20}} dataKey="x" type="number" name={featureX} label={{ value: getAxisLabel(featureX), position: 'insideBottom', offset: -20, fontSize:20}} domain={xAxisDomain} tickFormatter={formatXAxisTick} ticks={[...Array(xAxisTickCount)].map((_, index) => minX + xAxisTickInterval * index)}/>
         <YAxis tick={{fontSize: 20}} dataKey="y" type="number" name={featureY} label={{ value: getAxisLabel(featureY), angle: -90, position: 'insideLeft', offset: -35, dy:100 , fontSize:20}} domain={yAxisDomain} tickFormatter={formatYAxisTick} ticks={[...Array(yAxisTickCount)].map((_, index) => minY + yAxisTickInterval * index)} // Manually set tick values

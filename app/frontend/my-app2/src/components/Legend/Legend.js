@@ -2,7 +2,7 @@ import './Legend.css';
 
 function Legend() {
   return (
-    <div className="legend-container">
+    <div className="legend-container" style={{height: window.innerHeight*0.65*0.8}}>
       <div className="legend-item">
         <div className="legend-color-box" style={{ backgroundColor: '#ff0000' }}></div>
         Red Blood Cell

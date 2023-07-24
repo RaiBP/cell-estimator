@@ -9,8 +9,8 @@ const password = '***REMOVED***'
 
 const token = window.btoa(`${username}:${password}`)
 
-axios.defaults.baseURL = 'https://group06.ami.dedyn.io/api'
-//axios.defaults.baseURL = 'http://localhost:8000/api'
+//axios.defaults.baseURL = 'https://group06.ami.dedyn.io/api'
+axios.defaults.baseURL = 'http://localhost:8000/api'
 axios.defaults.headers.common['Authorization'] = `Basic ${token}`
 
 function DatasetSelector({ onChange, current }) {
@@ -136,7 +136,7 @@ function Menu({
   }
 
   return (
-    <div className='menu-container'>
+    <div className='menu-button-container'>
       <Button className='menu-button' onClick={onNext}>
         Next Image
       </Button>

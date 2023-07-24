@@ -3,22 +3,26 @@
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
-  background: #27173a;
-  width: 25vw;
-  padding-top: 20px;
+  background: #261738;
+  width: 400px; /* Set an appropriate max-width to limit its size */
+  padding-top: 40px;
+  padding-left: 20px; /* Add a bit of left padding for spacing */
+  padding-right: 20px; /* Add a bit of right padding for spacing */
   height: 100vh;
   box-sizing: border-box;
+  
+  margin: 0 auto; /* Center the menu container horizontally */
   }
 
 .popup-menu-button {
   margin-bottom: 10px;
-  padding: 10px 20px;
+  width: 90%;
+  padding: 10px 10px;
   font-size: 25px;
   border-radius: 5px;
-  width: 75%;
   border: none;
   color: #fff;
-  background-color: #3c3e45;
+  background-color: #453c42;
   cursor: pointer;
   transition: background-color 0.3s ease;
 }
