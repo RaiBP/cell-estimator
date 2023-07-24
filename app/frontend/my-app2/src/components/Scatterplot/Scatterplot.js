@@ -51,7 +51,7 @@ const ScatterplotComponent = ({ scatterplotDataX, scatterplotDataY, scatterplotD
       <ScatterChart width={900} height={400}  margin={{ top: 20, right: 0, bottom: 20, left: 30 }}>
         <CartesianGrid />
         <XAxis tick={{fontSize: 20}} dataKey="x" type="number" name={featureX} label={{ value: getAxisLabel(featureX), position: 'insideBottom', offset: -20, fontSize:20 }}/>
-        <YAxis tick={{fontSize: 20}} dataKey="y" type="number" name={featureY} label={{ value: getAxisLabel(featureY), angle: -90, position: 'insideLeft', offset: -20, dy:20 , fontSize:20}}/>
+        <YAxis tick={{fontSize: 20}} dataKey="y" type="number" name={featureY} label={{ value: getAxisLabel(featureY), angle: -90, position: 'insideLeft', offset: -20, dy:50 , fontSize:20}}/>
         <Tooltip />
         <Scatter
           data={data}

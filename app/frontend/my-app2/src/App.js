@@ -145,9 +145,6 @@ const AnnotationArea = () => {
  const [classificationMethods, setClassificationMethods] = useState([])
   const [scatterplotDataX, setScatterplotDataX] = useState(null);
   const [scatterplotDataY, setScatterplotDataY] = useState(null);
-  const [deletedXData, setDeletedXData] = useState([]);
-  const [deletedYData, setDeletedYData] = useState([]);
-  const [deletedColorData, setDeletedColorData] = useState([]);
   const [scatterplotDataColor, setScatterplotDataColor] = useState(null);
   const [featureXAxis, setFeatureXAxis] = useState("Volume");
   const [featureYAxis, setFeatureYAxis] = useState("Volume");
@@ -338,9 +335,6 @@ const [activePoint, setActivePoint] = useState(null);
     setScatterplotDataColor(null)
     setDeletedPolygons([])
     setNumberOfDeletedPolygons([])
-    setDeletedXData([])
-    setDeletedYData([])
-    setDeletedColorData([])
     setActivePoint(null)
   }
 
@@ -547,10 +541,6 @@ useEffect(() => {
         currentPolygonRef.current,
       ])
 
-      setDeletedXData([])
-      setDeletedYData([])
-      setDeletedColorData([])
-
       setScatterplotDataX(null)
       setScatterplotDataY(null)
       setScatterplotDataColor(null)
@@ -622,51 +612,21 @@ useEffect(() => {
     let lastNumber = numberOfDeletedPolygons.splice(-1, 1)
     lastNumber = lastNumber[0]
     let recoveredPolygon = []
-    let recoveredDataX = [];
-    let recoveredDataY = [];
-    let recoveredDataColor = [];
 
     if (lastNumber === 1) {
       recoveredPolygon = deletedPolygons.splice(-1, 1)
-      recoveredDataX = deletedXData.splice(-1, 1) 
-      recoveredDataY = deletedYData.splice(-1, 1)
-      recoveredDataColor = deletedColorData.splice(-1, 1)
     } else if (lastNumber > 1) {
       recoveredPolygon = deletedPolygons.splice(-lastNumber, lastNumber)
-      recoveredDataX = deletedXData.splice(-lastNumber, lastNumber) 
-      recoveredDataY = deletedYData.splice(-lastNumber, lastNumber)
-      recoveredDataColor = deletedColorData.splice(-lastNumber, lastNumber)
     }
 
     polygons.push(...recoveredPolygon)
-    if (scatterplotDataX === null) {
-      setScatterplotDataX(recoveredDataX)
-    } else {
-      scatterplotDataX.push(...recoveredDataX)
-    }
-
-    if (scatterplotDataY === null) {
-      setScatterplotDataY(recoveredDataY)
-    } else {
-      scatterplotDataY.push(...recoveredDataY)
-    }
-
-    if (scatterplotDataColor === null) {
-      setScatterplotDataColor(recoveredDataColor)
-    } else {
-      scatterplotDataColor.push(...recoveredDataColor)
-    }
   }
 
   function deleteall() {
     setNumberOfDeletedPolygons([...numberOfDeletedPolygons, polygons.length])
     setDeletedPolygons([...deletedPolygons, ...polygons])
     setPolygons([])
-
-    setDeletedXData([...deletedXData, ...scatterplotDataX])
-    setDeletedYData([...deletedYData, ...scatterplotDataY])
-    setDeletedColorData([...deletedColorData, ...scatterplotDataColor])
-
+    
     setScatterplotDataX(null)
     setScatterplotDataY(null)
     setScatterplotDataColor(null)
@@ -698,31 +658,14 @@ useEffect(() => {
         let polygonToDelete = [];
         polygonToDelete = polygons.splice(contextMenu.polygonID, 1)
 
-
         setDeletedPolygons([...deletedPolygons, ...polygonToDelete])
         setNumberOfDeletedPolygons([...numberOfDeletedPolygons, 1])
 
-        if (scatterplotDataX !== null && scatterplotDataY !== null && scatterplotDataColor !== null) {
-          let dataXToDelete = [];
-          let dataYToDelete = [];
-          let dataColorToDelete = [];
 
+        setScatterplotDataX(null)
+        setScatterplotDataY(null)
+        setScatterplotDataColor(null)
 
-          dataXToDelete = scatterplotDataX.splice(contextMenu.polygonID, 1)
-          dataYToDelete = scatterplotDataY.splice(contextMenu.polygonID, 1)
-          dataColorToDelete = scatterplotDataColor.splice(contextMenu.polygonID, 1)
-
-
-          setDeletedXData([...deletedXData, ...dataXToDelete])
-          setDeletedYData([...deletedYData, ...dataYToDelete])
-          setDeletedColorData([...deletedColorData, ...dataColorToDelete])
-
-          if ((scatterplotDataX.length == 0) || (scatterplotDataY.length === 0) || (scatterplotDataColor.length === 0)) {
-              setScatterplotDataX(null)
-              setScatterplotDataY(null)
-              setScatterplotDataColor(null)
-            }
-        }
         break
       case 'explain':
         setExplainMenu({ visible: true, polygonID: contextMenu.polygonID })
