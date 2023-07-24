@@ -41,7 +41,7 @@
 
 .menu-button-disabled {
   margin-bottom: 10px;
-  width: 250%;
+  width: 100%;
   padding: 10px 10px;
   font-size: 25px;
   border-radius: 5px;
@@ -67,7 +67,7 @@
 }
 
 .selector {
-  width: 100%;
+  width: 90%;
   padding: 7px;
   font-size: 25px;
   border-radius: 5px;
