@@ -5,7 +5,7 @@ from shutil import which
 from feature_extraction.feature_extractor import FeatureExtractor
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, Response
-from fastapi.middleware.cors import CORSMiddleware
+#from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Union
 from pathlib import Path
@@ -182,21 +182,38 @@ shared_features = None
 features_to_plot = None
 corrected_predictions = None
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+#app.add_middleware(
+#    CORSMiddleware,
+#    allow_origins=["*"],
+#    allow_credentials=True,
+#    allow_methods=["*"],
+#    allow_headers=["*"],
+#)
 
-# Handle preflight requests (OPTIONS) by explicitly allowing the necessary headers
-@app.options("/{path:path}", include_in_schema=False)
-async def preflight_handler(request: Request, path: str):
-    response = Response()
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "POST, PUT, DELETE"
-    response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type"
+# Salt to your taste
+ALLOWED_ORIGINS = ['https://group06.ami.dedyn.io', 'http://group06.ami.dedyn.io']
+
+# handle CORS preflight requests
+@app.options('/{rest_of_path:path}')
+async def preflight_handler(request: Request, rest_of_path: str) -> Response:
+    origin = request.headers.get('origin')
+    if origin in ALLOWED_ORIGINS:
+        response = Response()
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Methods'] = 'POST, GET, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Authorization, Content-Type'
+        return response
+    return Response(status_code=403)  # Forbidden if origin not allowed
+
+# set CORS headers
+@app.middleware("http")
+async def add_CORS_header(request: Request, call_next):
+    response = await call_next(request)
+    origin = request.headers.get('origin')
+    if origin in ALLOWED_ORIGINS:
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Methods'] = 'POST, GET, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Authorization, Content-Type'
     return response
 
 
