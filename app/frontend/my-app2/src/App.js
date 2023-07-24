@@ -141,11 +141,15 @@ const AnnotationArea = () => {
   const [scatterplotDataX, setScatterplotDataX] = useState(null);
   const [scatterplotDataY, setScatterplotDataY] = useState(null);
   const [scatterplotDataColor, setScatterplotDataColor] = useState(null);
+  const [scatterplotTrainingDataX, setScatterplotTrainingDataX] = useState(null);
+  const [scatterplotTrainingDataY, setScatterplotTrainingDataY] = useState(null);
+  const [scatterplotTrainingDataColor, setScatterplotTrainingDataColor] = useState(null);
   const [featureXAxis, setFeatureXAxis] = useState("Volume");
   const [featureYAxis, setFeatureYAxis] = useState("Volume");
 const [activePoint, setActivePoint] = useState(null);
   const [classificationError, setClassificationError] = useState(false);
   const [userDataExists, setUserDataExists] = useState(false);
+  const [showTrainingData, setShowTrainingData] = useState(false);
 
   // Context Menu for Polygon-editing
   const [contextMenu, setContextMenu] = useState({
@@ -718,6 +722,40 @@ useEffect(() => {
     console.log(e)
   }
 
+  async function onScatterplotTrainingData() {
+    setIsLoading(true);
+    axios
+      .post('/features_and_data_to_plot', {
+        x_feature: featureXAxis, y_feature: featureYAxis
+      })
+      .then((response) => {
+        setScatterplotTrainingDataX(response.data.feature_x_training_values)
+        setScatterplotTrainingDataY(response.data.feature_y_training_values)
+        const labelsTrainingData = response.data.labels_training
+        const colorsTrainingData = labelsTrainingData.map((label) => getColorByClassId(label))
+        setScatterplotTrainingDataColor(colorsTrainingData)
+        setIsLoading(false);
+      })
+      .catch((error) => {
+        console.error(`Error fetching training data for scatterplot: ${error}`)
+      })
+  }
+
+  const handleTrainingDataToggle = (event) => {
+    const checked = event.target.checked;
+    setShowTrainingData(checked);
+
+    if (checked) {
+      onScatterplotTrainingData();
+    }
+    else {
+        setScatterplotTrainingDataX(null)
+        setScatterplotTrainingDataY(null)
+        setScatterplotTrainingDataColor(null)
+    }
+  };
+
+
   async function onScatterplotFeatureChangeX(e) {
     const selectedFeature = e.target.value
     setFeatureXAxis(selectedFeature)
@@ -729,10 +767,11 @@ useEffect(() => {
       })
       .then((response) => {
         setScatterplotDataX(response.data.feature_x_values)
+        setScatterplotTrainingDataX(response.data.feature_x_training_values)
         setIsLoading(false);
       })
       .catch((error) => {
-        console.error(`Error selecting segmentation method: ${error}`)
+        console.error(`Error fetching data for ${selectedFeature} X-axis feature: ${error}`)
       })
   }
 
@@ -747,10 +786,11 @@ useEffect(() => {
       })
       .then((response) => {
         setScatterplotDataY(response.data.feature_y_values)
+        setScatterplotTrainingDataY(response.data.feature_y_training_values)
         setIsLoading(false);
       })
       .catch((error) => {
-        console.error(`Error selecting segmentation method: ${error}`)
+        console.error(`Error fetching data for ${selectedFeature} Y-axis feature: ${error}`)
       })
   }
 
@@ -974,9 +1014,14 @@ useEffect(() => {
         scatterDataX = {scatterplotDataX}
         scatterDataY = {scatterplotDataY}
         scatterDataColor = {scatterplotDataColor}
+        scatterTrainingDataX = {scatterplotTrainingDataX}
+        scatterTrainingDataY = {scatterplotTrainingDataY}
+        scatterTrainingDataColor = {scatterplotTrainingDataColor}
         onFeatureChangeX={onScatterplotFeatureChangeX}
         onFeatureChangeY={onScatterplotFeatureChangeY} 
         onPointHover={onPointHover}
+  handleTrainingDataToggle={handleTrainingDataToggle}
+  showTrainingData={showTrainingData}
       />}
       {isLoading && <LoadingSpinner />}
       {contextMenu.visible && (

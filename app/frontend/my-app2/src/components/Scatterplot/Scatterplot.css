@@ -1,43 +1,76 @@
+/* Define styles for the container div of the Scatterplot component */
 .scatter-container {
-  /* Define styles for the container div of the Scatterplot component */
-  /* For example: */
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   align-items: center;
   height: 100vh;
   width: 20%;
-    position: fixed;
+  position: fixed;
   left: 1200px;
   top: 900px;
   transform: translateX(-50%);
 }
 
+/* Define styles for the Scatterplot component */
 .scatter-component {
   width: 100%;
   height: 100%;
 }
 
+/* Define styles for the feature selector container */
 .selector-container-scatter {
-  /* Define styles for the feature selector container */
-  /* For example: */
   display: flex;
   justify-content: center;
   align-items: center;
   margin-bottom: 10px;
   background-color: #351C75;
   width: 100%;
+  padding: 10px;
+  border-radius: 5px;
 }
 
-.selector-label {
-  /* Define styles for the feature selector label */
-  /* For example: */
-  margin-right: 20px;
+/* Define styles for the feature selector label */
+.selector-label-scatter {
+  margin-right: 60px;
+  margin-left: 20px;
+  font-size: 20px;
+  font-weight: bold;
+  width:20px;
+  color: #fff;
+}
+
+/* Define styles for the feature selector */
+.selector-scatter {
+  padding: 5px;
+  font-size: 16px;
+  background-color: #fff;
+  color: #333;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  width: 200px;
+}
+
+/* Define styles for the "Show Training Data" checkbox container */
+.plot-training-data {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #fff;
+  font-size: 20px;
+  font-weight: bold;
   margin-left: 20px;
 }
 
-.selector {
-  /* Define styles for the feature selector */
-  /* For example: */
-  padding: 5px;
+/* Style for the checkbox */
+.plot-training-data input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+}
+
+/* Style for the checkbox label */
+.plot-training-data label {
+  font-size: 20px;
+  color: #fff;
+  white-space: nowrap; /* Keep the label on one line */
 }
