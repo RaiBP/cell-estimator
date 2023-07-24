@@ -6,17 +6,33 @@
   background: #261738;
   max-width: 400px; /* Set an appropriate max-width to limit its size */
   padding-top: 20px;
+  padding-left: 0px; /* Add a bit of left padding for spacing */
+  padding-right: 0px; /* Add a bit of right padding for spacing */
+  height: 100%;
+  box-sizing: border-box;
+  overflow: auto;
+  margin: 0 auto; /* Center the menu container horizontally */
+}
+
+.menu-button-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  background: #261738;
+  max-width: 400px; /* Set an appropriate max-width to limit its size */
+  padding-top: 20px;
   padding-left: 10px; /* Add a bit of left padding for spacing */
   padding-right: 10px; /* Add a bit of right padding for spacing */
   height: 100vh;
   box-sizing: border-box;
-  overflow-y: auto;
+  
   margin: 0 auto; /* Center the menu container horizontally */
 }
 
 .menu-button {
   margin-bottom: 10px;
-  width: 100%;
+  width: 90%;
   padding: 10px 10px;
   font-size: 25px;
   border-radius: 5px;
@@ -41,7 +57,7 @@
 
 .menu-button-disabled {
   margin-bottom: 10px;
-  width: 250%;
+  width: 90%;
   padding: 10px 10px;
   font-size: 25px;
   border-radius: 5px;
@@ -67,7 +83,7 @@
 }
 
 .selector {
-  width: 100%;
+  width: 90%;
   padding: 7px;
   font-size: 25px;
   border-radius: 5px;

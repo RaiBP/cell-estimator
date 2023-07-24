@@ -16,8 +16,8 @@ const apiBaseUrl = 'https://group06.ami.dedyn.io/api'
 axios.defaults.baseURL = apiBaseUrl
 
 const stageDimensions = {
-  width: 1000,
-  height: 800,
+  width: window.innerWidth*0.55,
+  height: window.innerHeight*0.65,
 }
 
 const StageContainer = ({ children }) => {
@@ -25,11 +25,47 @@ const StageContainer = ({ children }) => {
     display: 'flex',
     justifyContent: 'left',
     alignItems: 'center',
+    width: stageDimensions.width,
+    height: stageDimensions.height,
+    paddingLeft: '0px',
+    paddingRight: '20px',
+    paddingTop: '0px',
+    paddingBottom: '20px',
+    overflow: 'auto',
+    backgroundColor: "#351C75",
+  }
+
+  return <div style={style}>{children}</div>
+}
+
+const MenuAndLegendContainer = ({ children }) => {
+  const style = {
+    display: 'flex',
+    justifyContent: 'left',
+    alignItems: 'center',
+    width: '100%',
+    height: '100%',
+    paddingLeft: '0px',
+    paddingRight: '0px',
+    paddingTop: '20px',
+    paddingBottom: '20px',
+    backgroundColor: "#351C75",
+  }
+
+  return <div style={style}>{children}</div>
+}
+
+const MainPageContainer = ({ children }) => {
+  const style = {
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'left',
     flex: 1,
     width: '100%',
     height: '100%',
-    paddingLeft: '1px',
-    paddingTop: '50px',
+    paddingLeft: '0px',
+    paddingTop: '20px',
     overflow: 'auto',
     backgroundColor: "#351C75",
   }
@@ -113,6 +149,7 @@ const AnnotationArea = () => {
     height: '100%', // 100% of the viewport height
     width: '100%', // 100% of the viewport height
     backgroundColor: '#351C75',
+    overflow: 'auto',
   }
 
   // Image management
@@ -852,7 +889,7 @@ useEffect(() => {
 
 
   return (
-    <div style={style}>
+    <div key='Wrapper' style={style} >
       <MenuContainer>
         <Menu
           onReset={undoLast}
@@ -877,152 +914,155 @@ useEffect(() => {
           userDataExists={userDataExists}
         />
       </MenuContainer>
-      <StageContainer>
-        <Stage
-          ref={stageRef}
-          key='main-stage'
-          width={stageDimensions.width}
-          height={stageDimensions.height}
-          onClick={handleClick}
-          onMouseMove={handleMouseMove}
-        >
-          <Layer key='0'>
-            {image && (
-              <Image
-                width={stageDimensions.width}
-                height={stageDimensions.height}
-                image={image}
-                x={0}
-                y={0}
-              />
-            )}
-          </Layer>
-          <Layer key='1'>
-            {polygons.map((polygon, i) => (
-              <Group
-                key={`group-${i}-${polygon[0].id}`}
-                draggable
-                onClick={(e) => {
-                  if (e.evt.button === 0) {
-                    e.cancelBubble = true
-                    console.log('Clicked on polygon', i)
-                  }
-                }}
-                onContextMenu={(e) => {
-                  e.evt.preventDefault()
-                  const mousePos = stageRef.current
-                    .getStage()
-                    .getPointerPosition()
-                  setContextMenu({
-                    visible: true,
-                    x: mousePos.x,
-                    y: mousePos.y,
-                    polygonID: i,
-                  })
-                  if(mostUncertain && mostUncertain.includes(i)){
-                    const index=mostUncertain.indexOf(i)
-                    mostUncertain.splice(index,1)}
-                }}
-                onDragEnd={(e) => {
-                  const newPolygon = polygon.map((p) => ({
-                    x: p.x + e.target.x(),
-                    y: p.y + e.target.y(),
-                    color: p.color,
-                    id: p.id,
-                  }))
-                  const newPolygons = [...polygons]
-                  newPolygons[i] = newPolygon
-                  setPolygons(newPolygons)
-                  e.target.position({ x: 0, y: 0 }) // Reset group's position
-                }}
-                onMouseOver={(e) => {
-                  console.log('Mouse over polygon', i)
-                }}
-              >
-                <Line
-                  points={polygon.flatMap((p) => [p.x, p.y])}
-                  fill={polygon[0].color}
-                  opacity={showAmplitudeImage ?0.25 :0.50}
-                  stroke={polygon[0].color}
-                  strokeWidth={4}
-                  closed
-                />
-
-                {polygon.map((point, j) => (
-                  <Circle
-                    key={`circle-${j}-${point.id}`}
-                    x={point.x}
-                    y={point.y}
-                    radius={3}
-                    fill={(() => {
-                    // Define your condition here
-                    const isHighlighted = i == activePoint; // Replace with your actual condition
-                    const isUncertain = mostUncertain && mostUncertain.includes(i);
-
-                    if (isHighlighted) {
-                      return 'red'
-                    }
-                    if (isUncertain) {
-                      return '#800080'
-                    } else {
-                      return '#ffff00'
-                    }
-                    })()}
+      <MainPageContainer>
+        <MenuAndLegendContainer>
+          <StageContainer>
+            <Stage
+              ref={stageRef}
+              key='main-stage'
+              width={stageDimensions.width}
+              height={stageDimensions.height}
+              onClick={handleClick}
+              onMouseMove={handleMouseMove}
+            >
+              <Layer key='0'>
+                {image && (
+                  <Image
+                    width={stageDimensions.width}
+                    height={stageDimensions.height}
+                    image={image}
+                    x={0}
+                    y={0}
+                  />
+                )}
+              </Layer>
+              <Layer key='1'>
+                {polygons.map((polygon, i) => (
+                  <Group
+                    key={`group-${i}-${polygon[0].id}`}
                     draggable
-                    onDragEnd={(e) => {
-                      e.cancelBubble = true // stop event propagation
-                      const newPoint = {
-                        x: e.target.x() + e.target.getParent().x(),
-                        y: e.target.y() + e.target.getParent().y(),
-                        id: point.id,
+                    onClick={(e) => {
+                      if (e.evt.button === 0) {
+                        e.cancelBubble = true
+                        console.log('Clicked on polygon', i)
                       }
-                      const newPolygon = [...polygon]
-                      newPolygon[j] = newPoint
+                    }}
+                    onContextMenu={(e) => {
+                      e.evt.preventDefault()
+                      const mousePos = stageRef.current
+                        .getStage()
+                        .getPointerPosition()
+                      setContextMenu({
+                        visible: true,
+                        x: mousePos.x,
+                        y: mousePos.y,
+                        polygonID: i,
+                      })
+                      if(mostUncertain && mostUncertain.includes(i)){
+                        const index=mostUncertain.indexOf(i)
+                        mostUncertain.splice(index,1)}
+                    }}
+                    onDragEnd={(e) => {
+                      const newPolygon = polygon.map((p) => ({
+                        x: p.x + e.target.x(),
+                        y: p.y + e.target.y(),
+                        color: p.color,
+                        id: p.id,
+                      }))
                       const newPolygons = [...polygons]
                       newPolygons[i] = newPolygon
                       setPolygons(newPolygons)
+                      e.target.position({ x: 0, y: 0 }) // Reset group's position
                     }}
-                  />
+                    onMouseOver={(e) => {
+                      console.log('Mouse over polygon', i)
+                    }}
+                  >
+                    <Line
+                      points={polygon.flatMap((p) => [p.x, p.y])}
+                      fill={polygon[0].color}
+                      opacity={showAmplitudeImage ?0.25 :0.50}
+                      stroke={polygon[0].color}
+                      strokeWidth={4}
+                      closed
+                    />
+
+                    {polygon.map((point, j) => (
+                      <Circle
+                        key={`circle-${j}-${point.id}`}
+                        x={point.x}
+                        y={point.y}
+                        radius={3}
+                        fill={(() => {
+                        // Define your condition here
+                        const isHighlighted = i == activePoint; // Replace with your actual condition
+                        const isUncertain = mostUncertain && mostUncertain.includes(i);
+
+                        if (isHighlighted) {
+                          return 'red'
+                        }
+                        if (isUncertain) {
+                          return '#800080'
+                        } else {
+                          return '#ffff00'
+                        }
+                        })()}
+                        draggable
+                        onDragEnd={(e) => {
+                          e.cancelBubble = true // stop event propagation
+                          const newPoint = {
+                            x: e.target.x() + e.target.getParent().x(),
+                            y: e.target.y() + e.target.getParent().y(),
+                            id: point.id,
+                          }
+                          const newPolygon = [...polygon]
+                          newPolygon[j] = newPoint
+                          const newPolygons = [...polygons]
+                          newPolygons[i] = newPolygon
+                          setPolygons(newPolygons)
+                        }}
+                      />
+                    ))}
+                  </Group>
                 ))}
-              </Group>
-            ))}
-            {currentPolygon.length > 0 && (
-              <Line
-                key='preview'
-                points={[
-                  ...currentPolygon.flatMap((p) => [p.x, p.y]),
-                  nextPoint
-                    ? nextPoint.x
-                    : currentPolygon[currentPolygon.length - 1].x,
-                  nextPoint
-                    ? nextPoint.y
-                    : currentPolygon[currentPolygon.length - 1].y,
-                ]}
-                stroke='purple'
-                strokeWidth={4}
-              />
-            )}
-          </Layer>
-        </Stage>
-      </StageContainer>
-        <Legend>
-        </Legend>
-      {(availableFeaturesNames.length !== 0) && <Scatterplot 
-        featuresList = {availableFeaturesNames}
-        featureX={featureXAxis} 
-        featureY = {featureYAxis}
-        scatterDataX = {scatterplotDataX}
-        scatterDataY = {scatterplotDataY}
-        scatterDataColor = {scatterplotDataColor}
-        scatterTrainingDataX = {scatterplotTrainingDataX}
-        scatterTrainingDataY = {scatterplotTrainingDataY}
-        scatterTrainingDataColor = {scatterplotTrainingDataColor}
-        onFeatureChangeX={onScatterplotFeatureChangeX}
-        onFeatureChangeY={onScatterplotFeatureChangeY} 
-        onPointHover={onPointHover}
-  handleTrainingDataToggle={handleTrainingDataToggle}
-  showTrainingData={showTrainingData}
-      />}
+                {currentPolygon.length > 0 && (
+                  <Line
+                    key='preview'
+                    points={[
+                      ...currentPolygon.flatMap((p) => [p.x, p.y]),
+                      nextPoint
+                        ? nextPoint.x
+                        : currentPolygon[currentPolygon.length - 1].x,
+                      nextPoint
+                        ? nextPoint.y
+                        : currentPolygon[currentPolygon.length - 1].y,
+                    ]}
+                    stroke='purple'
+                    strokeWidth={4}
+                  />
+                )}
+              </Layer>
+            </Stage>
+          </StageContainer>
+          {!contextMenu.visible && (<Legend/>)}
+        </MenuAndLegendContainer>
+        {(availableFeaturesNames.length !== 0) && <Scatterplot 
+          featuresList = {availableFeaturesNames}
+          featureX={featureXAxis} 
+          featureY = {featureYAxis}
+          scatterDataX = {scatterplotDataX}
+          scatterDataY = {scatterplotDataY}
+          scatterDataColor = {scatterplotDataColor}
+          scatterTrainingDataX = {scatterplotTrainingDataX}
+          scatterTrainingDataY = {scatterplotTrainingDataY}
+          scatterTrainingDataColor = {scatterplotTrainingDataColor}
+          onFeatureChangeX={onScatterplotFeatureChangeX}
+          onFeatureChangeY={onScatterplotFeatureChangeY} 
+          onPointHover={onPointHover}
+          handleTrainingDataToggle={handleTrainingDataToggle}
+          showTrainingData={showTrainingData}
+        />}
+      </MainPageContainer>
       {isLoading && <LoadingSpinner />}
       {contextMenu.visible && (
         <PopupMenu
