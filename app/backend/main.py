@@ -173,6 +173,10 @@ class FeaturesList(BaseModel):
 class Polygons(BaseModel):
     points: List[List[int]]
 
+class BackendState(BaseModel):
+    classifier: str
+    dataset: str
+    segmentation_method: str
 
 app = FastAPI()
 prefix_router = APIRouter(prefix="/api")
@@ -741,6 +745,15 @@ async def user_data_exists():
     global user_dataset_path 
     value = user_dataset_path.exists()
     return BoolObject(value=value)
+
+@prefix_router.get("/backend_state")
+async def get_backend_state():
+    return BackendState(
+        classifier=manager.get_current_classification_method(),
+        segmentation_method=manager.get_current_segmentation_method(),
+        dataset=manager.get_dataset_id()
+    )
+
 
 
 app.include_router(prefix_router)
