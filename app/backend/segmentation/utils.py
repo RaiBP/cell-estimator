@@ -12,7 +12,7 @@ IMAGE_WIDTH = 512
 
 
 def list_segmentation_methods() -> List[str]:
-    return ['cellpose', 'threshold', 'sam', 'fastsam']
+    return ['cellpose', 'threshold', 'fastsam']
 
 def create_segmentation_model(selector):
     if selector == "cellpose":
