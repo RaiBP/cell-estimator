@@ -228,7 +228,7 @@ function Menu({
       <li>Konstantinos Larintzakis</li>
       <li>Wafa Laroussi</li>
       <li>Michael Lemanov</li>
-      <li>iIvan Nikolovski</li>
+      <li>Ivan Nikolovski</li>
     </ul>
   </div>
     </div>
