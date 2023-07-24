@@ -11,13 +11,9 @@ import { v4 as uuidv4 } from 'uuid'
 import './App.css'
 
 
-const username = 'ami';
-const password = '***REMOVED***';
-
-const token = window.btoa(`${username}:${password}`);
-
-axios.defaults.baseURL = 'https://group06.ami.dedyn.io/api'
-axios.defaults.headers.common['Authorization'] = `Basic ${token}`;
+const apiBaseUrl = 'https://group06.ami.dedyn.io/api'
+// const apiBaseUrl = 'http://localhost:8000/api'
+axios.defaults.baseURL = apiBaseUrl
 
 const stageDimensions = {
   width: 1000,
@@ -42,10 +38,9 @@ const StageContainer = ({ children }) => {
 }
 
 async function setNewImage(imageId, imageType, callback) {
-  const response = await fetch('https://group06.ami.dedyn.io/api/set_image', {
+  const response = await fetch(apiBaseUrl + '/set_image', {
     method: 'POST',
     headers: {
-      'Authorization': `Basic ${token}`,
       accept: 'application/json',
       'Content-Type': 'application/json',
     },
@@ -188,10 +183,9 @@ const [activePoint, setActivePoint] = useState(null);
   async function classifyCurrentImage(callback) {
     const masks = divideElements(polygons)
     setIsLoading(true)
-    const response = await fetch('https://group06.ami.dedyn.io/api/classify', {
+    const response = await fetch(apiBaseUrl + '/classify', {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${token}`,
         accept: 'application/json',
         'Content-Type': 'application/json',
       },
