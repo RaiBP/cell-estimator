@@ -10,7 +10,7 @@ const password = '***REMOVED***';
 
 const token =  window.btoa(`${username}:${password}`);
 
-axios.defaults.baseURL = 'https://api.group06.ami.dedyn.io/'
+axios.defaults.baseURL = 'https://group06.ami.dedyn.io/api'
 axios.defaults.headers.common['Authorization'] = `Basic ${token}`;
 
 function DatasetSelector({ onChange }) {

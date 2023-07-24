@@ -16,7 +16,7 @@ const password = '***REMOVED***';
 
 const token = window.btoa(`${username}:${password}`);
 
-axios.defaults.baseURL = 'https://api.group06.ami.dedyn.io/'
+axios.defaults.baseURL = 'https://group06.ami.dedyn.io/api'
 axios.defaults.headers.common['Authorization'] = `Basic ${token}`;
 
 const stageDimensions = {
@@ -42,7 +42,7 @@ const StageContainer = ({ children }) => {
 }
 
 async function setNewImage(imageId, imageType, callback) {
-  const response = await fetch('https://api.group06.ami.dedyn.io/set_image', {
+  const response = await fetch('https://group06.ami.dedyn.io/api/set_image', {
     method: 'POST',
     headers: {
       'Authorization': `Basic ${token}`,
@@ -188,7 +188,7 @@ const [activePoint, setActivePoint] = useState(null);
   async function classifyCurrentImage(callback) {
     const masks = divideElements(polygons)
     setIsLoading(true)
-    const response = await fetch('https://api.group06.ami.dedyn.io/classify', {
+    const response = await fetch('https://group06.ami.dedyn.io/api/classify', {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${token}`,

@@ -3,9 +3,9 @@ import os
 from re import A
 from shutil import which
 from feature_extraction.feature_extractor import FeatureExtractor
-from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, Response
-#from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, APIRouter
+from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Union
 from pathlib import Path
@@ -13,7 +13,6 @@ from enum import Enum
 import numpy as np
 import pandas as pd
 import cv2
-
 
 from segmentation import utils as segmentation_utils
 from pipeline import config as pipeline_config 
@@ -176,60 +175,34 @@ class Polygons(BaseModel):
 
 
 app = FastAPI()
+prefix_router = APIRouter(prefix="/api")
 
 # Global help variables
 shared_features = None
 features_to_plot = None
 corrected_predictions = None
 
-#app.add_middleware(
-#    CORSMiddleware,
-#    allow_origins=["*"],
-#    allow_credentials=True,
-#    allow_methods=["*"],
-#    allow_headers=["*"],
-#)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Salt to your taste
-ALLOWED_ORIGINS = ['https://group06.ami.dedyn.io', 'http://group06.ami.dedyn.io']
-
-# handle CORS preflight requests
-@app.options('/{rest_of_path:path}')
-async def preflight_handler(request: Request, rest_of_path: str) -> Response:
-    origin = request.headers.get('origin')
-    if origin in ALLOWED_ORIGINS:
-        response = Response()
-        response.headers['Access-Control-Allow-Origin'] = origin
-        response.headers['Access-Control-Allow-Methods'] = 'POST, GET, DELETE, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Authorization, Content-Type'
-        return response
-    return Response(status_code=403)  # Forbidden if origin not allowed
-
-# set CORS headers
-@app.middleware("http")
-async def add_CORS_header(request: Request, call_next):
-    response = await call_next(request)
-    origin = request.headers.get('origin')
-    if origin in ALLOWED_ORIGINS:
-        response.headers['Access-Control-Allow-Origin'] = origin
-        response.headers['Access-Control-Allow-Methods'] = 'POST, GET, DELETE, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Authorization, Content-Type'
-    return response
-
-
-@app.get("/datasets")
+@prefix_router.get("/datasets")
 async def get_datasets():
     return {
         # are we sure all the datasets will be in .pre file format?
         "datasets": [dataset.name for dataset in data_folder.glob("*.pre")],
     }
 
-@app.get("/dataset_info")
+@prefix_router.get("/dataset_info")
 async def get_dataset_info():
     return DatasetInfo(file=dataset_path.name, num_images=len(image_loader))
 
 
-@app.post("/select_dataset")
+@prefix_router.post("/select_dataset")
 async def select_dataset(dataset: Dataset):
     """
     Method for changing the dataset file from which to load the images
@@ -248,7 +221,7 @@ async def select_dataset(dataset: Dataset):
     return DatasetInfo(file=dataset_path.name, num_images=num_imgs)
 
 
-@app.post("/select_segmentator")
+@prefix_router.post("/select_segmentator")
 async def select_segmentator(segmentation_method: SegmentationMethod):
     """
     Method for initializing a new segmentator of type indicated by 'segmentation_method'
@@ -262,7 +235,7 @@ async def select_segmentator(segmentation_method: SegmentationMethod):
     return {'message': f"New segmentator of type {manager.get_current_segmentation_method()} initialized."}
 
 
-@app.post("/select_classifier")
+@prefix_router.post("/select_classifier")
 async def select_classifier(classification_method: ClassificationMethod):
     """
     Method for initializing a new classifier of type indicated by 'classification_method'
@@ -277,18 +250,18 @@ async def select_classifier(classification_method: ClassificationMethod):
     return {'message': message}
 
 
-@app.get("/get_segmentation_methods")
+@prefix_router.get("/get_segmentation_methods")
 async def get_segmentation_methods():
     return {"segmentation_methods": list_segmentation_methods()}
 
 
-@app.get("/get_classification_methods")
+@prefix_router.get("/get_classification_methods")
 async def get_classification_methods():
     global user_models_folder
     return {"classification_methods": list_classification_methods(user_models_folder)}
 
 
-@app.post("/set_image")
+@prefix_router.post("/set_image")
 async def set_image(image_query: ImageQuery):
     """
     Method to set an image as the current image in the backend manager. All subsequent operations will be 
@@ -363,7 +336,7 @@ async def set_image(image_query: ImageQuery):
             )
 
 
-@app.get("/segment")
+@prefix_router.get("/segment")
 async def segment():
     global manager, logging
 
@@ -407,7 +380,7 @@ async def segment():
     )
 
 
-@app.post("/classify")
+@prefix_router.post("/classify")
 async def classify(classify_query: ClassifyQuery): 
     global manager, logging
 
@@ -477,7 +450,7 @@ async def classify(classify_query: ClassifyQuery):
     return predictions
 
 
-@app.post("/save_masks_and_labels")
+@prefix_router.post("/save_masks_and_labels")
 async def save_masks_and_labels(predictions: List[str]):
     """
     Method to save the masks and labels once the user has confirmed that they are correct.
@@ -546,7 +519,7 @@ async def save_masks_and_labels(predictions: List[str]):
     return {"message": "User data has been saved"}
     
 
-@app.post("/images")
+@prefix_router.post("/images")
 async def get_images(image_query: ImageQuery):
     global manager, logging
 
@@ -627,12 +600,12 @@ async def get_images(image_query: ImageQuery):
     )
 
 
-@app.get('/download_masks_and_labels')
+@prefix_router.get('/download_masks_and_labels')
 async def download_masks_and_labels_route():
     return FileResponse(user_dataset_path, media_type='application/octet-stream', filename=user_dataset)
 
 
-@app.post("/receive_predictions")
+@prefix_router.post("/receive_predictions")
 async def receive_predictions(predictions_list: PredictionsList):
     """
     Method for receiving predictions from frontend and saving them in the PipelineManager
@@ -644,7 +617,7 @@ async def receive_predictions(predictions_list: PredictionsList):
     return {"message": "Predictions saved succesfully"}
 
 
-@app.get("/retrain_model")
+@prefix_router.get("/retrain_model")
 async def retrain_model():
     """
     Method for performing active learning based on the user-corrected predictions
@@ -689,7 +662,7 @@ async def retrain_model():
     return {"message": "Model retrained succesfully"}
 
 
-@app.post("/features_and_data_to_plot")
+@prefix_router.post("/features_and_data_to_plot")
 async def get_features_and_data_to_plot(features: FeaturesForScatterplot):
     """
     Method for saving the features that will be used for plotting
@@ -750,7 +723,7 @@ async def get_features_and_data_to_plot(features: FeaturesForScatterplot):
                            feature_y_training_values=feature_y_training_values,
                            labels_training = labels_training)
 
-@app.get("/available_features_names")
+@prefix_router.get("/available_features_names")
 async def get_available_features_names():
     """
     Method for listing available features that the frontend
@@ -763,8 +736,11 @@ async def get_available_features_names():
 
     return FeaturesList(features=result_list)
 
-@app.get("/user_data_exists")
+@prefix_router.get("/user_data_exists")
 async def user_data_exists():
     global user_dataset_path 
     value = user_dataset_path.exists()
     return BoolObject(value=value)
+
+
+app.include_router(prefix_router)
