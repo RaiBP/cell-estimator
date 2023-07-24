@@ -12,7 +12,7 @@ import './App.css'
 
 
 const apiBaseUrl = 'https://group06.ami.dedyn.io/api'
-// const apiBaseUrl = 'http://localhost:8000/api'
+//const apiBaseUrl = 'http://localhost:8000/api'
 axios.defaults.baseURL = apiBaseUrl
 
 const stageDimensions = {
@@ -902,7 +902,7 @@ useEffect(() => {
                 <Line
                   points={polygon.flatMap((p) => [p.x, p.y])}
                   fill={polygon[0].color}
-                  opacity={showAmplitudeImage ?0.25 :1}
+                  opacity={showAmplitudeImage ?0.25 :0.50}
                   stroke={polygon[0].color}
                   strokeWidth={4}
                   closed
