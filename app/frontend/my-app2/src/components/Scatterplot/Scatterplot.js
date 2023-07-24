@@ -151,8 +151,9 @@ const trainingData = scatterTrainingDataX && scatterTrainingDataY && scatterTrai
               <Cell
                 key={`cell-${index}`}
                 fill={entry.color}
-                strokeWidth={2}
-                size={80}
+              stroke='#000'
+                strokeWidth={2.5}
+                size={160}
               />
             )
           ))}

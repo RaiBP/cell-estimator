@@ -734,7 +734,7 @@ async def get_available_features_names():
     can access for the current image.
     """
     features = manager.get_features_names()
-    features_to_remove = ['Labels', 'LabelsEntropy', 'ImageID', 'DatasetID', 'oofProbability', 'aggProbability', 'wbcProbability', 'rbcProbability', 'pltProbability']
+    features_to_remove = ['MaskID', 'Labels', 'LabelsEntropy', 'ImageID', 'DatasetID', 'oofProbability', 'aggProbability', 'wbcProbability', 'rbcProbability', 'pltProbability']
 
     result_list = [x for x in features if x not in features_to_remove]
 
