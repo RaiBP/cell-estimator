@@ -9,8 +9,13 @@ const password = '***REMOVED***'
 
 const token = window.btoa(`${username}:${password}`)
 
-axios.defaults.baseURL = 'https://group06.ami.dedyn.io/api'
+const isRunningInKubernetes = process.env.KUBERNETES === true;
+const apiBaseUrl = isRunningInKubernetes ? 'https://group06.ami.dedyn.io/api' : 'http://localhost:8000/api';
+
+//axios.defaults.baseURL = 'https://group06.ami.dedyn.io/api'
 //axios.defaults.baseURL = 'http://localhost:8000/api'
+
+axios.defaults.baseURL = apiBaseUrl
 axios.defaults.headers.common['Authorization'] = `Basic ${token}`
 
 function DatasetSelector({ onChange, current }) {

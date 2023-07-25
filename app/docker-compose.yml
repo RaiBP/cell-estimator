@@ -15,6 +15,7 @@ services:
       - USER_DATA_FOLDER=/app/backend/user_data
       - TRAINING_DATA_FOLDER=/app/backend/classification/data
       - NUMBA_CACHE_DIR=/tmp 
+      - KUBERNETES=false
     command: supervisord
     deploy:  # Add this section for GPU access
       resources:

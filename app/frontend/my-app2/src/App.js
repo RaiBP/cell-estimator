@@ -10,8 +10,9 @@ import { v4 as uuidv4 } from 'uuid'
 
 import './App.css'
 
-
-const apiBaseUrl = 'https://group06.ami.dedyn.io/api'
+const isRunningInKubernetes = process.env.KUBERNETES === true;
+const apiBaseUrl = isRunningInKubernetes ? 'https://group06.ami.dedyn.io/api' : 'http://localhost:8000/api';
+//const apiBaseUrl = 'https://group06.ami.dedyn.io/api'
 //const apiBaseUrl = 'http://localhost:8000/api'
 axios.defaults.baseURL = apiBaseUrl
 
@@ -159,7 +160,6 @@ const AnnotationArea = () => {
   const [image, setImage] = useState(null)
   const [imageId, setImageId] = useState(0)
   const [currentDataset, setCurrentDataset] = useState(null)
-  const img = new window.Image()
 
   // Polygon management
   const [polygons, setPolygons] = useState([])
@@ -172,7 +172,6 @@ const AnnotationArea = () => {
   const [isSegmented, setIsSegmented] = useState(false);
 
   // Preview line management
-  const [previewLine, setPreviewLine] = useState(null)
   const [isClassified, setIsClassified] = useState(false)
  const [classificationMethods, setClassificationMethods] = useState([])
   const [scatterplotDataX, setScatterplotDataX] = useState(null);
@@ -201,7 +200,6 @@ const [activePoint, setActivePoint] = useState(null);
   })
   const [availableFeaturesNames, setAvailableFeaturesNames] = useState([])
 
-  const [imageUrl, setImageUrl] = useState('');
   // Component management
   const stageRef = React.useRef()
 
@@ -279,11 +277,12 @@ const [activePoint, setActivePoint] = useState(null);
         return '#00ff00'
       case 'oof':
         return '#ffff00'
+      default:
+        return '#ffa500'
     }
   }
 
   function getClassIdByColor(color) {
-    console.log(color)
     switch (color) {
       case '#ff0000':
         return 'rbc'
@@ -294,6 +293,8 @@ const [activePoint, setActivePoint] = useState(null);
       case '#00ff00':
         return 'agg'
       case '#ffff00':
+        return 'oof'
+      default:
         return 'oof'
     }
   }
@@ -500,6 +501,7 @@ useEffect(() => {
 
 // Hook for showing amplitude or phase image
 useEffect(() => {
+const img = new window.Image();
   if (showAmplitudeImage) {
     img.src = amplitudeImage
   } else {
@@ -744,7 +746,6 @@ useEffect(() => {
     }
     if (option === 'plot') {
       const randomImageUrl = 'https://www.istockphoto.com/de/foto/wandern-in-den-allg%C3%A4uer-alpen-gm1141196125-305637944';
-      setImageUrl(randomImageUrl);
 
     // Open the image in a new window
       window.open(randomImageUrl, '_blank');
