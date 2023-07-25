@@ -1,26 +1,22 @@
-**Dear student group of AMI 2023,**
+# Group 06 - Cell estimator
 
-this is your GitLab repository. Please follow the guidelines we gave you in the session at 25th of may:
+Welcome to the project page of Group06. Our project is called Cell estimator. Our website offers blood cell segmentation, classification and relabeling functionality.
 
- - Keep your repository clean and structured
- - The branch relevant for submission is `main` (formely called `master`)
- - Replace this readme file with the respective information concerning your project
- - GitLab is not just about code, but also about project organization. Leverage its power through Issues, Branches, Boards, Wiki, ...
- - A reasonable amount of visible contribution for each group member is required. GitLab offers many ways to do so!
+## Running the web application
+
+### Requirements
+
+1. Since we use segmentation algorithms that make use of the GPU, you will need a NVIDIA GPU in order to run it. The driver should support CUDA 12.0. Using the same hardware environment as the provided Kubernetes cluster works.
+2. Docker
+3. In order for your GPU to play nicely with docker, you need to install the nvidia container toolkit and restart your docker daemon
+
+```
+sudo apt install nvidia-container-toolkit
+sudo systemctl restart docker
+```
+
+### Running the docker image
 
 
-**What about these folders?**
 
-We initialized your repository with two folders. The `app` folder is where you will implement your containerized web application once you made plans how and what you want to achieve. The `deploy` folder is where configuration will be done to deploy your application on kubernetes. We will discuss these topics in a dedicated session.
 
-For code that is about data exploration etc. just create folders beside the existing ones.
-
-**What about the group share?**
-
-We placed the access information in your [project's wiki](/../../wikis/Home).
-
-&nbsp;
-
-Best regards and have fun!
-
-*AMI-Team*
