@@ -20,7 +20,7 @@ sudo systemctl restart docker
 1. Clone this repository with its submodules:
 
 ```
-gi` clone https://gitlab.lrz.de/ldv/teaching/ami/ami2023/projects/Group06.git --recurse-submodules
+git clone https://gitlab.lrz.de/ldv/teaching/ami/ami2023/projects/Group06.git --recurse-submodules
 ```
 
 2. Login to the container registry:
