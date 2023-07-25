@@ -3,7 +3,7 @@ import os
 from re import A
 from shutil import which
 from feature_extraction.feature_extractor import FeatureExtractor
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -708,7 +708,7 @@ async def get_features_and_data_to_plot(features: FeaturesForScatterplot):
         assert shared_features is not None and predictions is not None
     except Exception:
         logging.error(f"Either features or labels not found for image with image ID '{image_id}' and dataset ID '{dataset_id}'")
-        return {"error": "Either labels or features not found"}
+        raise HTTPException(status_code=404, detail="Either labels or features not found")
 
     feature_x_values = shared_features[feature_x].tolist()
     feature_y_values = shared_features[feature_y].tolist()

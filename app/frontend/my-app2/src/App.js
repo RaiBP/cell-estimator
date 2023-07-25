@@ -749,11 +749,11 @@ useEffect(() => {
         const labelsTrainingData = response.data.labels_training
         const colorsTrainingData = labelsTrainingData.map((label) => getColorByClassId(label))
         setScatterplotTrainingDataColor(colorsTrainingData)
-        setIsLoading(false);
       })
       .catch((error) => {
         console.error(`Error fetching training data for scatterplot: ${error}`)
       })
+    setIsLoading(false);
   }
 
   const handleTrainingDataToggle = (event) => {
@@ -783,11 +783,11 @@ useEffect(() => {
       .then((response) => {
         setScatterplotDataX(response.data.feature_x_values)
         setScatterplotTrainingDataX(response.data.feature_x_training_values)
-        setIsLoading(false);
       })
       .catch((error) => {
         console.error(`Error fetching data for ${selectedFeature} X-axis feature: ${error}`)
       })
+    setIsLoading(false);
   }
 
   function onScatterplotFeatureChangeY(e) {
@@ -802,11 +802,11 @@ useEffect(() => {
       .then((response) => {
         setScatterplotDataY(response.data.feature_y_values)
         setScatterplotTrainingDataY(response.data.feature_y_training_values)
-        setIsLoading(false);
       })
       .catch((error) => {
         console.error(`Error fetching data for ${selectedFeature} Y-axis feature: ${error}`)
       })
+    setIsLoading(false);
   }
 
   function onSegmentationMethodChange(e) {
@@ -818,12 +818,12 @@ useEffect(() => {
         method: selectedMethod,
       })
       .then((response) => {
-        setIsLoading(false);
         console.log(response.data) // Output the server's response to the console.
       })
       .catch((error) => {
         console.error(`Error selecting segmentation method: ${error}`)
       })
+    setIsLoading(false);
   }
 
   function onClassificationMethodChange(e) {
@@ -836,12 +836,12 @@ useEffect(() => {
         method: selectedMethod,
       })
       .then((response) => {
-        setIsLoading(false);
         console.log(response.data) // Output the server's response to the console.
       })
       .catch((error) => {
         console.error(`Error selecting classification method: ${error}`)
       })
+    setIsLoading(false);
   }
 
   function onDatasetChange(e) {
