@@ -36,6 +36,13 @@ cd app
 ./pull_and_run.sh
 ```
 
+After running this, the image should be pulled and the app should start on localhost:3000. Since the API takes more time to start than the frontend, it might be necessary to refresh the page in case you get fetch errors in the frontend. If you want to rerun after pulling, just run:
+
+```
+cd app
+docker-compose up
+```
+
 Alternatively, you can build the image locally if you prefer. This takes however quite some time:
 
 ```
