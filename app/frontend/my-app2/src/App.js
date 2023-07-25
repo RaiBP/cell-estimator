@@ -11,9 +11,9 @@ import './App.css'
 
 const isRunningLocally = process.env.REACT_APP_KUBERNETES === "false";
 
-//const apiBaseUrl = isRunningLocally ? 'http://localhost:8000/api' : 'https://group06.ami.dedyn.io/api';
+const apiBaseUrl = isRunningLocally ? 'http://localhost:8000/api' : 'https://group06.ami.dedyn.io/api';
 //const apiBaseUrl = 'https://group06.ami.dedyn.io/api'
-const apiBaseUrl = 'http://localhost:8000/api'
+//const apiBaseUrl = 'http://localhost:8000/api'
 axios.defaults.baseURL = apiBaseUrl
 
 const stageDimensions = {
