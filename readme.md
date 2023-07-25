@@ -41,7 +41,11 @@ After this, you should be able to see the app running in localhost:3000.
 
 ## Using the deployed web application 
 
-Visit https://group06.ami.dedyn.io 
+1. Login to the eduVPN
+2. Visit https://group06.ami.dedyn.io and login with the credentials below:
+
+Username: ami
+Password: ***REMOVED***
 
 
 
