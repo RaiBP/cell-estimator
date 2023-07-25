@@ -4,6 +4,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: gitlab.lrz.de:5005/ldv/teaching/ami/ami2023/projects/group06/app:latest
     volumes:
       - ami_share:/app/data
     stop_signal: SIGINT
