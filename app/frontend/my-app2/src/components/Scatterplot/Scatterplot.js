@@ -42,7 +42,13 @@ const ScatterplotComponent = ({
   scatterTrainingDataColor 
 }) => {
   if (!scatterplotDataX || !scatterplotDataY) {
-    return <div>No Data</div>;  
+
+    return  <div className="no-data-scatter">
+          No Data
+          <div className="no-data-message">
+            Please click on Segment then Classify to extract features
+          </div>
+        </div>;
   }
 
   // Combine the scatterplot data and training data if they exist

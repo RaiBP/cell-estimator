@@ -17,7 +17,7 @@ axios.defaults.baseURL = apiBaseUrl
 
 const stageDimensions = {
   width: window.innerWidth*0.55,
-  height: window.innerHeight*0.65,
+  height: window.innerWidth*0.4,
 }
 
 const StageContainer = ({ children }) => {
@@ -404,7 +404,7 @@ const [activePoint, setActivePoint] = useState(null);
       setPolygons(transformedPolygons)
       setIsClassified(true)
 
-      if (availableFeaturesNames.length == 0) {
+      if (availableFeaturesNames.length === 0) {
         fetchAvailableFeaturesNames()
       }
   }
@@ -466,7 +466,7 @@ const [activePoint, setActivePoint] = useState(null);
       setScatterplotDataColor(newDataColor)
       setIsClassified(true)
 
-      if (availableFeaturesNames.length == 0) {
+      if (availableFeaturesNames.length === 0) {
         fetchAvailableFeaturesNames()
       }
     } else {
