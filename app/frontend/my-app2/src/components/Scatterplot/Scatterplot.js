@@ -1,6 +1,4 @@
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Cell,  } from 'recharts';
-import axios from 'axios'
-import React, { useState, useEffect } from 'react'
 import './Scatterplot.css';
 
 const units = {

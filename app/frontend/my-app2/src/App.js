@@ -10,8 +10,9 @@ import { v4 as uuidv4 } from 'uuid'
 
 import './App.css'
 
-const isRunningInKubernetes = process.env.KUBERNETES === true;
-const apiBaseUrl = isRunningInKubernetes ? 'https://group06.ami.dedyn.io/api' : 'http://localhost:8000/api';
+const isRunningLocally = process.env.REACT_APP_KUBERNETES === "false";
+
+const apiBaseUrl = isRunningLocally ? 'http://localhost:8000/api' : 'https://group06.ami.dedyn.io/api';
 //const apiBaseUrl = 'https://group06.ami.dedyn.io/api'
 //const apiBaseUrl = 'http://localhost:8000/api'
 axios.defaults.baseURL = apiBaseUrl
@@ -709,6 +710,9 @@ useEffect(() => {
         break
       case 'noAction':
         noAction = true
+        break
+      default:
+        noAction = true
     }
 
     if (!deletePolygon && !noAction) {
@@ -996,7 +1000,7 @@ useEffect(() => {
                         radius={3}
                         fill={(() => {
                         // Define your condition here
-                        const isHighlighted = i == activePoint; // Replace with your actual condition
+                        const isHighlighted = i === activePoint; // Replace with your actual condition
                         const isUncertain = mostUncertain && mostUncertain.includes(i);
 
                         if (isHighlighted) {

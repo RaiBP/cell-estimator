@@ -9,9 +9,8 @@ const password = '***REMOVED***'
 
 const token = window.btoa(`${username}:${password}`)
 
-const isRunningInKubernetes = process.env.KUBERNETES === true;
-const apiBaseUrl = isRunningInKubernetes ? 'https://group06.ami.dedyn.io/api' : 'http://localhost:8000/api';
-
+const isRunningLocally = process.env.REACT_APP_KUBERNETES === "false";
+const apiBaseUrl = isRunningLocally ? 'http://localhost:8000/api' : 'https://group06.ami.dedyn.io/api';
 //axios.defaults.baseURL = 'https://group06.ami.dedyn.io/api'
 //axios.defaults.baseURL = 'http://localhost:8000/api'
 
@@ -36,7 +35,7 @@ function DatasetSelector({ onChange, current }) {
       </label>
       <select id='dataset-selector' className='selector' onChange={onChange}>
         {datasets.map((method, index) => (
-          <option key={index} value={method} selected={method == current}>
+          <option key={index} value={method} selected={method === current}>
             {method}
           </option>
         ))}
@@ -63,7 +62,7 @@ function SegmentationMethodsSelector({ onChange, current }) {
       </label>
       <select id='segmentation' className='selector' onChange={onChange}>
         {segmentationMethods.map((method, index) => (
-          <option key={index} value={method} selected={method == current}>
+          <option key={index} value={method} selected={method === current}>
             {method}
           </option>
         ))}
@@ -93,7 +92,7 @@ function ClassificationMethodsSelector({
       </label>
       <select id='classification' className='selector' onChange={onChange}>
         {classificationMethods.map((method, index) => (
-          <option key={index} value={method} selected={method == current}>
+          <option key={index} value={method} selected={method === current}>
             {method}
           </option>
         ))}

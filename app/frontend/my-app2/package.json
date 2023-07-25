@@ -17,7 +17,7 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "REACT_APP_KUBERNETES=\"$KUBERNETES\" react-scripts start",
     "start-api": "cd ../../backend && uvicorn main:app --reload --host 0.0.0.0",
     "build": "react-scripts build",
     "test": "react-scripts test",
