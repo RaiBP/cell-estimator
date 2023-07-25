@@ -3,22 +3,24 @@ import { Stage, Layer, Line, Image, Circle, Group } from 'react-konva'
 import axios from 'axios'
 import { Menu, MenuContainer } from './components/Menu/Menu'
 import { PopupMenu } from './components/PopupMenu/PopupMenu'
-import { Scatterplot } from './components/Scatterplot/Scatterplot';
+import { Scatterplot } from './components/Scatterplot/Scatterplot'
 import { Legend } from './components/Legend/Legend'
 import { v4 as uuidv4 } from 'uuid'
 
 import './App.css'
 
-const isRunningLocally = process.env.REACT_APP_KUBERNETES === "false";
+const isRunningLocally = process.env.REACT_APP_KUBERNETES === 'false'
 
-const apiBaseUrl = isRunningLocally ? 'http://localhost:8000/api' : 'https://group06.ami.dedyn.io/api';
+const apiBaseUrl = isRunningLocally
+  ? 'http://localhost:8000/api'
+  : 'https://group06.ami.dedyn.io/api'
 //const apiBaseUrl = 'https://group06.ami.dedyn.io/api'
 //const apiBaseUrl = 'http://localhost:8000/api'
 axios.defaults.baseURL = apiBaseUrl
 
 const stageDimensions = {
-  width: window.innerWidth*0.55*0.9,
-  height: window.innerWidth*0.4*0.9,
+  width: window.innerWidth * 0.55 * 0.9,
+  height: window.innerWidth * 0.4 * 0.9,
 }
 
 const StageContainer = ({ children }) => {
@@ -33,7 +35,7 @@ const StageContainer = ({ children }) => {
     paddingTop: '0px',
     paddingBottom: '20px',
     overflow: 'auto',
-    backgroundColor: "#351C75",
+    backgroundColor: '#351C75',
   }
 
   return <div style={style}>{children}</div>
@@ -50,7 +52,7 @@ const MenuAndLegendContainer = ({ children }) => {
     paddingRight: '0px',
     paddingTop: '20px',
     paddingBottom: '20px',
-    backgroundColor: "#351C75",
+    backgroundColor: '#351C75',
   }
 
   return <div style={style}>{children}</div>
@@ -68,7 +70,7 @@ const MainPageContainer = ({ children }) => {
     paddingLeft: '0px',
     paddingTop: '20px',
     overflow: 'auto',
-    backgroundColor: "#351C75",
+    backgroundColor: '#351C75',
   }
 
   return <div style={style}>{children}</div>
@@ -168,25 +170,26 @@ const AnnotationArea = () => {
   const [nextPoint, setNextPoint] = useState(null)
   const [deletedPolygons, setDeletedPolygons] = useState([])
   const [numberOfDeletedPolygons, setNumberOfDeletedPolygons] = useState([])
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSegmented, setIsSegmented] = useState(false);
+  const [isLoading, setIsLoading] = useState(false)
+  const [isSegmented, setIsSegmented] = useState(false)
 
   // Preview line management
   const [isClassified, setIsClassified] = useState(false)
   const [classificationMethods, setClassificationMethods] = useState([])
-  const [scatterplotDataX, setScatterplotDataX] = useState(null);
-  const [scatterplotDataY, setScatterplotDataY] = useState(null);
-  const [scatterplotDataColor, setScatterplotDataColor] = useState(null);
-  const [scatterplotTrainingDataX, setScatterplotTrainingDataX] = useState(null);
-  const [scatterplotTrainingDataY, setScatterplotTrainingDataY] = useState(null);
-  const [scatterplotTrainingDataColor, setScatterplotTrainingDataColor] = useState(null);
-  const [featureXAxis, setFeatureXAxis] = useState("Volume");
-  const [featureYAxis, setFeatureYAxis] = useState("Volume");
-  const [activePoint, setActivePoint] = useState(null);
-  const [classificationError, setClassificationError] = useState(false);
-  const [userDataExists, setUserDataExists] = useState(false);
-  const [showTrainingData, setShowTrainingData] = useState(false);
-  const [cellCount, setCellCount] = useState(0);
+  const [scatterplotDataX, setScatterplotDataX] = useState(null)
+  const [scatterplotDataY, setScatterplotDataY] = useState(null)
+  const [scatterplotDataColor, setScatterplotDataColor] = useState(null)
+  const [scatterplotTrainingDataX, setScatterplotTrainingDataX] = useState(null)
+  const [scatterplotTrainingDataY, setScatterplotTrainingDataY] = useState(null)
+  const [scatterplotTrainingDataColor, setScatterplotTrainingDataColor] =
+    useState(null)
+  const [featureXAxis, setFeatureXAxis] = useState('Volume')
+  const [featureYAxis, setFeatureYAxis] = useState('Volume')
+  const [activePoint, setActivePoint] = useState(null)
+  const [classificationError, setClassificationError] = useState(false)
+  const [userDataExists, setUserDataExists] = useState(false)
+  const [showTrainingData, setShowTrainingData] = useState(false)
+  const [cellCount, setCellCount] = useState(0)
 
   // Context Menu for Polygon-editing
   const [contextMenu, setContextMenu] = useState({
@@ -195,14 +198,14 @@ const AnnotationArea = () => {
     y: 0,
     polygonID: -1,
   })
-  
+
   const [availableFeaturesNames, setAvailableFeaturesNames] = useState([])
 
   // Component management
   const stageRef = React.useRef()
 
   // Most uncertain
-  const [mostUncertain,setMostUncertain]= useState([])
+  const [mostUncertain, setMostUncertain] = useState([])
 
   async function retrainModel() {
     setIsLoading(true)
@@ -229,7 +232,7 @@ const AnnotationArea = () => {
     setIsLoading(false)
     callback(predictions)
     console.log(predictions)
-    const mu=find_max_entropy(predictions)
+    const mu = find_max_entropy(predictions)
     setMostUncertain(mu)
     return predictions
   }
@@ -241,27 +244,28 @@ const AnnotationArea = () => {
     setIsLoading(false)
   }
 
-  function find_max_entropy(objects){
+  function find_max_entropy(objects) {
     // Key to compare values against
-    const keyToCompare = 'LabelsEntropy';
-    let threshold = 1.3;
-    let maxObject = [];
+    const keyToCompare = 'LabelsEntropy'
+    let threshold = 1.3
+    let maxObject = []
 
     // Iterate through each object
     for (const obj of objects) {
-    // Access the value of the specified key
-    const value = obj.features[keyToCompare];
+      // Access the value of the specified key
+      const value = obj.features[keyToCompare]
 
-    // Compare the value with the current maximum value
-    if (value > threshold) {
-    // Update the maximum value and corresponding object
-    maxObject.push(obj);
-    }}
+      // Compare the value with the current maximum value
+      if (value > threshold) {
+        // Update the maximum value and corresponding object
+        maxObject.push(obj)
+      }
+    }
 
     // maxObject now holds the object with the largest value for the specified key
-    const maskIDs = maxObject.map(obj => obj.features.MaskID);
-    return maskIDs;
-}
+    const maskIDs = maxObject.map((obj) => obj.features.MaskID)
+    return maskIDs
+  }
 
   function getColorByClassId(classId) {
     switch (classId) {
@@ -345,7 +349,7 @@ const AnnotationArea = () => {
   }
 
   function segmentCallback(receivedPolygons) {
-    setClassificationError(false);
+    setClassificationError(false)
     const transformedPolygons = []
 
     if (receivedPolygons.length !== 0) {
@@ -373,12 +377,12 @@ const AnnotationArea = () => {
   }
 
   async function classifyCallback(labels) {
-    setClassificationError(false);
+    setClassificationError(false)
     const newFeaturesScatterDataX = []
     const newFeaturesScatterDataY = []
     const newFeaturesColor = []
 
-    if (labels.length !== 0) { 
+    if (labels.length !== 0) {
       const transformedPolygons = polygons.map((polygon, index) => {
         const classId = labels[index]['class_id']
 
@@ -406,8 +410,7 @@ const AnnotationArea = () => {
       if (availableFeaturesNames.length === 0) {
         fetchAvailableFeaturesNames()
       }
-  }
-  else {
+    } else {
       if (polygons.length !== 0) {
         // if this is the case, there has been an error with the classification
         setClassificationError(true)
@@ -418,11 +421,10 @@ const AnnotationArea = () => {
     setActivePoint(null)
   }
 
-
   async function setImageCallback(response_json) {
     // This is a callback function that is called when the image is fetched
-    // Its only purpose is to set the image state variables 
-    setClassificationError(false);
+    // Its only purpose is to set the image state variables
+    setClassificationError(false)
 
     setAmplitudeImage(
       `data:image/jpeg;base64,${response_json.amplitude_img_data}`
@@ -459,8 +461,7 @@ const AnnotationArea = () => {
         newDataX.push(polygonWithPrediction.features[featureXAxis])
         newDataY.push(polygonWithPrediction.features[featureYAxis])
         newDataColor.push(getColorByClassId(polygonWithPrediction.class_id))
-        
-      })      
+      })
 
       setScatterplotDataX(newDataX)
       setScatterplotDataY(newDataY)
@@ -477,94 +478,93 @@ const AnnotationArea = () => {
       setScatterplotDataY(null)
       setScatterplotDataColor(null)
     }
-    setPolygons(transformedPolygons) 
+    setPolygons(transformedPolygons)
     setActivePoint(null)
   }
 
- const onPointHover = (index) => {
-    setActivePoint(index);
-  };
+  const onPointHover = (index) => {
+    setActivePoint(index)
+  }
 
-// Hook for checking if there are any drawn polygons
-useEffect(() => {
-  setIsSegmented(polygons.length !== 0);
-}, [polygons]);
+  // Hook for checking if there are any drawn polygons
+  useEffect(() => {
+    setIsSegmented(polygons.length !== 0)
+  }, [polygons])
 
   useEffect(() => {
     // Call the function when the app opens
-    checkUserData();
-  }, []);
+    checkUserData()
+  }, [])
 
-useEffect(() => {
-    console.log(`Current Image ID: ${imageId}`);
-}, [imageId]);
+  useEffect(() => {
+    console.log(`Current Image ID: ${imageId}`)
+  }, [imageId])
 
-// Hook for showing amplitude or phase image
-useEffect(() => {
-const img = new window.Image();
-  if (showAmplitudeImage) {
-    img.src = amplitudeImage
-  } else {
-    img.src = phaseImage
-  }
-  img.onload = () => {
-    setImage(img)
-  }
-}, [showAmplitudeImage, amplitudeImage, phaseImage])
-
-useEffect(() => {
-  const image_type = showAmplitudeImage ? 0 : 1
-
-  const setNewImageAsync = async () => {
-    setIsLoading(true)
-    await setNewImage(imageId, image_type, setImageCallback)
-    setIsLoading(false)
-  }
-
-  setNewImageAsync()
-}, [imageId, showAmplitudeImage, currentDataset])
-
-// Hook for keeping track of lines
-useEffect(() => {
-  currentPolygonRef.current = currentPolygon
-}, [currentPolygon])
-
-
-// Hook for keeping track of number of cells
-useEffect(() => {
-  setCellCount(polygons.length);
-}, [polygons])
-
-// Hook for registering keydown events -- happens only when component is mounted
-useEffect(() => {
-  // Handling keydown events -- registering callback
-  const handleKeyDown = (event) => {
-    if (event.key === 'r') {
-      deleteall()
-    } else if (event.key === 'z' && event.ctrlKey) {
-    } else if (event.key === 'Escape') {
-      finishPolygon()
-    } else if (event.key === 'ArrowRight') {
-      nextImage()
-    } else if (event.key === 'ArrowLeft') {
-      prevImage()
-    } else if (event.key === 't') {
-      toggleImage()
+  // Hook for showing amplitude or phase image
+  useEffect(() => {
+    const img = new window.Image()
+    if (showAmplitudeImage) {
+      img.src = amplitudeImage
+    } else {
+      img.src = phaseImage
     }
-  }
+    img.onload = () => {
+      setImage(img)
+    }
+  }, [showAmplitudeImage, amplitudeImage, phaseImage])
 
-  window.addEventListener('keydown', handleKeyDown)
-  return () => {
-    window.removeEventListener('keydown', handleKeyDown)
-  }
-}, [])
+  useEffect(() => {
+    const image_type = showAmplitudeImage ? 0 : 1
+
+    const setNewImageAsync = async () => {
+      setIsLoading(true)
+      await setNewImage(imageId, image_type, setImageCallback)
+      setIsLoading(false)
+    }
+
+    setNewImageAsync()
+  }, [imageId, showAmplitudeImage, currentDataset])
+
+  // Hook for keeping track of lines
+  useEffect(() => {
+    currentPolygonRef.current = currentPolygon
+  }, [currentPolygon])
+
+  // Hook for keeping track of number of cells
+  useEffect(() => {
+    setCellCount(polygons.length)
+  }, [polygons])
+
+  // Hook for registering keydown events -- happens only when component is mounted
+  useEffect(() => {
+    // Handling keydown events -- registering callback
+    const handleKeyDown = (event) => {
+      if (event.key === 'r') {
+        deleteall()
+      } else if (event.key === 'z' && event.ctrlKey) {
+      } else if (event.key === 'Escape') {
+        finishPolygon()
+      } else if (event.key === 'ArrowRight') {
+        nextImage()
+      } else if (event.key === 'ArrowLeft') {
+        prevImage()
+      } else if (event.key === 't') {
+        toggleImage()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [])
 
   const handleClick = (e) => {
     if (e.evt.button === 0) {
       const mousePos = stageRef.current.getStage().getPointerPosition()
       setCurrentPolygon([
         ...currentPolygon,
-        { x: mousePos.x, y: mousePos.y, color:'#ffa500', id: uuidv4() },
+        { x: mousePos.x, y: mousePos.y, color: '#ffa500', id: uuidv4() },
       ])
       console.log(currentPolygon)
     } else if (e.evt.button === 2) {
@@ -587,7 +587,6 @@ useEffect(() => {
       setScatterplotDataX(null)
       setScatterplotDataY(null)
       setScatterplotDataColor(null)
-
     }
     setCurrentPolygon([])
     setNextPoint(null)
@@ -662,7 +661,7 @@ useEffect(() => {
       recoveredPolygon = deletedPolygons.splice(-lastNumber, lastNumber)
     }
 
-    const updatedPolygons = [...polygons]; // Create a shallow copy of the polygons array
+    const updatedPolygons = [...polygons] // Create a shallow copy of the polygons array
     updatedPolygons.push(...recoveredPolygon)
     setPolygons(updatedPolygons)
   }
@@ -671,7 +670,7 @@ useEffect(() => {
     setNumberOfDeletedPolygons([...numberOfDeletedPolygons, polygons.length])
     setDeletedPolygons([...deletedPolygons, ...polygons])
     setPolygons([])
-    
+
     setScatterplotDataX(null)
     setScatterplotDataY(null)
     setScatterplotDataColor(null)
@@ -680,14 +679,14 @@ useEffect(() => {
   function handleOptionClick(option) {
     let chosenColor = polygons[contextMenu.polygonID][0].color
     let deletePolygon = false
-    let noAction = false  
+    let noAction = false
 
     switch (option) {
       case 'rbc':
         chosenColor = '#ff0000'
         break
       case 'wbc':
-        chosenColor = '#ffffff'   
+        chosenColor = '#ffffff'
         break
       case 'plt':
         chosenColor = '#0000ff'
@@ -700,14 +699,13 @@ useEffect(() => {
         break
       case 'delete':
         deletePolygon = true
-        let polygonToDelete = [];
-        const updatedPolygons = [...polygons]; // Create a shallow copy of the polygons array
-        polygonToDelete = updatedPolygons.splice(contextMenu.polygonID, 1);
-        setPolygons(updatedPolygons); // Update the state with the new array
+        let polygonToDelete = []
+        const updatedPolygons = [...polygons] // Create a shallow copy of the polygons array
+        polygonToDelete = updatedPolygons.splice(contextMenu.polygonID, 1)
+        setPolygons(updatedPolygons) // Update the state with the new array
 
         setDeletedPolygons([...deletedPolygons, ...polygonToDelete])
         setNumberOfDeletedPolygons([...numberOfDeletedPolygons, 1])
-
 
         setScatterplotDataX(null)
         setScatterplotDataY(null)
@@ -726,9 +724,9 @@ useEffect(() => {
         polygons[contextMenu.polygonID][i].color = chosenColor
       }
       if (scatterplotDataColor !== null) {
-      const newColors = [...scatterplotDataColor];
-      newColors[contextMenu.polygonID] = chosenColor; 
-      setScatterplotDataColor(newColors)
+        const newColors = [...scatterplotDataColor]
+        newColors[contextMenu.polygonID] = chosenColor
+        setScatterplotDataColor(newColors)
       }
     }
 
@@ -749,81 +747,88 @@ useEffect(() => {
   }
 
   async function onScatterplotTrainingData() {
-    setIsLoading(true);
+    setIsLoading(true)
     axios
       .post('/features_and_data_to_plot', {
-        x_feature: featureXAxis, y_feature: featureYAxis
+        x_feature: featureXAxis,
+        y_feature: featureYAxis,
       })
       .then((response) => {
         setScatterplotTrainingDataX(response.data.feature_x_training_values)
         setScatterplotTrainingDataY(response.data.feature_y_training_values)
         const labelsTrainingData = response.data.labels_training
-        const colorsTrainingData = labelsTrainingData.map((label) => getColorByClassId(label))
+        const colorsTrainingData = labelsTrainingData.map((label) =>
+          getColorByClassId(label)
+        )
         setScatterplotTrainingDataColor(colorsTrainingData)
       })
       .catch((error) => {
         console.error(`Error fetching training data for scatterplot: ${error}`)
       })
-    setIsLoading(false);
+    setIsLoading(false)
   }
 
   const handleTrainingDataToggle = (event) => {
-    const checked = event.target.checked;
-    setShowTrainingData(checked);
+    const checked = event.target.checked
+    setShowTrainingData(checked)
 
     if (checked) {
-      onScatterplotTrainingData();
+      onScatterplotTrainingData()
+    } else {
+      setScatterplotTrainingDataX(null)
+      setScatterplotTrainingDataY(null)
+      setScatterplotTrainingDataColor(null)
     }
-    else {
-        setScatterplotTrainingDataX(null)
-        setScatterplotTrainingDataY(null)
-        setScatterplotTrainingDataColor(null)
-    }
-  };
-
+  }
 
   async function onScatterplotFeatureChangeX(e) {
     const selectedFeature = e.target.value
     setFeatureXAxis(selectedFeature)
 
-    setIsLoading(true);
+    setIsLoading(true)
     axios
       .post('/features_and_data_to_plot', {
-        x_feature: selectedFeature, y_feature: featureYAxis
+        x_feature: selectedFeature,
+        y_feature: featureYAxis,
       })
       .then((response) => {
         setScatterplotDataX(response.data.feature_x_values)
         setScatterplotTrainingDataX(response.data.feature_x_training_values)
       })
       .catch((error) => {
-        console.error(`Error fetching data for ${selectedFeature} X-axis feature: ${error}`)
+        console.error(
+          `Error fetching data for ${selectedFeature} X-axis feature: ${error}`
+        )
       })
-    setIsLoading(false);
+    setIsLoading(false)
   }
 
   function onScatterplotFeatureChangeY(e) {
     const selectedFeature = e.target.value
     setFeatureYAxis(selectedFeature)
 
-    setIsLoading(true);
+    setIsLoading(true)
     axios
       .post('/features_and_data_to_plot', {
-        x_feature: featureXAxis, y_feature: selectedFeature
+        x_feature: featureXAxis,
+        y_feature: selectedFeature,
       })
       .then((response) => {
         setScatterplotDataY(response.data.feature_y_values)
         setScatterplotTrainingDataY(response.data.feature_y_training_values)
       })
       .catch((error) => {
-        console.error(`Error fetching data for ${selectedFeature} Y-axis feature: ${error}`)
+        console.error(
+          `Error fetching data for ${selectedFeature} Y-axis feature: ${error}`
+        )
       })
-    setIsLoading(false);
+    setIsLoading(false)
   }
 
   function onSegmentationMethodChange(e) {
     const selectedMethod = e.target.value
 
-    setIsLoading(true);
+    setIsLoading(true)
     axios
       .post('/select_segmentator', {
         method: selectedMethod,
@@ -834,14 +839,13 @@ useEffect(() => {
       .catch((error) => {
         console.error(`Error selecting segmentation method: ${error}`)
       })
-    setIsLoading(false);
+    setIsLoading(false)
   }
 
   function onClassificationMethodChange(e) {
     const selectedMethod = e.target.value
 
-
-    setIsLoading(true);
+    setIsLoading(true)
     axios
       .post('/select_classifier', {
         method: selectedMethod,
@@ -852,7 +856,7 @@ useEffect(() => {
       .catch((error) => {
         console.error(`Error selecting classification method: ${error}`)
       })
-    setIsLoading(false);
+    setIsLoading(false)
   }
 
   function onDatasetChange(e) {
@@ -860,7 +864,7 @@ useEffect(() => {
 
     console.log(`Selected dataset: ${selectedDataset}`)
 
-    setIsLoading(true);
+    setIsLoading(true)
     axios
       .post('/select_dataset', {
         filename: selectedDataset,
@@ -873,12 +877,11 @@ useEffect(() => {
       })
 
     setCurrentDataset(selectedDataset)
-    setIsLoading(false);
+    setIsLoading(false)
   }
 
-
   return (
-    <div key='Wrapper' style={style} >
+    <div key='Wrapper' style={style}>
       <MenuContainer>
         <Menu
           cellCount={cellCount}
@@ -949,9 +952,10 @@ useEffect(() => {
                         y: mousePos.y,
                         polygonID: i,
                       })
-                      if(mostUncertain && mostUncertain.includes(i)){
-                        const index=mostUncertain.indexOf(i)
-                        mostUncertain.splice(index,1)}
+                      if (mostUncertain && mostUncertain.includes(i)) {
+                        const index = mostUncertain.indexOf(i)
+                        mostUncertain.splice(index, 1)
+                      }
                     }}
                     onDragEnd={(e) => {
                       const newPolygon = polygon.map((p) => ({
@@ -972,7 +976,7 @@ useEffect(() => {
                     <Line
                       points={polygon.flatMap((p) => [p.x, p.y])}
                       fill={polygon[0].color}
-                      opacity={showAmplitudeImage ?0.25 :0.50}
+                      opacity={showAmplitudeImage ? 0.25 : 0.5}
                       stroke={polygon[0].color}
                       strokeWidth={4}
                       closed
@@ -985,18 +989,19 @@ useEffect(() => {
                         y={point.y}
                         radius={3}
                         fill={(() => {
-                        // Define your condition here
-                        const isHighlighted = i === activePoint; // Replace with your actual condition
-                        const isUncertain = mostUncertain && mostUncertain.includes(i);
+                          // Define your condition here
+                          const isHighlighted = i === activePoint // Replace with your actual condition
+                          const isUncertain =
+                            mostUncertain && mostUncertain.includes(i)
 
-                        if (isHighlighted) {
-                          return 'red'
-                        }
-                        if (isUncertain) {
-                          return '#800080'
-                        } else {
-                          return '#ffff00'
-                        }
+                          if (isHighlighted) {
+                            return 'red'
+                          }
+                          if (isUncertain) {
+                            return '#800080'
+                          } else {
+                            return '#ffff00'
+                          }
                         })()}
                         draggable
                         onDragEnd={(e) => {
@@ -1035,24 +1040,26 @@ useEffect(() => {
               </Layer>
             </Stage>
           </StageContainer>
-          {!contextMenu.visible && (<Legend/>)}
+          {!contextMenu.visible && <Legend />}
         </MenuAndLegendContainer>
-        {(availableFeaturesNames.length !== 0) && <Scatterplot 
-          featuresList = {availableFeaturesNames}
-          featureX={featureXAxis} 
-          featureY = {featureYAxis}
-          scatterDataX = {scatterplotDataX}
-          scatterDataY = {scatterplotDataY}
-          scatterDataColor = {scatterplotDataColor}
-          scatterTrainingDataX = {scatterplotTrainingDataX}
-          scatterTrainingDataY = {scatterplotTrainingDataY}
-          scatterTrainingDataColor = {scatterplotTrainingDataColor}
-          onFeatureChangeX={onScatterplotFeatureChangeX}
-          onFeatureChangeY={onScatterplotFeatureChangeY} 
-          onPointHover={onPointHover}
-          handleTrainingDataToggle={handleTrainingDataToggle}
-          showTrainingData={showTrainingData}
-        />}
+        {availableFeaturesNames.length !== 0 && (
+          <Scatterplot
+            featuresList={availableFeaturesNames}
+            featureX={featureXAxis}
+            featureY={featureYAxis}
+            scatterDataX={scatterplotDataX}
+            scatterDataY={scatterplotDataY}
+            scatterDataColor={scatterplotDataColor}
+            scatterTrainingDataX={scatterplotTrainingDataX}
+            scatterTrainingDataY={scatterplotTrainingDataY}
+            scatterTrainingDataColor={scatterplotTrainingDataColor}
+            onFeatureChangeX={onScatterplotFeatureChangeX}
+            onFeatureChangeY={onScatterplotFeatureChangeY}
+            onPointHover={onPointHover}
+            handleTrainingDataToggle={handleTrainingDataToggle}
+            showTrainingData={showTrainingData}
+          />
+        )}
       </MainPageContainer>
       {isLoading && <LoadingSpinner />}
       {contextMenu.visible && (
