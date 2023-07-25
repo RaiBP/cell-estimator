@@ -26,12 +26,14 @@ docker login gitlab.lrz.de:5005
 2. Run the app
 
 ```
+cd app
 ./pull_and_run.sh
 ```
 
 Alternatively, you can build the image locally if you prefer. This takes however quite some time:
 
 ```
+cd app
 ./build_and_run.sh
 ```
 
