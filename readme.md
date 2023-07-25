@@ -17,13 +17,19 @@ sudo systemctl restart docker
 
 ### Running the docker image
 
-1. Login to the container registry:
+1. Clone this repository with its submodules:
+
+```
+git clone https://gitlab.lrz.de/ldv/teaching/ami/ami2023/projects/Group06.git --recurse-submodules
+```
+
+2. Login to the container registry:
 
 ```
 docker login gitlab.lrz.de:5005
 ```
 
-2. Run the app
+3. Run the app
 
 ```
 cd app
