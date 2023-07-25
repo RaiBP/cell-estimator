@@ -130,13 +130,13 @@ const trainingData = scatterTrainingDataX && scatterTrainingDataY && scatterTrai
       {/* Render your scatterplot using the retrieved data */}
       <ScatterChart width={1600} height={800}  margin={{ top: 20, right: 0, bottom: 25, left: 145 }}>
         <CartesianGrid />
-        <XAxis tick={{fontSize: 20}} dataKey="x" type="number" name={featureX} label={{ value: getAxisLabel(featureX), position: 'insideBottom', offset: -20, fontSize:20}} domain={xAxisDomain} tickFormatter={formatXAxisTick} ticks={[...Array(xAxisTickCount)].map((_, index) => minX + xAxisTickInterval * index)}/>
-        <YAxis tick={{fontSize: 20}} dataKey="y" type="number" name={featureY} label={{ value: getAxisLabel(featureY), angle: -90, position: 'insideLeft', offset: -35, dy:100 , fontSize:20}} domain={yAxisDomain} tickFormatter={formatYAxisTick} ticks={[...Array(yAxisTickCount)].map((_, index) => minY + yAxisTickInterval * index)} // Manually set tick values
+        <XAxis tick={{fontSize: 20, fill: 'white'}} dataKey="x" type="number" name={featureX} label={{ fill:'white', stroke: 'white', value: getAxisLabel(featureX), position: 'insideBottom', offset: -20, fontSize:20}} domain={xAxisDomain} tickFormatter={formatXAxisTick} ticks={[...Array(xAxisTickCount)].map((_, index) => minX + xAxisTickInterval * index)}/>
+        <YAxis tick={{fontSize: 20, fill: 'white' }} dataKey="y" type="number" name={featureY} label={{ fill:'white', stroke: 'white', value: getAxisLabel(featureY), angle: -90, position: 'insideLeft', offset: -35, dy:100 , fontSize:20}} domain={yAxisDomain} tickFormatter={formatYAxisTick} ticks={[...Array(yAxisTickCount)].map((_, index) => minY + yAxisTickInterval * index)} // Manually set tick values
         />
         <Tooltip content={<CustomTooltip />} />
 
         {/* Render the training data points */}
-        <Scatter data={trainingData} shape="circle" fillOpacity={0.4}>
+        <Scatter data={trainingData} shape="circle" fillOpacity={0.5}>
           {trainingData.map((entry, index) => (
             <Cell
               key={`cell-training-${index}`}

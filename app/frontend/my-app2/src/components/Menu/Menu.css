@@ -24,11 +24,12 @@
   padding-top: 20px;
   padding-left: 10px; /* Add a bit of left padding for spacing */
   padding-right: 10px; /* Add a bit of right padding for spacing */
-  height: 100vh;
+  height: 189vh;
   box-sizing: border-box;
   
   margin: 0 auto; /* Center the menu container horizontally */
 }
+
 
 .menu-button {
   margin-bottom: 10px;
@@ -41,6 +42,13 @@
   background-color: #453c42;
   cursor: pointer;
   transition: background-color 0.3s ease;
+}
+
+.menu-image-id {
+  margin-bottom: 20px;
+  width: 90%;
+  font-size: 30px;
+  color: #fff;
 }
 
 .menu-button:hover {

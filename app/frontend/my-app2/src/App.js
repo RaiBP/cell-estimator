@@ -18,8 +18,8 @@ const apiBaseUrl = isRunningLocally ? 'http://localhost:8000/api' : 'https://gro
 axios.defaults.baseURL = apiBaseUrl
 
 const stageDimensions = {
-  width: window.innerWidth*0.55,
-  height: window.innerWidth*0.4,
+  width: window.innerWidth*0.55*0.9,
+  height: window.innerWidth*0.4*0.9,
 }
 
 const StageContainer = ({ children }) => {
@@ -432,6 +432,8 @@ const [activePoint, setActivePoint] = useState(null);
     )
     setPhaseImage(`data:image/jpeg;base64,${response_json.phase_img_data}`)
 
+    setContextMenu({ visible: false })
+
     const transformedPolygons = []
     const newDataX = []
     const newDataY = []
@@ -589,14 +591,14 @@ useEffect(() => {
   }
 
   const nextImage = () => {
-    setImageId((prevId) => prevId + 1)
+    setImageId((prevId) => Number(prevId) + Number(1))
     setDeletedPolygons([])
     setNumberOfDeletedPolygons([])
     setMostUncertain(null)
   }
 
   const prevImage = () => {
-    setImageId((prevId) => prevId - 1)
+    setImageId((prevId) => Number(prevId) - Number(1))
     setDeletedPolygons([])
     setNumberOfDeletedPolygons([])
     setMostUncertain(null)
@@ -608,7 +610,7 @@ useEffect(() => {
     const newImageId = e.target.image_id.value
     // Validate the number
     if (newImageId >= 0 && newImageId <= 9999) {
-      setImageId(newImageId)
+      setImageId(Number(newImageId))
       // Perform your desired action with the valid number
       console.log('Valid number:', newImageId)
     } else {
@@ -917,6 +919,7 @@ useEffect(() => {
           setClassificationMethods={setClassificationMethods}
           classificationError={classificationError}
           userDataExists={userDataExists}
+          imageId={imageId}
         />
       </MenuContainer>
       <MainPageContainer>

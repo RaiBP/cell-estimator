@@ -126,6 +126,7 @@ function Menu({
   setClassificationMethods,
   classificationError,
   userDataExists,
+  imageId
 }) {
   const [backendState, setBackendState] = useState({})
 
@@ -141,6 +142,9 @@ function Menu({
 
   return (
     <div className='menu-button-container'>
+      <div className='menu-image-id'>
+      Image ID: {imageId}
+      </div>
       <Button className='menu-button' onClick={onNext}>
         Next Image
       </Button>
