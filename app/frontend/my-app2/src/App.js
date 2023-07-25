@@ -186,6 +186,7 @@ const AnnotationArea = () => {
   const [classificationError, setClassificationError] = useState(false);
   const [userDataExists, setUserDataExists] = useState(false);
   const [showTrainingData, setShowTrainingData] = useState(false);
+  const [cellCount, setCellCount] = useState(0);
 
   // Context Menu for Polygon-editing
   const [contextMenu, setContextMenu] = useState({
@@ -528,6 +529,12 @@ useEffect(() => {
   currentPolygonRef.current = currentPolygon
 }, [currentPolygon])
 
+
+// Hook for keeping track of number of cells
+useEffect(() => {
+  setCellCount(polygons.length);
+}, [polygons])
+
 // Hook for registering keydown events -- happens only when component is mounted
 useEffect(() => {
   // Handling keydown events -- registering callback
@@ -655,7 +662,9 @@ useEffect(() => {
       recoveredPolygon = deletedPolygons.splice(-lastNumber, lastNumber)
     }
 
-    polygons.push(...recoveredPolygon)
+    const updatedPolygons = [...polygons]; // Create a shallow copy of the polygons array
+    updatedPolygons.push(...recoveredPolygon)
+    setPolygons(updatedPolygons)
   }
 
   function deleteall() {
@@ -692,7 +701,9 @@ useEffect(() => {
       case 'delete':
         deletePolygon = true
         let polygonToDelete = [];
-        polygonToDelete = polygons.splice(contextMenu.polygonID, 1)
+        const updatedPolygons = [...polygons]; // Create a shallow copy of the polygons array
+        polygonToDelete = updatedPolygons.splice(contextMenu.polygonID, 1);
+        setPolygons(updatedPolygons); // Update the state with the new array
 
         setDeletedPolygons([...deletedPolygons, ...polygonToDelete])
         setNumberOfDeletedPolygons([...numberOfDeletedPolygons, 1])
@@ -870,6 +881,7 @@ useEffect(() => {
     <div key='Wrapper' style={style} >
       <MenuContainer>
         <Menu
+          cellCount={cellCount}
           onReset={undoLast}
           onUndo={deleteall}
           onNext={nextImage}

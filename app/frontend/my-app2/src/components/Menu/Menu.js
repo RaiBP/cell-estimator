@@ -106,6 +106,7 @@ const MenuContainer = ({ children }) => {
 }
 
 function Menu({
+  cellCount,
   onReset,
   onUndo,
   onNext,
@@ -144,6 +145,9 @@ function Menu({
     <div className='menu-button-container'>
       <div className='menu-image-id'>
       Image ID: {imageId}
+      </div>
+      <div className='menu-cell-count'>
+      Cell Count: {cellCount}
       </div>
       <Button className='menu-button' onClick={onNext}>
         Next Image
