@@ -17,10 +17,10 @@ sudo systemctl restart docker
 
 ### Running the docker image
 
-1. Clone this repository:
+1. Clone this repository with this submodules:
 
 ```
-git clone https://gitlab.lrz.de/ldv/teaching/ami/ami2023/projects/Group06.git
+git clone https://gitlab.lrz.de/ldv/teaching/ami/ami2023/projects/Group06.git --recurse-submodules
 ```
 
 2. Login to the container registry:
@@ -53,6 +53,8 @@ After this, you should be able to see the app running in localhost:3000.
 Username: ami
 
 Password: ***REMOVED***
+
+This is the most reliable way of running the application, in case you are having problems running it locally with docker.
 
 
 
