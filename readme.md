@@ -2,7 +2,7 @@
 
 Welcome to the project page of Group06. Our project is called Cell estimator. Our website offers blood cell segmentation, classification and relabeling functionality.
 
-## Running the web application
+## Running the web application locally
 
 ### Requirements
 
@@ -17,6 +17,29 @@ sudo systemctl restart docker
 
 ### Running the docker image
 
+1. Login to the container registry:
+
+```
+docker login gitlab.lrz.de:5005
+```
+
+2. Run the app
+
+```
+./pull_and_run.sh
+```
+
+Alternatively, you can build the image locally if you prefer. This takes however quite some time:
+
+```
+./build_and_run.sh
+```
+
+After this, you should be able to see the app running in localhost:3000.
+
+## Using the deployed web application 
+
+Visit https://group06.ami.dedyn.io 
 
 
 
