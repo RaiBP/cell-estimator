@@ -17,10 +17,10 @@ sudo systemctl restart docker
 
 ### Running the docker image
 
-1. Clone this repository with its submodules:
+1. Clone this repository:
 
 ```
-git clone https://gitlab.lrz.de/ldv/teaching/ami/ami2023/projects/Group06.git --recurse-submodules
+git clone https://gitlab.lrz.de/ldv/teaching/ami/ami2023/projects/Group06.git
 ```
 
 2. Login to the container registry:
@@ -51,6 +51,7 @@ After this, you should be able to see the app running in localhost:3000.
 2. Visit https://group06.ami.dedyn.io and login with the credentials below:
 
 Username: ami
+
 Password: ***REMOVED***
 
 
