@@ -3,7 +3,6 @@ import { Stage, Layer, Line, Image, Circle, Group } from 'react-konva'
 import axios from 'axios'
 import { Menu, MenuContainer } from './components/Menu/Menu'
 import { PopupMenu } from './components/PopupMenu/PopupMenu'
-import { ExplainMenu } from './components/ExplainMenu/ExplainMenu'
 import { Scatterplot } from './components/Scatterplot/Scatterplot';
 import { Legend } from './components/Legend/Legend'
 import { v4 as uuidv4 } from 'uuid'
@@ -174,7 +173,7 @@ const AnnotationArea = () => {
 
   // Preview line management
   const [isClassified, setIsClassified] = useState(false)
- const [classificationMethods, setClassificationMethods] = useState([])
+  const [classificationMethods, setClassificationMethods] = useState([])
   const [scatterplotDataX, setScatterplotDataX] = useState(null);
   const [scatterplotDataY, setScatterplotDataY] = useState(null);
   const [scatterplotDataColor, setScatterplotDataColor] = useState(null);
@@ -183,7 +182,7 @@ const AnnotationArea = () => {
   const [scatterplotTrainingDataColor, setScatterplotTrainingDataColor] = useState(null);
   const [featureXAxis, setFeatureXAxis] = useState("Volume");
   const [featureYAxis, setFeatureYAxis] = useState("Volume");
-const [activePoint, setActivePoint] = useState(null);
+  const [activePoint, setActivePoint] = useState(null);
   const [classificationError, setClassificationError] = useState(false);
   const [userDataExists, setUserDataExists] = useState(false);
   const [showTrainingData, setShowTrainingData] = useState(false);
@@ -195,10 +194,7 @@ const [activePoint, setActivePoint] = useState(null);
     y: 0,
     polygonID: -1,
   })
-  const [explainMenu, setExplainMenu] = useState({
-    visible: false,
-    polygonID: -1,
-  })
+  
   const [availableFeaturesNames, setAvailableFeaturesNames] = useState([])
 
   // Component management
@@ -707,9 +703,6 @@ useEffect(() => {
         setScatterplotDataColor(null)
 
         break
-      case 'explain':
-        setExplainMenu({ visible: true, polygonID: contextMenu.polygonID })
-        break
       case 'noAction':
         noAction = true
         break
@@ -742,28 +735,6 @@ useEffect(() => {
       .catch((error) => {
         console.error(`Error while getting available features: ${error}`)
       })
-  }
-
-  function handleExplainMenuClick(option) {
-
-    // Explain menu handlers
-    if (option === 'close') {
-      setExplainMenu({ visible: false })
-    }
-    if (option === 'plot') {
-      const randomImageUrl = 'https://www.istockphoto.com/de/foto/wandern-in-den-allg%C3%A4uer-alpen-gm1141196125-305637944';
-
-    // Open the image in a new window
-      window.open(randomImageUrl, '_blank');
-    }
-  }
-
-  function handleExplainMenuXAxisSelectorChange(e) {
-    console.log(e)
-  }
-
-  function handleExplainMenuYAxisSelectorChange(e) {
-    console.log(e)
   }
 
   async function onScatterplotTrainingData() {
@@ -1077,14 +1048,6 @@ useEffect(() => {
           x={contextMenu.x}
           y={contextMenu.y}
           handleOptionClick={handleOptionClick}
-        />
-      )}
-      {explainMenu.visible && (
-        <ExplainMenu
-          handleOptionClick={handleExplainMenuClick}
-          selectorOptions={availableFeaturesNames}
-          handleXAxisFeatureChange={handleExplainMenuXAxisSelectorChange}
-          handleYAxisFeatureChange={handleExplainMenuYAxisSelectorChange}
         />
       )}
     </div>
