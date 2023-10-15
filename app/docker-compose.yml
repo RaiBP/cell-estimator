@@ -29,5 +29,5 @@ volumes:
   ami_share:
     driver_opts:
       type: cifs
-      o: username=ami,password=***REMOVED***,vers=3.0
+      o: username=ami,password=999999999,vers=3.0
       device: //10.195.6.13/ami
