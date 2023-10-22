@@ -60,13 +60,14 @@ This is the most reliable way of running the application, in case you are having
 
 # Citation
 If you use part of our code, please consider using the following citation:
-
+```
 @software{cellestimator2023,
   author = {Raimundo Becerra Parra and Konstantinos Larintzakis and Wafa Laroussi and Michael Lemanov and Ivan Nikolovski and Leonardo Fernandes Oliveira},
   title = {Cell Estimator: A Web-Platform for Blood Cell Segmentation, Classification and Active Learning},
   url = {https://github.com/RaiBP/cell-estimator},
   date = {2023-07-25},
 }
+```
 
 
 
