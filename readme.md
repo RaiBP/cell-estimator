@@ -1,6 +1,5 @@
-# Group 06 - Cell estimator
-
-Welcome to the project page of Group06. Our project is called Cell estimator. Our website offers blood cell segmentation, classification and relabeling functionality.
+# Cell Estimator: A Web-Platform for Blood Cell Segmentation, Classification and Active Learning
+Welcome to the project page of Group06 of the Applied Machine Learning course at the Technical University of Munich (TUM), Summer Semester 2023. Our project is called Cell Estimator. Our website offers blood cell segmentation, classification and relabeling functionality.
 
 ## Running the web application locally
 
@@ -58,6 +57,16 @@ After this, you should be able to see the app running in localhost:3000.
 2. Visit https://group06.ami.dedyn.io and login with the credentials from the ami course.
 
 This is the most reliable way of running the application, in case you are having problems running it locally with docker.
+
+# Citation
+If you use part of our code, please consider using the following citation:
+
+@software{cellestimator2023,
+  author = {Raimundo Becerra Parra and Konstantinos Larintzakis and Wafa Laroussi and Michael Lemanov and Ivan Nikolovski and Leonardo Fernandes Oliveira},
+  title = {Cell Estimator: A Web-Platform for Blood Cell Segmentation, Classification and Active Learning},
+  url = {https://github.com/RaiBP/cell-estimator},
+  date = {2023-07-25},
+}
 
 
 
